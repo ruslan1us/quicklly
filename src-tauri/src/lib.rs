@@ -93,6 +93,11 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Must be registered first: a second launch exits here and opens the input
+        // window of the already running instance instead.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_input(app);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
