@@ -23,7 +23,8 @@
         "center": true,
         "resizable": false,
         "maximizable": false,
-        "minimizable": false
+        "minimizable": false,
+        "visible": false
       }
     ],
     "security": {
