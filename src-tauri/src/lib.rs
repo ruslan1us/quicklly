@@ -5,9 +5,15 @@ use std::path::PathBuf;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Manager, WindowEvent};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_opener::OpenerExt;
 
 const MAIN_WINDOW: &str = "main";
+
+/// Global hotkey that brings up the input window: Ctrl+Alt+N.
+fn new_note_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyN)
+}
 
 fn notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
     Ok(app.path().document_dir()?.join("Quicklly"))
@@ -88,8 +94,21 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state() == ShortcutState::Pressed && *shortcut == new_note_shortcut() {
+                        show_input(app);
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             setup_tray(app)?;
+            // A taken hotkey must not stop the app: the tray still works without it.
+            if let Err(e) = app.global_shortcut().register(new_note_shortcut()) {
+                eprintln!("Failed to register global hotkey Ctrl+Alt+N: {e}");
+            }
             Ok(())
         })
         .on_window_event(|window, event| match event {
