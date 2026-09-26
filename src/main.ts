@@ -119,6 +119,10 @@ async function save() {
     await hide();
     return;
   }
+  if (text === "/exit") {
+    await invoke("exit_app");
+    return;
+  }
   try {
     await invoke("save_note", { text });
     remember(text);

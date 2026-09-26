@@ -30,7 +30,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
 | Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
-| Exit                           | Tray menu → **Quit**                        |
+| Exit                           | Type `/exit` and press <kbd>Enter</kbd>, or tray menu → **Quit** |
 
 ## Where notes are stored
 

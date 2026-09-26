@@ -51,6 +51,12 @@ async fn open_settings(app: AppHandle) {
     show_settings(&app);
 }
 
+/// Quits the app from the input window (the `/exit` command), like "Quit" in the tray.
+#[tauri::command]
+async fn exit_app(app: AppHandle) {
+    app.exit(0);
+}
+
 /// Shows the settings window, creating it on first use so it costs nothing until opened.
 fn show_settings(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
@@ -172,6 +178,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_note,
             open_settings,
+            exit_app,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
