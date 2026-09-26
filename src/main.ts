@@ -21,6 +21,11 @@ async function save() {
     await hide();
     return;
   }
+  if (text === "/config") {
+    await invoke("open_settings");
+    await hide();
+    return;
+  }
   try {
     await invoke("save_note", { text });
     await hide();

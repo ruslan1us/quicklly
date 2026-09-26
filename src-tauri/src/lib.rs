@@ -43,6 +43,14 @@ fn open_notes_folder(app: &AppHandle) {
     }
 }
 
+/// Opens settings from the input window (the `/config` command).
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+async fn open_settings(app: AppHandle) {
+    show_settings(&app);
+}
+
 /// Shows the settings window, creating it on first use so it costs nothing until opened.
 fn show_settings(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
@@ -163,6 +171,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             save_note,
+            open_settings,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
