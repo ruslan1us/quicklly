@@ -11,6 +11,13 @@ back in whatever you were doing.
   with OneDrive or Git. No database.
 - **Lightweight** — lives in the system tray.
 
+## Installation
+
+Download the installer (`Quicklly_x.y.z_x64-setup.exe`, or the `.msi`) from the
+[latest release](https://github.com/ruslan1us/quicklly/releases/latest) and run it.
+The installer is not code-signed yet, so Windows SmartScreen may warn you: click
+**More info → Run anyway**.
+
 ## Usage
 
 | Action                         | How                                         |
@@ -20,7 +27,7 @@ back in whatever you were doing.
 | Cancel                         | <kbd>Esc</kbd>                              |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
-| Settings                       | Tray menu → **Settings…**                   |
+| Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
 | Exit                           | Tray menu → **Quit**                        |
 
 ## Where notes are stored
@@ -62,7 +69,27 @@ grouped by day:
 - 09:05 book a dentist appointment
 ```
 
-The notes folder can be changed in the settings as well (tray menu → **Settings…**).
+The notes folder can be changed in the settings as well.
+
+## Settings
+
+Open the settings with `/config` in the input window or from the tray menu. They are fully
+keyboard-driven:
+
+| Key                                  | Action                                     |
+| ------------------------------------ | ------------------------------------------ |
+| <kbd>↑</kbd> <kbd>↓</kbd>            | Select a setting                           |
+| <kbd>←</kbd> <kbd>→</kbd>            | Switch between values                      |
+| <kbd>Enter</kbd>                     | Edit: record a new hotkey, pick a folder   |
+| <kbd>Del</kbd>                       | Reset the setting to its default           |
+| <kbd>Esc</kbd>                       | Close                                      |
+
+| Setting            | Default                                     | Options                                      |
+| ------------------ | ------------------------------------------- | -------------------------------------------- |
+| Hotkey             | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Any key or combination except <kbd>Esc</kbd> |
+| Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
+| Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
+| Start with Windows | Off                                         | On, Off                                      |
 
 ## Building from source
 
