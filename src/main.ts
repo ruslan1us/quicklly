@@ -35,6 +35,29 @@ input.addEventListener("scroll", () => {
   if (!scrollable) input.scrollTop = 0;
 });
 
+/** Notes saved while the app runs, oldest first; browsed with ↑/↓ like a shell history. */
+const history: string[] = [];
+const HISTORY_LIMIT = 100;
+/** Position while browsing; `history.length` stands for the empty field. */
+let historyIndex = 0;
+
+/** True while the field shows an unedited note from the history. */
+function browsingHistory() {
+  return historyIndex < history.length && input.value === history[historyIndex];
+}
+
+function showHistory(index: number) {
+  historyIndex = index;
+  input.value = history[index] ?? "";
+  input.setSelectionRange(input.value.length, input.value.length);
+  void fit();
+}
+
+function remember(text: string) {
+  if (history[history.length - 1] !== text) history.push(text);
+  if (history.length > HISTORY_LIMIT) history.shift();
+}
+
 function clearError() {
   input.classList.remove("error");
   input.title = "";
@@ -42,6 +65,7 @@ function clearError() {
 
 async function hide() {
   input.value = "";
+  historyIndex = history.length;
   clearError();
   await appWindow.hide();
   await fit();
@@ -60,6 +84,7 @@ async function save() {
   }
   try {
     await invoke("save_note", { text });
+    remember(text);
     await hide();
   } catch (err) {
     input.classList.add("error");
@@ -76,6 +101,15 @@ input.addEventListener("keydown", (e) => {
   } else if (e.key === "Escape") {
     e.preventDefault();
     void hide();
+  } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
+    return;
+  } else if (e.key === "ArrowUp" && (input.value === "" || browsingHistory())) {
+    // In an empty field or while browsing, ↑/↓ walk the history; otherwise they move the caret.
+    e.preventDefault();
+    if (historyIndex > 0) showHistory(historyIndex - 1);
+  } else if (e.key === "ArrowDown" && browsingHistory()) {
+    e.preventDefault();
+    showHistory(historyIndex + 1);
   }
 });
 

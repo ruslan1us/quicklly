@@ -25,6 +25,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon |
 | Save the note                  | <kbd>Enter</kbd>                            |
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
+| Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
 | Cancel                         | <kbd>Esc</kbd>                              |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
