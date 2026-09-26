@@ -21,7 +21,8 @@ pub enum Mode {
 /// The file (and `dir`) are created on first write. A daily file starts with a
 /// `# YYYY-MM-DD` heading; the inbox starts with `# Inbox` and gets a `## YYYY-MM-DD`
 /// heading whenever the first note of a new day is added.
-/// Line breaks in `text` are folded into spaces so a note always stays one list item.
+/// A multi-line note stays one list item: further lines are indented under the first one,
+/// and blank lines are dropped.
 /// Returns the path of the file written to, or `None` if the note is blank.
 pub fn append_note(
     dir: &Path,
@@ -34,7 +35,7 @@ pub fn append_note(
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
-        .join(" ");
+        .join("\n  ");
     if text.is_empty() {
         return Ok(None);
     }
@@ -154,20 +155,20 @@ mod tests {
     }
 
     #[test]
-    fn folds_line_breaks_and_skips_blank_notes() {
-        let dir = temp_dir("fold");
+    fn indents_extra_lines_and_skips_blank_notes() {
+        let dir = temp_dir("lines");
         assert_eq!(
             append_note(&dir, Mode::Daily, at(26, 9, 0), "  \r\n ").unwrap(),
             None
         );
         assert!(!dir.exists());
 
-        let path = append_note(&dir, Mode::Daily, at(26, 9, 0), " one\r\n\ntwo ")
+        let path = append_note(&dir, Mode::Daily, at(26, 9, 0), " one\r\n\n two \nthree")
             .unwrap()
             .unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            "# 2026-09-26\n\n- 09:00 one two\n"
+            "# 2026-09-26\n\n- 09:00 one\n  two\n  three\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

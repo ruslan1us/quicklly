@@ -24,6 +24,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | ------------------------------ | ------------------------------------------- |
 | Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon |
 | Save the note                  | <kbd>Enter</kbd>                            |
+| New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
 | Cancel                         | <kbd>Esc</kbd>                              |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
@@ -51,7 +52,13 @@ A file looks like this:
 ```
 
 Files are UTF-8; new notes are appended to the end, and the heading is written with the first
-note of the day.
+note of the day. A multi-line note stays one list item, with the extra lines indented under it:
+
+```markdown
+- 19:20 groceries:
+  milk
+  bread
+```
 
 Alternatively, choose **Single inbox** in the settings to keep all notes in one `inbox.md`,
 grouped by day:

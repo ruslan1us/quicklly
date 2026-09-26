@@ -17,14 +17,33 @@ body {
   background: Canvas;
 }
 
-#note {
+/* The note fills the window; one row is 2 + 13 + 26 + 13 + 2 = 56px. */
+#note,
+#measure {
   flex: 1;
-  padding: 0 16px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 13px 16px;
   border: 2px solid transparent;
   outline: none;
   background: transparent;
   color: CanvasText;
   font: inherit;
+  line-height: 26px;
+  resize: none;
+  overflow-y: hidden;
+}
+
+/* Invisible copy of the note, used to measure the height the text needs. */
+#measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  visibility: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
 }
 
 #note.error {
@@ -33,7 +52,7 @@ body {
 
 .hint {
   position: absolute;
-  top: 50%;
+  top: 28px;
   right: 16px;
   transform: translateY(-50%);
   font-size: 13px;
