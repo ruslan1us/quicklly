@@ -135,7 +135,11 @@ input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     void save();
-  } else if (e.key === "Escape") {
+  } else if (
+    e.key === "Escape" ||
+    // Ctrl+C closes like in a terminal, unless there is a selection to copy.
+    (e.ctrlKey && e.code === "KeyC" && input.selectionStart === input.selectionEnd)
+  ) {
     e.preventDefault();
     void hide();
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {

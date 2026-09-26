@@ -26,7 +26,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Save the note                  | <kbd>Enter</kbd>                            |
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
 | Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
-| Cancel                         | <kbd>Esc</kbd>                              |
+| Cancel                         | <kbd>Esc</kbd>, or <kbd>Ctrl</kbd>+<kbd>C</kbd> when no text is selected |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
 | Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
@@ -90,7 +90,7 @@ keyboard-driven:
 | <kbd>←</kbd> <kbd>→</kbd>            | Switch between values                      |
 | <kbd>Enter</kbd>                     | Edit: record a new hotkey, pick a folder   |
 | <kbd>Del</kbd>                       | Reset the setting to its default           |
-| <kbd>Esc</kbd>                       | Close                                      |
+| <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close                              |
 
 | Setting            | Default                                     | Options                                      |
 | ------------------ | ------------------------------------------- | -------------------------------------------- |

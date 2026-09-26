@@ -186,6 +186,11 @@ document.addEventListener("keydown", (e) => {
     recordKey(e);
     return;
   }
+  // Ctrl+C closes like in a terminal (by physical key, so any keyboard layout works).
+  if (e.ctrlKey && e.code === "KeyC") {
+    void appWindow.close();
+    return;
+  }
   const row = rows[selected];
   switch (e.key) {
     case "ArrowUp":
