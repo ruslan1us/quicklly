@@ -5,13 +5,43 @@
   grid-template-columns: 2ch 15ch 7ch minmax(0, 1fr);
 }
 
-.file .count {
+.file span:last-child {
   color: var(--dim);
   text-align: right;
 }
 
-.file.selected .count {
+.file.selected span:last-child {
   color: var(--fg);
+}
+
+/* Notes: cursor · time · done mark · text (multi-line notes keep their lines). */
+.note {
+  grid-template-columns: 2ch 6ch 2ch minmax(0, 1fr);
+}
+
+.note span:last-child {
+  color: var(--fg);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.note:not(.selected) span:nth-child(2) {
+  color: var(--dim);
+}
+
+.note.done span:last-child {
+  color: var(--dim);
+}
+
+/* Day separator in the inbox. */
+.day {
+  margin-top: 6px;
+  color: var(--dim);
+  cursor: default;
+}
+
+.day:first-child {
+  margin-top: 0;
 }
 
 .dim {

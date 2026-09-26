@@ -95,6 +95,13 @@ async fn open_reader(app: AppHandle) {
     show_popup(&app, READER_WINDOW, "reader.html", "Quicklly Notes");
 }
 
+/// Reads one notes file for the reader.
+#[tauri::command]
+fn read_note_file(app: AppHandle, name: String) -> Result<Vec<reader::Item>, String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::read_file(&dir, &name).map_err(|e| format!("Failed to read {name}: {e}"))
+}
+
 /// Goes back from the reader to the note input (→ in the file list).
 #[tauri::command]
 fn open_input(app: AppHandle) {
@@ -205,6 +212,7 @@ pub fn run() {
             open_reader,
             open_input,
             list_note_files,
+            read_note_file,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
