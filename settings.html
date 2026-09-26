@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/settings.css" />
+    <title>Quicklly Settings</title>
+    <script type="module" src="/src/settings.ts" defer></script>
+  </head>
+
+  <body>
+    <main>
+      <section>
+        <h2>Notes folder</h2>
+        <div class="row">
+          <input id="notes-dir" type="text" readonly />
+          <button id="pick-notes-dir" type="button">Change…</button>
+          <button id="reset-notes-dir" type="button">Reset</button>
+        </div>
+        <p class="hint">New notes are written to a daily file in this folder.</p>
+      </section>
+      <p id="error" class="error" hidden></p>
+    </main>
+  </body>
+</html>

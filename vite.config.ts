@@ -27,4 +27,13 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // Each window is its own page.
+  build: {
+    rolldownOptions: {
+      input: {
+        main: "index.html",
+        settings: "settings.html",
+      },
+    },
+  },
 }));
