@@ -1,0 +1,20 @@
+/* Reader-specific layout on top of terminal.css. */
+
+/* File list: cursor · name · "today" · note count. */
+.file {
+  grid-template-columns: 2ch 15ch 7ch minmax(0, 1fr);
+}
+
+.file .count {
+  color: var(--dim);
+  text-align: right;
+}
+
+.file.selected .count {
+  color: var(--fg);
+}
+
+.dim {
+  margin: 0;
+  color: var(--dim);
+}

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
+import { appWindow, fitToContent, reveal } from "./popup";
 import { type Theme, applyTheme } from "./theme";
 
 interface Settings {
@@ -27,7 +27,6 @@ interface Row {
 const rowsList = document.querySelector<HTMLUListElement>("#rows")!;
 const error = document.querySelector<HTMLParagraphElement>("#error")!;
 const help = document.querySelector<HTMLElement>("#help")!;
-const appWindow = getCurrentWindow();
 
 const HELP = "↑↓ select · ←→ change · Enter edit · Del reset · Esc close";
 const RECORDING_HELP = "Press a key or combination · Esc cancel";
@@ -127,11 +126,6 @@ function render() {
   help.textContent = recording !== null ? RECORDING_HELP : HELP;
 }
 
-/** Fits the window height to the page content. */
-async function fitToContent() {
-  await appWindow.setSize(new LogicalSize(window.innerWidth, document.body.scrollHeight));
-}
-
 async function run(command: string, args?: Record<string, unknown>) {
   error.hidden = true;
   try {
@@ -225,7 +219,5 @@ window.addEventListener("blur", () => recording !== null && stopRecording());
 
 // The window is created hidden: size it to the content first, then show it.
 void run("get_settings").then(async () => {
-  await appWindow.center();
-  await appWindow.show();
-  await appWindow.setFocus();
+  await reveal();
 });

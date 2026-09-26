@@ -5,6 +5,9 @@ use std::path::{Path, PathBuf};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
+/// File that collects all notes in inbox mode.
+pub const INBOX_FILE: &str = "inbox.md";
+
 /// Which file notes go to.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,7 +47,7 @@ pub fn append_note(
     let date = now.format("%Y-%m-%d").to_string();
     let path = match mode {
         Mode::Daily => dir.join(format!("{date}.md")),
-        Mode::Inbox => dir.join("inbox.md"),
+        Mode::Inbox => dir.join(INBOX_FILE),
     };
     let existing = match fs::read_to_string(&path) {
         Ok(content) => content,

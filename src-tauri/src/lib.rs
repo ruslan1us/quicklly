@@ -1,5 +1,6 @@
 mod hotkey;
 mod notes;
+mod reader;
 mod settings;
 
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -10,6 +11,7 @@ use tauri_plugin_opener::OpenerExt;
 
 const MAIN_WINDOW: &str = "main";
 const SETTINGS_WINDOW: &str = "settings";
+const READER_WINDOW: &str = "reader";
 
 /// Appends `text` to today's note file in the notes folder.
 #[tauri::command]
@@ -57,32 +59,53 @@ async fn exit_app(app: AppHandle) {
     app.exit(0);
 }
 
-/// Shows the settings window, creating it on first use so it costs nothing until opened.
-fn show_settings(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
+/// Shows a terminal-style popup window, creating it on first use so it costs nothing until
+/// opened. The page sizes the window to its content and then shows it, so it never flickers.
+fn show_popup(app: &AppHandle, label: &str, page: &str, title: &str) {
+    if let Some(window) = app.get_webview_window(label) {
         let _ = window.unminimize();
         let _ = window.show();
         let _ = window.set_focus();
         return;
     }
-    let result = WebviewWindowBuilder::new(
-        app,
-        SETTINGS_WINDOW,
-        WebviewUrl::App("settings.html".into()),
-    )
-    .title("Quicklly Settings")
-    // The page sizes the window to its content and then shows it, so it never flickers.
-    .inner_size(640.0, 200.0)
-    .visible(false)
-    // A frameless popup like the input window; it is dragged by its header.
-    .decorations(false)
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .resizable(false)
-    .build();
+    let result = WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
+        .title(title)
+        .inner_size(640.0, 200.0)
+        .visible(false)
+        // A frameless popup like the input window; it is dragged by its header.
+        .decorations(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .build();
     if let Err(e) = result {
-        eprintln!("Failed to open settings window: {e}");
+        eprintln!("Failed to open {label} window: {e}");
     }
+}
+
+fn show_settings(app: &AppHandle) {
+    show_popup(app, SETTINGS_WINDOW, "settings.html", "Quicklly Settings");
+}
+
+/// Opens the notes reader from the input window (← in an empty note).
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+async fn open_reader(app: AppHandle) {
+    show_popup(&app, READER_WINDOW, "reader.html", "Quicklly Notes");
+}
+
+/// Goes back from the reader to the note input (→ in the file list).
+#[tauri::command]
+fn open_input(app: AppHandle) {
+    show_input(&app);
+}
+
+/// Lists the notes files for the reader.
+#[tauri::command]
+fn list_note_files(app: AppHandle) -> Result<Vec<reader::NoteFile>, String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::list_files(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
 }
 
 fn setup_tray(app: &App) -> tauri::Result<()> {
@@ -179,6 +202,9 @@ pub fn run() {
             save_note,
             open_settings,
             exit_app,
+            open_reader,
+            open_input,
+            list_note_files,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,

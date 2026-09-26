@@ -33,6 +33,7 @@ export default defineConfig(() => ({
       input: {
         main: "index.html",
         settings: "settings.html",
+        reader: "reader.html",
       },
     },
   },

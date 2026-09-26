@@ -148,6 +148,10 @@ input.addEventListener("keydown", (e) => {
     void hide();
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
+  } else if (e.key === "ArrowLeft" && input.value === "") {
+    // ← in an empty note opens the notes reader.
+    e.preventDefault();
+    void invoke("open_reader").then(hide);
   } else if (e.key === "ArrowUp" && (input.value === "" || browsingHistory())) {
     // In an empty field or while browsing, ↑/↓ walk the history; otherwise they move the caret.
     e.preventDefault();
