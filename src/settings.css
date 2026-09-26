@@ -52,6 +52,14 @@ button {
   margin: 0;
 }
 
+.check + .check {
+  margin-top: 6px;
+}
+
+.check .hint {
+  margin: 0;
+}
+
 .hint {
   margin: 6px 0 0;
   opacity: 0.7;

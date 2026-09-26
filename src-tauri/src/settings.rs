@@ -6,9 +6,12 @@ use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_store::StoreExt;
 
+use crate::notes::Mode;
+
 /// Settings file, stored in the app data directory.
 const STORE_FILE: &str = "settings.json";
 const NOTES_DIR_KEY: &str = "notesDir";
+const MODE_KEY: &str = "mode";
 
 /// Settings as shown in the settings window.
 #[derive(Serialize)]
@@ -16,6 +19,7 @@ const NOTES_DIR_KEY: &str = "notesDir";
 pub struct SettingsView {
     notes_dir: String,
     notes_dir_is_default: bool,
+    mode: Mode,
     autostart: bool,
 }
 
@@ -48,11 +52,21 @@ fn set_custom_notes_dir(app: &AppHandle, dir: Option<PathBuf>) -> Result<(), Str
     store.save().map_err(|e| e.to_string())
 }
 
+/// Whether notes go to a file per day or a single inbox; daily unless changed in settings.
+pub fn mode(app: &AppHandle) -> Mode {
+    app.store(STORE_FILE)
+        .ok()
+        .and_then(|store| store.get(MODE_KEY))
+        .and_then(|mode| serde_json::from_value(mode).ok())
+        .unwrap_or_default()
+}
+
 fn view(app: &AppHandle) -> Result<SettingsView, String> {
     let notes_dir = notes_dir(app).map_err(|e| e.to_string())?;
     Ok(SettingsView {
         notes_dir: notes_dir.to_string_lossy().into_owned(),
         notes_dir_is_default: custom_notes_dir(app).is_none(),
+        mode: mode(app),
         autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
     })
 }
@@ -82,6 +96,17 @@ pub async fn pick_notes_dir(app: AppHandle) -> Result<SettingsView, String> {
 #[tauri::command]
 pub fn reset_notes_dir(app: AppHandle) -> Result<SettingsView, String> {
     set_custom_notes_dir(&app, None)?;
+    view(&app)
+}
+
+#[tauri::command]
+pub fn set_mode(app: AppHandle, mode: Mode) -> Result<SettingsView, String> {
+    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
+    store.set(
+        MODE_KEY,
+        serde_json::to_value(mode).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
     view(&app)
 }
 

@@ -19,7 +19,8 @@ fn new_note_shortcut() -> Shortcut {
 #[tauri::command]
 fn save_note(app: AppHandle, text: String) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    notes::append_note(&dir, chrono::Local::now().naive_local(), &text)
+    let mode = settings::mode(&app);
+    notes::append_note(&dir, mode, chrono::Local::now().naive_local(), &text)
         .map_err(|e| format!("Failed to save note in {}: {e}", dir.display()))?;
     Ok(())
 }
@@ -60,11 +61,12 @@ fn show_settings(app: &AppHandle) {
         WebviewUrl::App("settings.html".into()),
     )
     .title("Quicklly Settings")
-    .inner_size(560.0, 280.0)
+    // The page sizes the window to its content and then shows it, so it never flickers.
+    .inner_size(560.0, 300.0)
+    .visible(false)
     .resizable(false)
     .maximizable(false)
     .minimizable(false)
-    .center()
     .build();
     if let Err(e) = result {
         eprintln!("Failed to open settings window: {e}");
@@ -168,6 +170,7 @@ pub fn run() {
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
+            settings::set_mode,
             settings::set_autostart,
         ])
         .run(tauri::generate_context!())

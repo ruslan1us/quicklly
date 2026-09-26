@@ -20,6 +20,7 @@ back in whatever you were doing.
 | Cancel                         | <kbd>Esc</kbd>                              |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
+| Settings                       | Tray menu → **Settings…**                   |
 | Exit                           | Tray menu → **Quit**                        |
 
 ## Where notes are stored
@@ -44,6 +45,24 @@ A file looks like this:
 
 Files are UTF-8; new notes are appended to the end, and the heading is written with the first
 note of the day.
+
+Alternatively, choose **Single inbox** in the settings to keep all notes in one `inbox.md`,
+grouped by day:
+
+```markdown
+# Inbox
+
+## 2026-09-26
+
+- 14:32 check why swap keeps growing on prod3
+- 15:10 buy a birthday present
+
+## 2026-09-27
+
+- 09:05 book a dentist appointment
+```
+
+The notes folder can be changed in the settings as well (tray menu → **Settings…**).
 
 ## Building from source
 
