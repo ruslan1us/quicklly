@@ -10,16 +10,25 @@ interface Settings {
   autostart: boolean;
 }
 
-const hotkey = document.querySelector<HTMLInputElement>("#hotkey")!;
-const resetHotkeyButton = document.querySelector<HTMLButtonElement>("#reset-hotkey")!;
-const notesDir = document.querySelector<HTMLInputElement>("#notes-dir")!;
-const pickButton = document.querySelector<HTMLButtonElement>("#pick-notes-dir")!;
-const resetButton = document.querySelector<HTMLButtonElement>("#reset-notes-dir")!;
-const modeInputs = document.querySelectorAll<HTMLInputElement>('input[name="mode"]');
-const autostart = document.querySelector<HTMLInputElement>("#autostart")!;
-const appWindow = getCurrentWindow();
-const error = document.querySelector<HTMLParagraphElement>("#error")!;
+/** One line of the settings list. */
+interface Row {
+  label: string;
+  value(s: Settings): string;
+  /** ←/→ (and Enter): switch to the previous/next value. */
+  cycle?(s: Settings, step: 1 | -1): void;
+  /** Enter: edit the value. */
+  edit?(): void;
+  /** Del: back to the default. */
+  reset?(): void;
+}
 
+const rowsList = document.querySelector<HTMLUListElement>("#rows")!;
+const error = document.querySelector<HTMLParagraphElement>("#error")!;
+const help = document.querySelector<HTMLElement>("#help")!;
+const appWindow = getCurrentWindow();
+
+const HELP = "↑↓ select · ←→ change · Enter edit · Del reset · Esc close";
+const RECORDING_HELP = "Press a key or combination · Esc cancel";
 const MODIFIER_CODES = new Set([
   "ControlLeft",
   "ControlRight",
@@ -31,17 +40,72 @@ const MODIFIER_CODES = new Set([
   "MetaRight",
 ]);
 
-let currentHotkey = "";
+let settings: Settings | null = null;
+let selected = 0;
+/** While recording a hotkey: the modifiers held so far, e.g. "Ctrl+Alt+…". */
+let recording: string | null = null;
 
-function render(settings: Settings) {
-  currentHotkey = settings.hotkey;
-  if (document.activeElement !== hotkey) hotkey.value = settings.hotkey;
-  resetHotkeyButton.disabled = settings.hotkeyIsDefault;
-  notesDir.value = settings.notesDir;
-  notesDir.title = settings.notesDir;
-  resetButton.disabled = settings.notesDirIsDefault;
-  modeInputs.forEach((input) => (input.checked = input.value === settings.mode));
-  autostart.checked = settings.autostart;
+const choice = (text: string) => `‹ ${text} ›`;
+
+const rows: Row[] = [
+  {
+    label: "Hotkey",
+    value: (s) => recording ?? s.hotkey,
+    edit: () => {
+      recording = "Press a key or combination…";
+      render();
+    },
+    reset: () => void run("reset_hotkey"),
+  },
+  {
+    label: "Notes folder",
+    value: (s) => s.notesDir,
+    edit: () => void run("pick_notes_dir"),
+    reset: () => void run("reset_notes_dir"),
+  },
+  {
+    label: "Notes file",
+    value: (s) => choice(s.mode === "daily" ? "One file per day" : "Single inbox"),
+    cycle: (s) => void run("set_mode", { mode: s.mode === "daily" ? "inbox" : "daily" }),
+    reset: () => void run("set_mode", { mode: "daily" }),
+  },
+  {
+    label: "Start with Windows",
+    value: (s) => choice(s.autostart ? "On" : "Off"),
+    cycle: (s) => void run("set_autostart", { enabled: !s.autostart }),
+    reset: () => void run("set_autostart", { enabled: false }),
+  },
+];
+
+function render() {
+  if (!settings) return;
+  rowsList.replaceChildren(
+    ...rows.map((row, i) => {
+      const li = document.createElement("li");
+      li.className = "row";
+      li.classList.toggle("selected", i === selected);
+      li.classList.toggle("recording", i === selected && recording !== null);
+
+      const cursor = document.createElement("span");
+      cursor.textContent = i === selected ? "❯" : "";
+      const label = document.createElement("span");
+      label.textContent = row.label;
+      const value = document.createElement("span");
+      value.className = "value";
+      value.textContent = row.value(settings!);
+      value.title = value.textContent;
+
+      li.append(cursor, label, value);
+      li.addEventListener("click", (e) => {
+        selected = i;
+        // Clicking the value acts on it, like Enter.
+        if (e.target === value) activate(row);
+        else render();
+      });
+      return li;
+    }),
+  );
+  help.textContent = recording !== null ? RECORDING_HELP : HELP;
 }
 
 /** Fits the window height to the page content. */
@@ -52,16 +116,27 @@ async function fitToContent() {
 async function run(command: string, args?: Record<string, unknown>) {
   error.hidden = true;
   try {
-    render(await invoke<Settings>(command, args));
+    settings = await invoke<Settings>(command, args);
   } catch (err) {
     error.textContent = String(err);
     error.hidden = false;
   }
+  render();
   // An error message changes the height.
   await fitToContent();
 }
 
-// Hotkey recording: focus the field and press any key or combination; clicking away cancels.
+function activate(row: Row) {
+  if (!settings) return;
+  if (row.edit) row.edit();
+  else row.cycle?.(settings, 1);
+}
+
+function stopRecording() {
+  recording = null;
+  render();
+}
+
 function modifiers(e: KeyboardEvent): string[] {
   const mods = [];
   if (e.ctrlKey) mods.push("Ctrl");
@@ -71,36 +146,58 @@ function modifiers(e: KeyboardEvent): string[] {
   return mods;
 }
 
-hotkey.addEventListener("focus", () => {
-  hotkey.classList.add("recording");
-  hotkey.value = "Press a key or combination…";
-});
-
-hotkey.addEventListener("blur", () => {
-  hotkey.classList.remove("recording");
-  hotkey.value = currentHotkey;
-});
-
-hotkey.addEventListener("keydown", (e) => {
-  e.preventDefault();
+/** Hotkey recording: the next key or combination becomes the hotkey; Esc cancels. */
+function recordKey(e: KeyboardEvent) {
   const mods = modifiers(e);
-  if (MODIFIER_CODES.has(e.code)) {
-    hotkey.value = [...mods.map((m) => (m === "Super" ? "Win" : m)), "…"].join("+");
+  if (e.code === "Escape" && mods.length === 0) {
+    stopRecording();
+  } else if (MODIFIER_CODES.has(e.code)) {
+    recording = [...mods.map((m) => (m === "Super" ? "Win" : m)), "…"].join("+");
+    render();
+  } else {
+    recording = null;
+    void run("set_hotkey", { hotkey: [...mods, e.code].join("+") });
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!settings) return;
+  e.preventDefault();
+  if (recording !== null) {
+    recordKey(e);
     return;
   }
-  hotkey.blur();
-  void run("set_hotkey", { hotkey: [...mods, e.code].join("+") });
+  const row = rows[selected];
+  switch (e.key) {
+    case "ArrowUp":
+      selected = (selected + rows.length - 1) % rows.length;
+      render();
+      break;
+    case "ArrowDown":
+      selected = (selected + 1) % rows.length;
+      render();
+      break;
+    case "ArrowLeft":
+    case "ArrowRight":
+      row.cycle?.(settings, e.key === "ArrowLeft" ? -1 : 1);
+      break;
+    case "Enter":
+    case " ":
+      activate(row);
+      break;
+    case "Delete":
+    case "Backspace":
+      row.reset?.();
+      break;
+    case "Escape":
+      void appWindow.close();
+      break;
+  }
 });
 
-resetHotkeyButton.addEventListener("click", () => void run("reset_hotkey"));
-pickButton.addEventListener("click", () => void run("pick_notes_dir"));
-resetButton.addEventListener("click", () => void run("reset_notes_dir"));
-modeInputs.forEach((input) =>
-  input.addEventListener("change", () => void run("set_mode", { mode: input.value })),
-);
-autostart.addEventListener("change", () =>
-  void run("set_autostart", { enabled: autostart.checked }),
-);
+// Clicking anywhere or leaving the window cancels hotkey recording.
+document.addEventListener("mousedown", () => recording !== null && stopRecording(), true);
+window.addEventListener("blur", () => recording !== null && stopRecording());
 
 // The window is created hidden: size it to the content first, then show it.
 void run("get_settings").then(async () => {

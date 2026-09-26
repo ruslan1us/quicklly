@@ -1,79 +1,72 @@
+/* Terminal-style settings, always dark, in the colours of the app icon. */
 :root {
-  color-scheme: light dark;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  --bg: #150b2b;
+  --fg: #ddd6f0;
+  --dim: #8a7fb0;
+  --accent: #b5a6e0;
+  --error: #ff8a9a;
+
+  color-scheme: dark;
+  font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 14px;
+  line-height: 1.6;
 }
 
 body {
   margin: 0;
-  background: Canvas;
-  color: CanvasText;
+  background: var(--bg);
+  color: var(--fg);
+  user-select: none;
+  cursor: default;
 }
 
 main {
-  padding: 16px 20px;
+  padding: 12px 18px 14px;
 }
 
-section + section {
-  margin-top: 20px;
+header {
+  margin-bottom: 10px;
+  color: var(--accent);
+  font-weight: 700;
 }
 
-h2 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  font-weight: 600;
+#rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .row {
-  display: flex;
-  gap: 8px;
-}
-
-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  font: inherit;
-}
-
-#hotkey {
+  display: grid;
+  grid-template-columns: 2ch 20ch minmax(0, 1fr);
   cursor: pointer;
 }
 
-#hotkey.recording {
-  cursor: text;
-  outline: 2px solid Highlight;
+.row .value {
+  overflow: hidden;
+  color: var(--dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-button {
-  padding: 6px 12px;
-  font: inherit;
+.row.selected {
+  color: var(--accent);
 }
 
-.check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.row.selected .value {
+  color: var(--fg);
 }
 
-.check input {
-  flex: none;
-  margin: 0;
-}
-
-.check + .check {
-  margin-top: 6px;
-}
-
-.check .hint {
-  margin: 0;
-}
-
-.hint {
-  margin: 6px 0 0;
-  opacity: 0.7;
+.row.recording .value {
+  color: var(--accent);
 }
 
 .error {
-  color: #d93025;
+  margin: 10px 0 0;
+  color: var(--error);
+}
+
+footer {
+  margin-top: 12px;
+  color: var(--dim);
 }

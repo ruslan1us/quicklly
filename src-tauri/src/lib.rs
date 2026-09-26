@@ -58,11 +58,13 @@ fn show_settings(app: &AppHandle) {
     )
     .title("Quicklly Settings")
     // The page sizes the window to its content and then shows it, so it never flickers.
-    .inner_size(560.0, 300.0)
+    .inner_size(640.0, 200.0)
     .visible(false)
+    // A frameless popup like the input window; it is dragged by its header.
+    .decorations(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
     .resizable(false)
-    .maximizable(false)
-    .minimizable(false)
     .build();
     if let Err(e) = result {
         eprintln!("Failed to open settings window: {e}");
