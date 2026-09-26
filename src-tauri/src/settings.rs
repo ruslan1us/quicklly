@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_store::StoreExt;
 
@@ -15,6 +16,7 @@ const NOTES_DIR_KEY: &str = "notesDir";
 pub struct SettingsView {
     notes_dir: String,
     notes_dir_is_default: bool,
+    autostart: bool,
 }
 
 fn default_notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
@@ -51,6 +53,7 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
     Ok(SettingsView {
         notes_dir: notes_dir.to_string_lossy().into_owned(),
         notes_dir_is_default: custom_notes_dir(app).is_none(),
+        autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
     })
 }
 
@@ -79,5 +82,18 @@ pub async fn pick_notes_dir(app: AppHandle) -> Result<SettingsView, String> {
 #[tauri::command]
 pub fn reset_notes_dir(app: AppHandle) -> Result<SettingsView, String> {
     set_custom_notes_dir(&app, None)?;
+    view(&app)
+}
+
+/// Turns launching at Windows sign-in on or off (a `Run` entry in the user registry).
+#[tauri::command]
+pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<SettingsView, String> {
+    let autolaunch = app.autolaunch();
+    let result = if enabled {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    result.map_err(|e| e.to_string())?;
     view(&app)
 }

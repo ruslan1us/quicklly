@@ -60,7 +60,7 @@ fn show_settings(app: &AppHandle) {
         WebviewUrl::App("settings.html".into()),
     )
     .title("Quicklly Settings")
-    .inner_size(560.0, 220.0)
+    .inner_size(560.0, 280.0)
     .resizable(false)
     .maximizable(false)
     .minimizable(false)
@@ -127,6 +127,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
@@ -167,6 +168,7 @@ pub fn run() {
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
+            settings::set_autostart,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
