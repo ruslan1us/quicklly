@@ -179,6 +179,8 @@ pub fn run() {
             settings::set_hotkey,
             settings::reset_hotkey,
             settings::set_autostart,
+            settings::get_theme,
+            settings::set_theme,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

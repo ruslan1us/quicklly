@@ -1,5 +1,4 @@
 :root {
-  color-scheme: light dark;
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 18px;
 }
@@ -14,7 +13,7 @@ body {
 body {
   position: relative;
   display: flex;
-  background: Canvas;
+  background: var(--bg);
 }
 
 /* The note fills the window; one row is 2 + 13 + 26 + 13 + 2 = 56px. */
@@ -27,11 +26,15 @@ body {
   border: 2px solid transparent;
   outline: none;
   background: transparent;
-  color: CanvasText;
+  color: var(--fg);
   font: inherit;
   line-height: 26px;
   resize: none;
   overflow-y: hidden;
+}
+
+#note::placeholder {
+  color: var(--dim);
 }
 
 /* Invisible copy of the note, used to measure the height the text needs. */
@@ -47,7 +50,7 @@ body {
 }
 
 #note.error {
-  border-color: #d93025;
+  border-color: var(--error);
 }
 
 .hint {
@@ -55,8 +58,8 @@ body {
   top: 28px;
   right: 16px;
   transform: translateY(-50%);
+  color: var(--dim);
   font-size: 13px;
-  opacity: 0.45;
   pointer-events: none;
 }
 

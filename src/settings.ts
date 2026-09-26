@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
+import { type Theme, applyTheme } from "./theme";
 
 interface Settings {
   notesDir: string;
@@ -7,6 +8,7 @@ interface Settings {
   mode: "daily" | "inbox";
   hotkey: string;
   hotkeyIsDefault: boolean;
+  theme: Theme;
   autostart: boolean;
 }
 
@@ -47,6 +49,13 @@ let recording: string | null = null;
 
 const choice = (text: string) => `‹ ${text} ›`;
 
+const THEMES: { theme: Theme; name: string }[] = [
+  { theme: "default", name: "Default" },
+  { theme: "defaultPlus", name: "Default+" },
+  { theme: "light", name: "Light" },
+];
+const themeIndex = (s: Settings) => THEMES.findIndex((t) => t.theme === s.theme);
+
 const rows: Row[] = [
   {
     label: "Hotkey",
@@ -70,6 +79,15 @@ const rows: Row[] = [
     reset: () => void run("set_mode", { mode: "daily" }),
   },
   {
+    label: "Theme",
+    value: (s) => choice(THEMES[themeIndex(s)]?.name ?? s.theme),
+    cycle: (s, step) => {
+      const next = THEMES[(themeIndex(s) + step + THEMES.length) % THEMES.length];
+      void run("set_theme", { theme: next.theme });
+    },
+    reset: () => void run("set_theme", { theme: "default" }),
+  },
+  {
     label: "Start with Windows",
     value: (s) => choice(s.autostart ? "On" : "Off"),
     cycle: (s) => void run("set_autostart", { enabled: !s.autostart }),
@@ -79,6 +97,7 @@ const rows: Row[] = [
 
 function render() {
   if (!settings) return;
+  applyTheme(settings.theme);
   rowsList.replaceChildren(
     ...rows.map((row, i) => {
       const li = document.createElement("li");

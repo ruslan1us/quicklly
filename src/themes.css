@@ -1,0 +1,35 @@
+/* Colour themes shared by all windows; the active one is set as <html data-theme="…">. */
+
+/* Default: neutral dark. */
+:root,
+:root[data-theme="default"] {
+  --bg: #121212;
+  --fg: #e6e6e6;
+  --dim: #8a8a8a;
+  --accent: #ffffff;
+  --caret: #d4d4d4;
+  --error: #ff7b7b;
+  color-scheme: dark;
+}
+
+/* Default+: dark purple, in the colours of the app icon. */
+:root[data-theme="defaultPlus"] {
+  --bg: #150b2b;
+  --fg: #ddd6f0;
+  --dim: #8a7fb0;
+  --accent: #b5a6e0;
+  --caret: #b5a6e0;
+  --error: #ff8a9a;
+  color-scheme: dark;
+}
+
+/* Light: light lavender. */
+:root[data-theme="light"] {
+  --bg: #f5f2fc;
+  --fg: #2a1257;
+  --dim: #8579a8;
+  --accent: #5b2a9e;
+  --caret: #5b2a9e;
+  --error: #c62839;
+  color-scheme: light;
+}

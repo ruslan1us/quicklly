@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
@@ -15,6 +15,20 @@ const STORE_FILE: &str = "settings.json";
 const NOTES_DIR_KEY: &str = "notesDir";
 const MODE_KEY: &str = "mode";
 const HOTKEY_KEY: &str = "hotkey";
+const THEME_KEY: &str = "theme";
+
+/// Colour theme of all windows.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Theme {
+    /// Neutral dark.
+    #[default]
+    Default,
+    /// Dark purple, in the colours of the app icon.
+    DefaultPlus,
+    /// Light lavender.
+    Light,
+}
 
 /// Settings as shown in the settings window.
 #[derive(Serialize)]
@@ -25,6 +39,7 @@ pub struct SettingsView {
     mode: Mode,
     hotkey: String,
     hotkey_is_default: bool,
+    theme: Theme,
     autostart: bool,
 }
 
@@ -105,6 +120,14 @@ fn change_hotkey(app: &AppHandle, new: Shortcut) -> Result<(), String> {
     store.save().map_err(|e| e.to_string())
 }
 
+fn theme(app: &AppHandle) -> Theme {
+    app.store(STORE_FILE)
+        .ok()
+        .and_then(|store| store.get(THEME_KEY))
+        .and_then(|theme| serde_json::from_value(theme).ok())
+        .unwrap_or_default()
+}
+
 fn view(app: &AppHandle) -> Result<SettingsView, String> {
     let notes_dir = notes_dir(app).map_err(|e| e.to_string())?;
     let hotkey = hotkey(app);
@@ -114,6 +137,7 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
         mode: mode(app),
         hotkey: hotkey::label(&hotkey),
         hotkey_is_default: hotkey == hotkey::default(),
+        theme: theme(app),
         autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
     })
 }
@@ -167,6 +191,25 @@ pub fn set_hotkey(app: AppHandle, hotkey: String) -> Result<SettingsView, String
 #[tauri::command]
 pub fn reset_hotkey(app: AppHandle) -> Result<SettingsView, String> {
     change_hotkey(&app, hotkey::default())?;
+    view(&app)
+}
+
+#[tauri::command]
+pub fn get_theme(app: AppHandle) -> Theme {
+    theme(&app)
+}
+
+/// Saves the theme and tells every window to switch to it.
+#[tauri::command]
+pub fn set_theme(app: AppHandle, theme: Theme) -> Result<SettingsView, String> {
+    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
+    store.set(
+        THEME_KEY,
+        serde_json::to_value(theme).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+    app.emit("theme-changed", theme)
+        .map_err(|e| e.to_string())?;
     view(&app)
 }
 

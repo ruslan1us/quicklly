@@ -97,6 +97,7 @@ keyboard-driven:
 | Hotkey             | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Any key or combination except <kbd>Esc</kbd> |
 | Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
 | Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
+| Theme              | Default                                     | Default (dark), Default+ (dark purple), Light |
 | Start with Windows | Off                                         | On, Off                                      |
 
 ## Building from source

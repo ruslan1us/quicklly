@@ -1,12 +1,5 @@
-/* Terminal-style settings, always dark, in the colours of the app icon. */
+/* Terminal-style settings; colours come from themes.css. */
 :root {
-  --bg: #150b2b;
-  --fg: #ddd6f0;
-  --dim: #8a7fb0;
-  --accent: #b5a6e0;
-  --error: #ff8a9a;
-
-  color-scheme: dark;
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 14px;
   line-height: 1.6;

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
+import { followTheme } from "./theme";
 
 const input = document.querySelector<HTMLTextAreaElement>("#note")!;
 const appWindow = getCurrentWindow();
@@ -120,3 +121,5 @@ input.addEventListener("input", () => {
 
 // The window is hidden rather than destroyed, so refocus the input on every show.
 window.addEventListener("focus", () => input.focus());
+
+void followTheme();
