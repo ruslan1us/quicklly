@@ -18,7 +18,7 @@ body {
 
 /* The note fills the window; one row is 2 + 13 + 26 + 13 + 2 = 56px. */
 #note,
-#measure {
+.mirror {
   flex: 1;
   box-sizing: border-box;
   margin: 0;
@@ -33,12 +33,17 @@ body {
   overflow-y: hidden;
 }
 
+#note {
+  /* The native caret is replaced by the block caret below. */
+  caret-color: transparent;
+}
+
 #note::placeholder {
   color: var(--dim);
 }
 
-/* Invisible copy of the note, used to measure the height the text needs. */
-#measure {
+/* Invisible copies of the note, used to measure the text height and the caret position. */
+.mirror {
   position: absolute;
   top: 0;
   left: 0;
@@ -51,6 +56,23 @@ body {
 
 #note.error {
   border-color: var(--error);
+}
+
+/* Selection in inverse video like a terminal, matching the caret. */
+#note::selection {
+  background: var(--caret);
+  color: var(--bg);
+}
+
+/* Terminal-style block caret: shows the character under it in the background colour. */
+#caret {
+  position: absolute;
+  height: 26px;
+  background: var(--caret);
+  color: var(--bg);
+  line-height: 26px;
+  white-space: pre;
+  pointer-events: none;
 }
 
 .hint {

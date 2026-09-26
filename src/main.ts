@@ -6,12 +6,16 @@ const input = document.querySelector<HTMLTextAreaElement>("#note")!;
 const appWindow = getCurrentWindow();
 
 const measure = document.querySelector<HTMLDivElement>("#measure")!;
+const caret = document.querySelector<HTMLDivElement>("#caret")!;
+const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
 
 /** The window grows with the note up to 10 lines, then the note scrolls. */
-const MAX_HEIGHT = 56 + 26 * 9;
+const LINE_HEIGHT = 26;
+const MAX_HEIGHT = 56 + LINE_HEIGHT * 9;
 let windowHeight = 0;
 let scrollable = false;
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
+const NBSP = String.fromCharCode(0xa0);
 
 /**
  * Resizes the window to fit the text; the note fills the window and follows it.
@@ -34,7 +38,39 @@ async function fit() {
 // Until the window has grown, a new line would scroll the note to the caret and back.
 input.addEventListener("scroll", () => {
   if (!scrollable) input.scrollTop = 0;
+  updateCaret();
 });
+
+/**
+ * Draws the terminal-style block caret over the character at the cursor, found by laying
+ * out the text before the cursor on an invisible copy of the note.
+ */
+function updateCaret() {
+  const { selectionStart, selectionEnd, value } = input;
+  // A selection is shown by its highlight instead.
+  if (document.activeElement !== input || selectionStart !== selectionEnd) {
+    caret.hidden = true;
+    return;
+  }
+  // Over an empty note the caret covers the first letter of the placeholder, like a terminal.
+  const under = value === "" ? input.placeholder[0] : value[selectionStart];
+  const marker = document.createElement("span");
+  marker.textContent = under && under !== "\n" ? under : NBSP;
+  caretMeasure.replaceChildren(value.slice(0, selectionStart), marker);
+
+  const rect = marker.getBoundingClientRect();
+  caret.textContent = marker.textContent;
+  caret.style.left = `${rect.left}px`;
+  // The marker box is the glyph height; centre the caret on the 26px line instead.
+  const lineTop = rect.top - (LINE_HEIGHT - rect.height) / 2;
+  caret.style.top = `${lineTop - input.scrollTop}px`;
+  caret.style.width = `${rect.width}px`;
+  caret.hidden = false;
+}
+
+document.addEventListener("selectionchange", updateCaret);
+input.addEventListener("focus", updateCaret);
+input.addEventListener("blur", updateCaret);
 
 /** Notes saved while the app runs, oldest first; browsed with ↑/↓ like a shell history. */
 const history: string[] = [];
@@ -116,6 +152,7 @@ input.addEventListener("keydown", (e) => {
 
 input.addEventListener("input", () => {
   clearError();
+  updateCaret();
   void fit();
 });
 
