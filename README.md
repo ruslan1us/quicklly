@@ -15,7 +15,7 @@ back in whatever you were doing.
 
 | Action                         | How                                         |
 | ------------------------------ | ------------------------------------------- |
-| Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>, or click the tray icon |
+| Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon |
 | Save the note                  | <kbd>Enter</kbd>                            |
 | Cancel                         | <kbd>Esc</kbd>                              |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |

@@ -1,19 +1,15 @@
+mod hotkey;
 mod notes;
 mod settings;
 
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 
 const MAIN_WINDOW: &str = "main";
 const SETTINGS_WINDOW: &str = "settings";
-
-/// Global hotkey that brings up the input window: Ctrl+Alt+N.
-fn new_note_shortcut() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyN)
-}
 
 /// Appends `text` to today's note file in the notes folder.
 #[tauri::command]
@@ -132,8 +128,9 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, shortcut, event| {
-                    if event.state() == ShortcutState::Pressed && *shortcut == new_note_shortcut() {
+                // The only registered shortcut is the new-note hotkey.
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
                         show_input(app);
                     }
                 })
@@ -141,10 +138,7 @@ pub fn run() {
         )
         .setup(|app| {
             setup_tray(app)?;
-            // A taken hotkey must not stop the app: the tray still works without it.
-            if let Err(e) = app.global_shortcut().register(new_note_shortcut()) {
-                eprintln!("Failed to register global hotkey Ctrl+Alt+N: {e}");
-            }
+            settings::register_hotkey(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -171,6 +165,8 @@ pub fn run() {
             settings::pick_notes_dir,
             settings::reset_notes_dir,
             settings::set_mode,
+            settings::set_hotkey,
+            settings::reset_hotkey,
             settings::set_autostart,
         ])
         .run(tauri::generate_context!())

@@ -36,6 +36,15 @@ input {
   font: inherit;
 }
 
+#hotkey {
+  cursor: pointer;
+}
+
+#hotkey.recording {
+  cursor: text;
+  outline: 2px solid Highlight;
+}
+
 button {
   padding: 6px 12px;
   font: inherit;
