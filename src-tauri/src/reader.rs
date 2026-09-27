@@ -6,7 +6,7 @@ use std::path::Path;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::notes::INBOX_FILE;
+use crate::notes::{note_lines, INBOX_FILE};
 
 /// A notes file as listed in the reader.
 #[derive(Debug, PartialEq, Serialize)]
@@ -174,6 +174,23 @@ pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<()> {
     })
 }
 
+/// Replaces the text of a note, keeping its time and done mark. Extra lines are indented
+/// under the first one, like new notes; a blank text is refused (Del deletes a note).
+pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Result<()> {
+    let new_lines = note_lines(text);
+    let Some((first, rest)) = new_lines.split_first() else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "a note can't be empty",
+        ));
+    };
+    edit_note(dir, name, note, |lines, span| {
+        let first = note_line(note.done, &note.time, first);
+        let rest = rest.iter().map(|line| format!("  {line}"));
+        lines.splice(span, std::iter::once(first).chain(rest));
+    })
+}
+
 fn note_line(done: bool, time: &str, text: &str) -> String {
     let checkbox = if done { "[x] " } else { "" };
     if text.is_empty() {
@@ -298,6 +315,24 @@ mod tests {
             fs::read_to_string(&path).unwrap(),
             "# Inbox\n\n## 2026-09-26\n\n- 15:00 three\n"
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn edits_text_keeping_time_and_done_mark() {
+        let dir = temp_dir("edit");
+        let path = dir.join("2026-09-26.md");
+        fs::write(&path, "# 2026-09-26\n\n- [x] 14:32 one\n- 15:00 two\n").unwrap();
+
+        let note = note_ref(2, "14:32", true, "one");
+        set_text(&dir, "2026-09-26.md", &note, " first \n\n second\n").unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# 2026-09-26\n\n- [x] 14:32 first\n  second\n- 15:00 two\n"
+        );
+
+        let note = note_ref(2, "14:32", true, "first\nsecond");
+        assert!(set_text(&dir, "2026-09-26.md", &note, " \n ").is_err());
         fs::remove_dir_all(&dir).unwrap();
     }
 

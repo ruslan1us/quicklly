@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { blockCaret } from "./blockCaret";
 import { appWindow, fitToContent, reveal } from "./popup";
 import { followTheme } from "./theme";
 
@@ -31,6 +32,22 @@ let items: Item[] = [];
 let selectedItem = -1;
 /** Set after the first Del: a second Del deletes the selected note, anything else cancels. */
 let confirmingDelete = false;
+/** While true, the selected note is shown in `editor` for editing. */
+let editing = false;
+
+/** Inline editor for a note, with the same block caret as the note input. */
+const editorBox = document.createElement("div");
+editorBox.className = "editor";
+const editor = document.createElement("textarea");
+editor.rows = 1;
+editor.spellcheck = false;
+const editorCaret = document.createElement("div");
+editorCaret.className = "caret";
+const editorMirror = document.createElement("div");
+editorMirror.className = "mirror";
+editorMirror.setAttribute("aria-hidden", "true");
+editorBox.append(editor, editorCaret, editorMirror);
+const updateEditorCaret = blockCaret(editor, editorCaret, editorMirror);
 
 const dateOf = (name: string) => name.replace(/\.md$/, "");
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -122,24 +139,28 @@ function renderNotes() {
   const done = items.filter((item) => item.kind === "note" && item.done).length;
   const title = openFile === "inbox.md" ? openFile : dateOf(openFile);
   header.textContent = `Quicklly · ${title} · ${counts(count, done)}`;
-  help.textContent = confirmingDelete
-    ? "Del again to delete · any other key cancels"
-    : "↑↓ select · Space done · Del delete · ← back · Esc close";
+  help.textContent = editing
+    ? "Enter save · Shift+Enter new line · Esc cancel"
+    : confirmingDelete
+      ? "Del again to delete · any other key cancels"
+      : "↑↓ select · Space done · Enter edit · Del delete · ← back · Esc close";
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
     ...items.map((item, i) => {
       if (item.kind === "day") return row("row day", ["", `── ${item.date}`], false);
+      const text = editing && i === selectedItem ? editorBox : item.text;
       const li = row(
         "row note",
-        [i === selectedItem ? "❯" : "", item.time, item.done ? "✓" : "", item.text],
+        [i === selectedItem ? "❯" : "", item.time, item.done ? "✓" : "", text],
         i === selectedItem,
         () => {
+          if (editing) return;
           selectedItem = i;
           render();
         },
       );
-      li.classList.toggle("done", item.done);
+      li.classList.toggle("done", item.done && !(editing && i === selectedItem));
       li.classList.toggle("deleting", confirmingDelete && i === selectedItem);
       return li;
     }),
@@ -230,6 +251,45 @@ async function deleteNote() {
   }
 }
 
+/** Grows the editor with its text, and the window with it. */
+function fitEditor() {
+  editor.style.height = "0";
+  editor.style.height = `${editor.scrollHeight}px`;
+  updateEditorCaret();
+  void fitToContent(MAX_HEIGHT);
+}
+
+function startEdit() {
+  const note = items[selectedItem];
+  if (note?.kind !== "note") return;
+  editing = true;
+  editor.value = note.text;
+  render();
+  editor.focus();
+  editor.setSelectionRange(editor.value.length, editor.value.length);
+  fitEditor();
+}
+
+function cancelEdit() {
+  editing = false;
+  render();
+  void fitToContent(MAX_HEIGHT);
+}
+
+/** Saves the edited text; a blank or unchanged text just ends the edit (Del deletes a note). */
+async function saveEdit() {
+  const note = items[selectedItem];
+  const text = editor.value;
+  if (note?.kind !== "note" || text.trim() === "" || text === note.text) {
+    cancelEdit();
+    return;
+  }
+  editing = false;
+  await changeNote("edit_note", { text });
+}
+
+editor.addEventListener("input", fitEditor);
+
 function cancelDelete() {
   confirmingDelete = false;
   render();
@@ -246,6 +306,21 @@ function moveNote(step: number) {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (editing) {
+    if (e.isComposing) return;
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void saveEdit();
+    } else if (
+      e.key === "Escape" ||
+      (e.ctrlKey && e.code === "KeyC" && editor.selectionStart === editor.selectionEnd)
+    ) {
+      e.preventDefault();
+      cancelEdit();
+    }
+    // Anything else types into the editor.
+    return;
+  }
   e.preventDefault();
   // Esc or Ctrl+C (by physical key, so any keyboard layout works) closes like in a terminal.
   if (e.key === "Escape" || (e.ctrlKey && e.code === "KeyC")) {
@@ -275,6 +350,8 @@ document.addEventListener("keydown", (e) => {
   } else if (e.key === " ") {
     const note = items[selectedItem];
     if (note?.kind === "note") void changeNote("set_note_done", { done: !note.done });
+  } else if (e.key === "Enter") {
+    startEdit();
   } else if (e.key === "Delete" && items[selectedItem]?.kind === "note") {
     confirmingDelete = true;
     render();
@@ -287,8 +364,8 @@ document.addEventListener("mousedown", () => confirmingDelete && cancelDelete(),
 // Double-click opens a file, like Enter.
 rowsList.addEventListener("dblclick", () => view === "files" && openSelectedFile());
 
-// Notes may have changed since the reader was last shown.
-window.addEventListener("focus", () => void refresh());
+// Notes may have changed since the reader was last shown (but don't lose an edit in progress).
+window.addEventListener("focus", () => !editing && void refresh());
 
 // Shown only once themed and filled in, so it never flickers.
 void Promise.all([followTheme(), refresh()]).then(reveal);

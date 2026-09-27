@@ -19,6 +19,14 @@ pub enum Mode {
     Inbox,
 }
 
+/// The lines of a note as they are stored: trimmed, without blank lines.
+pub fn note_lines(text: &str) -> Vec<&str> {
+    text.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect()
+}
+
 /// Appends a note as `- HH:MM text` to the notes file in `dir` chosen by `mode`.
 ///
 /// The file (and `dir`) are created on first write. A daily file starts with a
@@ -33,12 +41,7 @@ pub fn append_note(
     now: NaiveDateTime,
     text: &str,
 ) -> io::Result<Option<PathBuf>> {
-    let text = text
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n  ");
+    let text = note_lines(text).join("\n  ");
     if text.is_empty() {
         return Ok(None);
     }
