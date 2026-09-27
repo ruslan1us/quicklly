@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
@@ -9,6 +10,7 @@ use tauri::{
 };
 use tauri_plugin_store::StoreExt;
 
+use crate::reader::NoteRef;
 use crate::settings::{self, PadPosition, STORE_FILE};
 
 /// The Pad: a bigger editor for longer notes.
@@ -220,4 +222,33 @@ pub async fn expand_to_pad(app: AppHandle, text: String) -> Result<(), String> {
     }
     show(&app);
     Ok(())
+}
+
+/// A note from the reader to edit in the Pad (Shift+Enter).
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PadEdit {
+    name: String,
+    note: NoteRef,
+}
+
+/// The note the Pad should edit next; taken by the Pad once it is ready.
+#[derive(Default)]
+pub struct PendingEdit(Mutex<Option<PadEdit>>);
+
+/// Opens a note from the reader in the Pad, to edit it there.
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+pub async fn edit_in_pad(app: AppHandle, name: String, note: NoteRef) {
+    *app.state::<PendingEdit>().0.lock().unwrap() = Some(PadEdit { name, note });
+    if app.get_webview_window(PAD_WINDOW).is_some() {
+        let _ = app.emit_to(PAD_WINDOW, "pad-edit", ());
+    }
+    show(&app);
+}
+
+/// Hands the note to edit, if any, to the Pad.
+#[tauri::command]
+pub fn take_pad_edit(app: AppHandle) -> Option<PadEdit> {
+    app.state::<PendingEdit>().0.lock().unwrap().take()
 }

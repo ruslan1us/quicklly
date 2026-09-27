@@ -223,7 +223,7 @@ pub fn parse(content: &str) -> Vec<Item> {
 }
 
 /// A note as the reader last saw it, so a change is only made to that exact note.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoteRef {
     pub line: usize,
     pub time: String,

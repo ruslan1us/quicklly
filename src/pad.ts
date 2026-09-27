@@ -11,6 +11,14 @@ const backdrop = document.querySelector<HTMLDivElement>("#backdrop")!;
 const status = document.querySelector<HTMLSpanElement>("#status")!;
 const pin = document.querySelector<HTMLSpanElement>("#pin")!;
 const help = document.querySelector<HTMLSpanElement>("#help")!;
+const title = document.querySelector<HTMLSpanElement>("#title")!;
+
+/** A note from the reader (Shift+Enter there), edited here in place of the draft. */
+interface PadEdit {
+  name: string;
+  note: { line: number; time: string; done: boolean; text: string };
+}
+let editing: PadEdit | null = null;
 
 /** A pinned Pad stays open over other windows; an unpinned one hides like the input window. */
 let pinned = false;
@@ -154,6 +162,11 @@ function showError(err: unknown) {
 }
 
 function renderHelp() {
+  title.textContent = editing ? `Quicklly · Pad · editing ${editing.note.time}` : "Quicklly · Pad";
+  if (editing) {
+    help.textContent = "Ctrl+Enter save · Esc cancel";
+    return;
+  }
   const first = text.value === "" ? "← quick line" : "Ctrl+Enter save";
   help.textContent = `${first} · Ctrl+P pin · Esc close`;
 }
@@ -235,8 +248,43 @@ async function saveDraft() {
 }
 
 async function hide() {
+  // Leaving an edit cancels it; the draft is kept either way.
+  if (editing) await stopEditing();
   await saveDraft();
   await appWindow.hide();
+}
+
+/** Puts the draft aside to edit the note the reader asked for, if there is one. */
+async function startEditing() {
+  const edit = await invoke<PadEdit | null>("take_pad_edit");
+  if (!edit) return;
+  if (!editing) await saveDraft();
+  editing = edit;
+  text.value = edit.note.text;
+  text.setSelectionRange(text.value.length, text.value.length);
+  refresh();
+}
+
+/** Ends an edit and brings the draft back. */
+async function stopEditing() {
+  editing = null;
+  text.value = await invoke<string>("get_pad_draft");
+  text.setSelectionRange(text.value.length, text.value.length);
+  refresh();
+}
+
+/** Saves the edited note in its file, where the reader shows it. */
+async function saveEdit(edit: PadEdit) {
+  if (!text.value.trim()) return;
+  try {
+    await invoke("edit_note", { name: edit.name, note: edit.note, text: text.value });
+  } catch (err) {
+    showError(err);
+    return;
+  }
+  await stopEditing();
+  if (pinned) flashSaved();
+  else await hide();
 }
 
 /**
@@ -244,6 +292,10 @@ async function hide() {
  * which then hides unless it is pinned.
  */
 async function saveNote() {
+  if (editing) {
+    await saveEdit(editing);
+    return;
+  }
   if (!text.value.trim()) return;
   try {
     await invoke("save_note", { text: text.value });
@@ -272,7 +324,7 @@ text.addEventListener("keydown", (e) => {
   } else if (e.key === "Tab" && !e.ctrlKey && !e.altKey) {
     e.preventDefault();
     indent(e.shiftKey);
-  } else if (e.key === "ArrowLeft" && text.value === "" && plain) {
+  } else if (e.key === "ArrowLeft" && text.value === "" && plain && !editing) {
     // ← in an empty Pad goes back to the input window, the way → came here.
     e.preventDefault();
     void invoke("open_input").then(() => (pinned ? undefined : hide()));
@@ -291,7 +343,7 @@ text.addEventListener("keydown", (e) => {
 
 text.addEventListener("input", () => {
   refresh();
-  saveDraftSoon();
+  if (!editing) saveDraftSoon();
 });
 text.addEventListener("scroll", () => {
   syncScroll();
@@ -302,8 +354,12 @@ document.addEventListener("selectionchange", () => {
   markCurrentLine();
 });
 
-// Text moved here from the input window with Ctrl+E.
+// A note to edit, sent while the Pad is already open.
+void listen("pad-edit", () => void startEditing());
+
+// Text moved here from the input window with Ctrl+E (it shows once an edit is over).
 void listen("pad-draft-changed", async () => {
+  if (editing) return;
   text.value = await invoke<string>("get_pad_draft");
   text.setSelectionRange(text.value.length, text.value.length);
   refresh();
@@ -328,6 +384,7 @@ void Promise.all([
   renderPin();
   text.value = draft;
   text.setSelectionRange(draft.length, draft.length);
+  await startEditing();
   await appWindow.show();
   await appWindow.setFocus();
   text.focus();

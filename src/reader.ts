@@ -146,7 +146,7 @@ function renderNotes() {
     ? "Enter save · Shift+Enter new line · Esc cancel"
     : confirmingDelete
       ? "Del again to delete · any other key cancels"
-      : "↑↓ select · Space done · Enter edit · Del delete · ← back · Esc close";
+      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · Del delete · ← back · Esc close";
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
@@ -379,6 +379,10 @@ document.addEventListener("keydown", (e) => {
   } else if (e.key === " ") {
     const note = items[selectedItem];
     if (note?.kind === "note") void changeNote("set_note_done", { done: !note.done });
+  } else if (e.key === "Enter" && e.shiftKey) {
+    // Shift+Enter edits the note in the Pad, with room for a longer text.
+    const note = items[selectedItem];
+    if (note?.kind === "note") void invoke("edit_in_pad", { name: openFile, note });
   } else if (e.key === "Enter") {
     startEdit();
   } else if (e.key === "Delete" && items[selectedItem]?.kind === "note") {

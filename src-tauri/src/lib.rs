@@ -261,6 +261,7 @@ pub fn run() {
         .manage(PendingReaderTarget::default())
         .manage(updater::AvailableUpdate::default())
         .manage(pad::Pinned::default())
+        .manage(pad::PendingEdit::default())
         .setup(|app| {
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
@@ -313,6 +314,8 @@ pub fn run() {
             pad::get_pad_pinned,
             pad::set_pad_pinned,
             pad::expand_to_pad,
+            pad::edit_in_pad,
+            pad::take_pad_edit,
             settings::set_hotkey_target,
             settings::set_pad_position,
             updater::install_update,

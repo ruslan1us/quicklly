@@ -100,6 +100,7 @@ entry):
 | ------------------------------------ | ---------------------- | ---------------------------------- |
 | <kbd>↑</kbd> <kbd>↓</kbd>            | Select a file          | Select a note                      |
 | <kbd>Enter</kbd>                     | Open the file          | Edit the note                      |
+| <kbd>Shift</kbd>+<kbd>Enter</kbd>    |                        | Edit the note in the Pad           |
 | <kbd>Space</kbd>                     |                        | Mark as done / not done            |
 | <kbd>Del</kbd>                       |                        | Delete (press <kbd>Del</kbd> twice) |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
