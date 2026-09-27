@@ -27,11 +27,34 @@ pub fn note_lines(text: &str) -> Vec<&str> {
         .collect()
 }
 
-/// Appends a note as `- HH:MM text` to the notes file in `dir` chosen by `mode`.
+/// The first `#tag` in `text`, lowercased: a `#` at the start of a word, then a letter, then
+/// letters, digits, `_` or `-`. So `#1`, `#2026-09-26` and `C#` are not tags.
+pub fn first_tag(text: &str) -> Option<String> {
+    let mut previous = ' ';
+    let mut chars = text.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        let starts_tag = c == '#'
+            && previous.is_whitespace()
+            && chars.peek().is_some_and(|&(_, next)| next.is_alphabetic());
+        previous = c;
+        if !starts_tag {
+            continue;
+        }
+        let tag: String = text[i + 1..]
+            .chars()
+            .take_while(|&c| c.is_alphanumeric() || c == '_' || c == '-')
+            .collect();
+        return Some(tag.to_lowercase());
+    }
+    None
+}
+
+/// Appends a note as `- HH:MM text` to its notes file in `dir`: the file of its first
+/// `#tag` (`tag.md`), otherwise the daily file or the inbox, depending on `mode`.
 ///
 /// The file (and `dir`) are created on first write. A daily file starts with a
-/// `# YYYY-MM-DD` heading; the inbox starts with `# Inbox` and gets a `## YYYY-MM-DD`
-/// heading whenever the first note of a new day is added.
+/// `# YYYY-MM-DD` heading; the inbox and tag files start with `# Inbox` / `# tag` and get a
+/// `## YYYY-MM-DD` heading whenever the first note of a new day is added.
 /// A multi-line note stays one list item: further lines are indented under the first one,
 /// and blank lines are dropped.
 /// Returns the path of the file written to, or `None` if the note is blank.
@@ -48,9 +71,11 @@ pub fn append_note(
 
     fs::create_dir_all(dir)?;
     let date = now.format("%Y-%m-%d").to_string();
-    let path = match mode {
-        Mode::Daily => dir.join(format!("{date}.md")),
-        Mode::Inbox => dir.join(INBOX_FILE),
+    // A grouped file has a title and a heading per day; a daily file needs neither.
+    let (path, grouped_title) = match (first_tag(&text), mode) {
+        (Some(tag), _) => (dir.join(format!("{tag}.md")), Some(tag)),
+        (None, Mode::Inbox) => (dir.join(INBOX_FILE), Some("Inbox".to_string())),
+        (None, Mode::Daily) => (dir.join(format!("{date}.md")), None),
     };
     let existing = match fs::read_to_string(&path) {
         Ok(content) => content,
@@ -63,15 +88,15 @@ pub fn append_note(
     if !existing.is_empty() && !existing.ends_with('\n') {
         entry.push('\n');
     }
-    match mode {
-        Mode::Daily => {
+    match grouped_title {
+        None => {
             if existing.is_empty() {
                 entry.push_str(&format!("# {date}\n\n"));
             }
         }
-        Mode::Inbox => {
+        Some(title) => {
             if existing.is_empty() {
-                entry.push_str("# Inbox\n\n");
+                entry.push_str(&format!("# {title}\n\n"));
             }
             let heading = format!("## {date}");
             // Notes are appended, so the last day heading in the file is the current one.
@@ -142,6 +167,39 @@ mod tests {
              ## 2026-09-26\n\n- 14:32 first\n- 15:05 second\n\n\
              ## 2026-09-27\n\n- 09:00 next day\n"
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn finds_the_first_tag() {
+        assert_eq!(first_tag("buy milk #Todo #work"), Some("todo".into()));
+        assert_eq!(first_tag("#идея: трекер кофе"), Some("идея".into()));
+        assert_eq!(first_tag("line one\n  #work-2 next"), Some("work-2".into()));
+        assert_eq!(first_tag("learning C# and #1 of #2026-09-26"), None);
+        assert_eq!(first_tag("a#b and # alone"), None);
+    }
+
+    #[test]
+    fn tagged_notes_go_to_the_tag_file_grouped_by_day() {
+        let dir = temp_dir("tag");
+        append_note(&dir, Mode::Daily, at(26, 9, 0), "untagged").unwrap();
+        append_note(&dir, Mode::Daily, at(26, 10, 0), "buy milk #Todo #work").unwrap();
+        let path = append_note(&dir, Mode::Inbox, at(27, 11, 0), "call the bank #todo")
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(path, dir.join("todo.md"));
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n\
+             ## 2026-09-26\n\n- 10:00 buy milk #Todo #work\n\n\
+             ## 2026-09-27\n\n- 11:00 call the bank #todo\n"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("2026-09-26.md")).unwrap(),
+            "# 2026-09-26\n\n- 09:00 untagged\n"
+        );
+        assert!(!dir.join("work.md").exists());
         fs::remove_dir_all(&dir).unwrap();
     }
 

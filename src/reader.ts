@@ -50,7 +50,9 @@ editorMirror.setAttribute("aria-hidden", "true");
 editorBox.append(editor, editorCaret, editorMirror);
 const updateEditorCaret = blockCaret(editor, editorCaret, editorMirror);
 
-const dateOf = (name: string) => name.replace(/\.md$/, "");
+/** Daily files are shown by their date, other files by their name. */
+const displayName = (name: string) =>
+  /^\d{4}-\d{2}-\d{2}\.md$/.test(name) ? name.slice(0, -".md".length) : name;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /** "12 notes · 3 done", or just "12 notes" when none are done. */
 const counts = (notes: number, done: number) =>
@@ -114,7 +116,7 @@ function renderFiles() {
         "row file",
         [
           i === selectedFile ? "❯" : "",
-          span(file.name === "inbox.md" ? file.name : dateOf(file.name), "name"),
+          span(displayName(file.name), "name"),
           file.name === today ? "today" : "",
           file.notes > 0 ? progressBar(file.notes, file.done) : "",
           span(
@@ -138,7 +140,7 @@ function renderFiles() {
 function renderNotes() {
   const count = noteIndexes().length;
   const done = items.filter((item) => item.kind === "note" && item.done).length;
-  const title = openFile === "inbox.md" ? openFile : dateOf(openFile);
+  const title = displayName(openFile);
   header.textContent = `Quicklly · ${title} · ${counts(count, done)}`;
   help.textContent = editing
     ? "Enter save · Shift+Enter new line · Esc cancel"

@@ -79,12 +79,17 @@ grouped by day:
 - 09:05 book a dentist appointment
 ```
 
+A note with a `#tag` goes to the file of that tag instead: `buy milk #todo` is appended to
+`todo.md`, grouped by day like the inbox. The tag stays in the note; with several tags, the
+first one decides. A tag starts with a letter, so `#1` or `C#` are not tags.
+
 The notes folder can be changed in the settings as well.
 
 ## Reader
 
 Press <kbd>←</kbd> in an empty input window to browse your notes. The first screen lists the
-notes files, newest first, each with a progress bar of done notes; a file where every note is
+notes files (the inbox, tag files and any other Markdown files in the folder, then the days,
+newest first), each with a progress bar of done notes; a file where every note is
 done is crossed off. Open one to go through its notes one by one (a multi-line note is one
 entry):
 

@@ -33,8 +33,8 @@ pub enum Item {
     },
 }
 
-/// Lists the notes files in `dir`: `inbox.md` first, then daily files, newest first.
-/// Other files in the folder are ignored. A missing folder just has no notes yet.
+/// Lists the Markdown files in `dir`: `inbox.md` first, then tag files and any other `.md`
+/// files by name, then daily files, newest first. A missing folder just has no notes yet.
 pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
@@ -51,11 +51,20 @@ pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
         let (notes, done) = count_notes(&fs::read_to_string(entry.path())?);
         files.push(NoteFile { name, notes, done });
     }
-    // Daily names are ISO dates, so reverse name order is newest first.
+    let group = |name: &str| match name {
+        INBOX_FILE => 0,
+        _ if daily_date(name).is_none() => 1,
+        _ => 2,
+    };
     files.sort_by(|a, b| {
-        (b.name == INBOX_FILE)
-            .cmp(&(a.name == INBOX_FILE))
-            .then_with(|| b.name.cmp(&a.name))
+        group(&a.name).cmp(&group(&b.name)).then_with(|| {
+            // Daily names are ISO dates, so reverse name order is newest first.
+            if group(&a.name) == 2 {
+                b.name.cmp(&a.name)
+            } else {
+                a.name.cmp(&b.name)
+            }
+        })
     });
     Ok(files)
 }
@@ -82,11 +91,8 @@ pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
     }
     let mut hits = Vec::new();
     for file in list_files(dir)? {
-        let mut day = file
-            .name
-            .strip_suffix(".md")
-            .unwrap_or_default()
-            .to_string();
+        // Notes in other files take their day from the `## YYYY-MM-DD` heading above them.
+        let mut day = daily_date(&file.name).unwrap_or_default().to_string();
         for item in parse(&fs::read_to_string(dir.join(&file.name))?) {
             match item {
                 Item::Day { date } => day = date,
@@ -123,12 +129,18 @@ pub fn read_file(dir: &Path, name: &str) -> io::Result<Vec<Item>> {
     Ok(parse(&fs::read_to_string(dir.join(name))?))
 }
 
-/// `inbox.md` or a daily `YYYY-MM-DD.md`.
+/// Any Markdown file directly in the notes folder: a plain `name.md`, no paths.
 fn is_notes_file(name: &str) -> bool {
-    name == INBOX_FILE
-        || name
-            .strip_suffix(".md")
-            .is_some_and(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok())
+    name.len() > ".md".len()
+        && name.ends_with(".md")
+        && Path::new(name).file_name().and_then(|n| n.to_str()) == Some(name)
+        && !name.starts_with('.')
+}
+
+/// The date of a daily file name `YYYY-MM-DD.md`.
+fn daily_date(name: &str) -> Option<&str> {
+    name.strip_suffix(".md")
+        .filter(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok())
 }
 
 /// Splits `- HH:MM text` or `- [x] HH:MM text` into (done, time, text).
@@ -503,10 +515,8 @@ mod tests {
     }
 
     #[test]
-    fn lists_notes_files_inbox_first_then_newest() {
-        let dir = std::env::temp_dir().join(format!("quicklly-test-list-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
+    fn lists_inbox_then_tag_files_then_days_newest_first() {
+        let dir = temp_dir("list");
         fs::write(dir.join("2026-09-25.md"), "# 2026-09-25\n\n- 09:00 a\n").unwrap();
         fs::write(
             dir.join("2026-09-26.md"),
@@ -514,7 +524,13 @@ mod tests {
         )
         .unwrap();
         fs::write(dir.join("inbox.md"), "# Inbox\n").unwrap();
-        fs::write(dir.join("todo.md"), "- 12:00 not a notes file\n").unwrap();
+        fs::write(
+            dir.join("todo.md"),
+            "# todo\n\n## 2026-09-26\n\n- 12:00 d #todo\n",
+        )
+        .unwrap();
+        fs::write(dir.join("ideas.md"), "# ideas\n").unwrap();
+        fs::write(dir.join("notes.txt"), "- 12:00 not Markdown\n").unwrap();
 
         let names = |files: Vec<NoteFile>| {
             files
@@ -526,13 +542,18 @@ mod tests {
             names(list_files(&dir).unwrap()),
             [
                 ("inbox.md".to_string(), 0, 0),
+                ("ideas.md".to_string(), 0, 0),
+                ("todo.md".to_string(), 1, 0),
                 ("2026-09-26.md".to_string(), 2, 1),
                 ("2026-09-25.md".to_string(), 1, 0),
             ]
         );
         assert!(list_files(&dir.join("missing")).unwrap().is_empty());
-        assert!(read_file(&dir, "todo.md").is_err());
+        assert!(read_file(&dir, "todo.md").is_ok());
+        assert!(read_file(&dir, "notes.txt").is_err());
         assert!(read_file(&dir, "../2026-09-26.md").is_err());
+        assert!(read_file(&dir, "..\\2026-09-26.md").is_err());
+        assert_eq!(search(&dir, "#todo", 10).unwrap()[0].day, "2026-09-26");
         fs::remove_dir_all(&dir).unwrap();
     }
 }

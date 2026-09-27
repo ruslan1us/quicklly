@@ -5,6 +5,12 @@
   grid-template-columns: 2ch 15ch 7ch 10ch minmax(0, 1fr);
 }
 
+.file .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file .bar {
   color: var(--dim);
 }
