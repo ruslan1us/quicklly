@@ -167,6 +167,13 @@ pub fn set_done(dir: &Path, name: &str, note: &NoteRef, done: bool) -> io::Resul
     })
 }
 
+/// Removes a note, including its extra lines, from a notes file.
+pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<()> {
+    edit_note(dir, name, note, |lines, span| {
+        lines.drain(span);
+    })
+}
+
 fn note_line(done: bool, time: &str, text: &str) -> String {
     let checkbox = if done { "[x] " } else { "" };
     if text.is_empty() {
@@ -272,6 +279,24 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
             "# 2026-09-26\r\n\r\n- 14:32 one\r\n  two\r\n- 15:00 three\r\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn deletes_a_multi_line_note() {
+        let dir = temp_dir("delete");
+        let path = dir.join("inbox.md");
+        fs::write(
+            &path,
+            "# Inbox\n\n## 2026-09-26\n\n- 14:32 one\n  two\n- 15:00 three\n",
+        )
+        .unwrap();
+
+        delete(&dir, "inbox.md", &note_ref(4, "14:32", false, "one\ntwo")).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# Inbox\n\n## 2026-09-26\n\n- 15:00 three\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

@@ -29,6 +29,8 @@ let openFile = "";
 let items: Item[] = [];
 /** Index into `items` of the selected note (day headings are skipped). */
 let selectedItem = -1;
+/** Set after the first Del: a second Del deletes the selected note, anything else cancels. */
+let confirmingDelete = false;
 
 const dateOf = (name: string) => name.replace(/\.md$/, "");
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -120,7 +122,9 @@ function renderNotes() {
   const done = items.filter((item) => item.kind === "note" && item.done).length;
   const title = openFile === "inbox.md" ? openFile : dateOf(openFile);
   header.textContent = `Quicklly · ${title} · ${counts(count, done)}`;
-  help.textContent = "↑↓ select · Space done · ← back · Esc close";
+  help.textContent = confirmingDelete
+    ? "Del again to delete · any other key cancels"
+    : "↑↓ select · Space done · Del delete · ← back · Esc close";
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
@@ -136,6 +140,7 @@ function renderNotes() {
         },
       );
       li.classList.toggle("done", item.done);
+      li.classList.toggle("deleting", confirmingDelete && i === selectedItem);
       return li;
     }),
   );
@@ -214,6 +219,22 @@ async function changeNote(command: string, args: Record<string, unknown> = {}) {
   await refresh(failed);
 }
 
+/** Deletes the selected note and selects the one that took its place (or the new last one). */
+async function deleteNote() {
+  const position = noteIndexes().indexOf(selectedItem);
+  await changeNote("delete_note");
+  const notes = noteIndexes();
+  if (notes.length > 0) {
+    selectedItem = notes[Math.min(position, notes.length - 1)];
+    render();
+  }
+}
+
+function cancelDelete() {
+  confirmingDelete = false;
+  render();
+}
+
 /** Moves an index by `step` through `count` entries, wrapping around. */
 const wrap = (index: number, step: number, count: number) => (index + step + count) % count;
 
@@ -229,6 +250,12 @@ document.addEventListener("keydown", (e) => {
   // Esc or Ctrl+C (by physical key, so any keyboard layout works) closes like in a terminal.
   if (e.key === "Escape" || (e.ctrlKey && e.code === "KeyC")) {
     void appWindow.close();
+    return;
+  }
+  if (confirmingDelete) {
+    confirmingDelete = false;
+    if (e.key === "Delete") void deleteNote();
+    else render();
     return;
   }
   if (view === "files") {
@@ -248,8 +275,14 @@ document.addEventListener("keydown", (e) => {
   } else if (e.key === " ") {
     const note = items[selectedItem];
     if (note?.kind === "note") void changeNote("set_note_done", { done: !note.done });
+  } else if (e.key === "Delete" && items[selectedItem]?.kind === "note") {
+    confirmingDelete = true;
+    render();
   }
 });
+
+// A click also cancels a pending delete.
+document.addEventListener("mousedown", () => confirmingDelete && cancelDelete(), true);
 
 // Double-click opens a file, like Enter.
 rowsList.addEventListener("dblclick", () => view === "files" && openSelectedFile());

@@ -52,6 +52,12 @@
   text-decoration: line-through;
 }
 
+/* Waiting for the second Del. */
+.note.deleting,
+.note.deleting span {
+  color: var(--error) !important;
+}
+
 /* Day separator in the inbox. */
 .day {
   margin-top: 6px;
