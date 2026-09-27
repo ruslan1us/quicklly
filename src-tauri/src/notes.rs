@@ -19,12 +19,37 @@ pub enum Mode {
     Inbox,
 }
 
-/// The lines of a note as they are stored: trimmed, without blank lines.
+/// The lines of a note as they are stored: without trailing spaces or blank lines around it,
+/// the first line also without leading spaces. Blank lines and indentation inside are kept.
 pub fn note_lines(text: &str) -> Vec<&str> {
-    text.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .collect()
+    let lines: Vec<&str> = text.lines().map(str::trim_end).collect();
+    let Some(start) = lines.iter().position(|line| !line.is_empty()) else {
+        return Vec::new();
+    };
+    let end = lines
+        .iter()
+        .rposition(|line| !line.is_empty())
+        .unwrap_or(start);
+    let mut lines = lines[start..=end].to_vec();
+    lines[0] = lines[0].trim_start();
+    lines
+}
+
+/// A note's text as it is stored after `- HH:MM `: extra lines are indented by two spaces
+/// under the first one, blank lines stay empty.
+pub fn format_note(lines: &[&str]) -> String {
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            if i == 0 || line.is_empty() {
+                line.to_string()
+            } else {
+                format!("  {line}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// The first `#tag` in `text`, lowercased: a `#` at the start of a word, then a letter, then
@@ -55,8 +80,8 @@ pub fn first_tag(text: &str) -> Option<String> {
 /// The file (and `dir`) are created on first write. A daily file starts with a
 /// `# YYYY-MM-DD` heading; the inbox and tag files start with `# Inbox` / `# tag` and get a
 /// `## YYYY-MM-DD` heading whenever the first note of a new day is added.
-/// A multi-line note stays one list item: further lines are indented under the first one,
-/// and blank lines are dropped.
+/// A multi-line note stays one list item: further lines are indented under the first one
+/// (see [`format_note`]).
 /// Returns the path of the file written to, or `None` if the note is blank.
 pub fn append_note(
     dir: &Path,
@@ -64,7 +89,7 @@ pub fn append_note(
     now: NaiveDateTime,
     text: &str,
 ) -> io::Result<Option<PathBuf>> {
-    let text = note_lines(text).join("\n  ");
+    let text = format_note(&note_lines(text));
     if text.is_empty() {
         return Ok(None);
     }
@@ -227,12 +252,13 @@ mod tests {
         );
         assert!(!dir.exists());
 
-        let path = append_note(&dir, Mode::Daily, at(26, 9, 0), " one\r\n\n two \nthree")
+        let text = "\n  one \r\n\n  - two  \nthree\n \n";
+        let path = append_note(&dir, Mode::Daily, at(26, 9, 0), text)
             .unwrap()
             .unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            "# 2026-09-26\n\n- 09:00 one\n  two\n  three\n"
+            "# 2026-09-26\n\n- 09:00 one\n\n    - two\n  three\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

@@ -6,7 +6,7 @@ use std::path::Path;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::notes::{note_lines, INBOX_FILE};
+use crate::notes::{format_note, note_lines, INBOX_FILE};
 
 /// A notes file as listed in the reader.
 #[derive(Debug, PartialEq, Serialize)]
@@ -194,13 +194,21 @@ pub fn parse(content: &str) -> Vec<Item> {
         } else if let Some((done, time, first)) = parse_note_line(line) {
             let start = i;
             let mut text = first.to_string();
-            while let Some(more) = lines.get(i + 1).and_then(|l| l.strip_prefix("  ")) {
-                if more.trim().is_empty() {
-                    break;
+            // Extra lines are indented by two spaces; blank lines belong to the note only
+            // when another indented line follows them.
+            loop {
+                let mut next = i + 1;
+                while lines.get(next).is_some_and(|l| l.trim().is_empty()) {
+                    next += 1;
                 }
-                text.push('\n');
-                text.push_str(more);
-                i += 1;
+                match lines.get(next).and_then(|l| l.strip_prefix("  ")) {
+                    Some(more) if !more.trim().is_empty() => {
+                        text.push_str(&"\n".repeat(next - i));
+                        text.push_str(more);
+                        i = next;
+                    }
+                    _ => break,
+                }
             }
             items.push(Item::Note {
                 line: start,
@@ -250,7 +258,9 @@ pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Resul
     };
     edit_note(dir, name, note, |lines, span| {
         let first = note_line(note.done, &note.time, first);
-        let rest = rest.iter().map(|line| format!("  {line}"));
+        let rest = format_note(&[&[""], rest].concat());
+        // `rest` starts with the empty first line, so skip it.
+        let rest = rest.lines().skip(1).map(String::from);
         lines.splice(span, std::iter::once(first).chain(rest));
     })
 }
@@ -389,7 +399,7 @@ mod tests {
         fs::write(&path, "# 2026-09-26\n\n- [x] 14:32 one\n- 15:00 two\n").unwrap();
 
         let note = note_ref(2, "14:32", true, "one");
-        set_text(&dir, "2026-09-26.md", &note, " first \n\n second\n").unwrap();
+        set_text(&dir, "2026-09-26.md", &note, " first \nsecond\n\n").unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
             "# 2026-09-26\n\n- [x] 14:32 first\n  second\n- 15:00 two\n"
@@ -457,7 +467,8 @@ mod tests {
             "",
             "- 14:32 one",
             "  two",
-            "  three",
+            "",
+            "    - three",
             "- [x] 15:00 done",
             "",
             "some text by hand",
@@ -471,12 +482,32 @@ mod tests {
             parse(&content),
             [
                 day("2026-09-26"),
-                note(4, "14:32", false, "one\ntwo\nthree"),
-                note(7, "15:00", true, "done"),
+                note(4, "14:32", false, "one\ntwo\n\n  - three"),
+                note(8, "15:00", true, "done"),
                 day("2026-09-27"),
-                note(13, "09:00", false, "next"),
+                note(14, "09:00", false, "next"),
             ]
         );
+    }
+
+    #[test]
+    fn edits_keep_blank_lines_and_indentation() {
+        let dir = temp_dir("edit-blank");
+        let path = dir.join("2026-09-26.md");
+        fs::write(&path, "# 2026-09-26\n\n- 14:32 one\n- 15:00 two\n").unwrap();
+
+        let old = note_ref(2, "14:32", false, "one");
+        set_text(&dir, "2026-09-26.md", &old, "one\n\n  - sub\nend").unwrap();
+        let content = fs::read_to_string(&path).unwrap();
+        assert_eq!(
+            content,
+            "# 2026-09-26\n\n- 14:32 one\n\n    - sub\n  end\n- 15:00 two\n"
+        );
+        assert_eq!(
+            parse(&content)[0],
+            note(2, "14:32", false, "one\n\n  - sub\nend")
+        );
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
