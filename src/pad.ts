@@ -8,6 +8,27 @@ const text = document.querySelector<HTMLTextAreaElement>("#text")!;
 const numbers = document.querySelector<HTMLDivElement>("#numbers")!;
 const linesMirror = document.querySelector<HTMLDivElement>("#lines-mirror")!;
 const status = document.querySelector<HTMLSpanElement>("#status")!;
+const pin = document.querySelector<HTMLSpanElement>("#pin")!;
+
+/** A pinned Pad stays open over other windows; an unpinned one hides like the input window. */
+let pinned = false;
+
+function renderPin() {
+  pin.textContent = pinned ? "● pinned" : "○ pin";
+  pin.classList.toggle("pinned", pinned);
+}
+
+async function togglePin() {
+  try {
+    await invoke("set_pad_pinned", { pinned: !pinned });
+    pinned = !pinned;
+    renderPin();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+pin.addEventListener("click", () => void togglePin());
 
 const updateCaret = blockCaret(
   text,
@@ -54,7 +75,21 @@ function syncScroll() {
   numbers.style.transform = `translateY(${-text.scrollTop}px)`;
 }
 
+/** Until when the status says a note was just saved (in a pinned Pad, which stays open). */
+let savedUntil = 0;
+
+function flashSaved() {
+  savedUntil = Date.now() + 1500;
+  renderStatus();
+  window.setTimeout(renderStatus, 1500);
+}
+
 function renderStatus() {
+  if (Date.now() < savedUntil) {
+    status.className = "saved";
+    status.textContent = "saved ✓";
+    return;
+  }
   const before = text.value.slice(0, text.selectionStart);
   const column = before.length - before.lastIndexOf("\n");
   const chars = text.value.length;
@@ -94,7 +129,10 @@ async function hide() {
   await appWindow.hide();
 }
 
-/** Saves the text as a note, like the input window does, and starts over with an empty Pad. */
+/**
+ * Saves the text as a note, like the input window does, and starts over with an empty Pad,
+ * which then hides unless it is pinned.
+ */
 async function saveNote() {
   if (!text.value.trim()) return;
   try {
@@ -105,7 +143,12 @@ async function saveNote() {
   }
   text.value = "";
   refresh();
-  await hide();
+  if (pinned) {
+    flashSaved();
+    await saveDraft();
+  } else {
+    await hide();
+  }
 }
 
 text.addEventListener("keydown", (e) => {
@@ -113,6 +156,9 @@ text.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.ctrlKey) {
     e.preventDefault();
     void saveNote();
+  } else if (e.ctrlKey && e.code === "KeyP") {
+    e.preventDefault();
+    void togglePin();
   } else if (
     e.key === "Escape" ||
     // Ctrl+C closes like in a terminal, unless there is a selection to copy.
@@ -136,6 +182,9 @@ document.addEventListener("selectionchange", () => {
   markCurrentLine();
 });
 
+// Resizing a pinned Pad changes where lines wrap.
+window.addEventListener("resize", refresh);
+
 // The window is hidden rather than destroyed, so refocus the text on every show.
 window.addEventListener("focus", () => {
   text.focus();
@@ -143,7 +192,13 @@ window.addEventListener("focus", () => {
 });
 
 // Shown only once themed and filled with the draft, so it never flickers.
-void Promise.all([followTheme(), invoke<string>("get_pad_draft")]).then(async ([, draft]) => {
+void Promise.all([
+  followTheme(),
+  invoke<string>("get_pad_draft"),
+  invoke<boolean>("get_pad_pinned"),
+]).then(async ([, draft, isPinned]) => {
+  pinned = isPinned;
+  renderPin();
   text.value = draft;
   text.setSelectionRange(draft.length, draft.length);
   await appWindow.show();

@@ -257,10 +257,12 @@ pub fn run() {
         )
         .manage(PendingReaderTarget::default())
         .manage(updater::AvailableUpdate::default())
+        .manage(pad::Pinned::default())
         .setup(|app| {
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
             updater::start(app.handle());
+            pad::load(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -268,10 +270,16 @@ pub fn run() {
             if window.label() != MAIN_WINDOW && window.label() != pad::PAD_WINDOW {
                 return;
             }
+            let pinned_pad =
+                window.label() == pad::PAD_WINDOW && pad::is_pinned(window.app_handle());
             match event {
-                // Clicking elsewhere dismisses the input window, keeping the typed draft.
-                WindowEvent::Focused(false) => {
+                // Clicking elsewhere dismisses the window, keeping the typed draft; a pinned Pad
+                // stays open.
+                WindowEvent::Focused(false) if !pinned_pad => {
                     let _ = window.hide();
+                }
+                WindowEvent::Moved(_) | WindowEvent::Resized(_) if pinned_pad => {
+                    pad::remember_bounds(window);
                 }
                 // Alt+F4 only hides the window; the app keeps living in the tray until "Quit".
                 WindowEvent::CloseRequested { api, .. } => {
@@ -299,6 +307,8 @@ pub fn run() {
             pad::open_pad,
             pad::get_pad_draft,
             pad::set_pad_draft,
+            pad::get_pad_pinned,
+            pad::set_pad_pinned,
             updater::install_update,
             settings::get_settings,
             settings::pick_notes_dir,

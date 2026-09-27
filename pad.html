@@ -10,7 +10,10 @@
   </head>
 
   <body>
-    <header data-tauri-drag-region>Quicklly · Pad</header>
+    <header data-tauri-drag-region>
+      <span data-tauri-drag-region>Quicklly · Pad</span>
+      <span id="pin" title="Ctrl+P"></span>
+    </header>
     <div id="editor">
       <div id="gutter"><div id="numbers"></div></div>
       <div id="area">
@@ -22,7 +25,7 @@
     </div>
     <footer>
       <span id="status"></span>
-      <span id="help">Ctrl+Enter save · Esc close</span>
+      <span id="help">Ctrl+Enter save · Ctrl+P pin · Esc close</span>
     </footer>
   </body>
 </html>

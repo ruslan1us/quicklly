@@ -11,7 +11,7 @@ use crate::hotkey;
 use crate::notes::Mode;
 
 /// Settings file, stored in the app data directory.
-const STORE_FILE: &str = "settings.json";
+pub const STORE_FILE: &str = "settings.json";
 const NOTES_DIR_KEY: &str = "notesDir";
 const MODE_KEY: &str = "mode";
 const HOTKEY_KEY: &str = "hotkey";
