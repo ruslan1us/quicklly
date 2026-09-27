@@ -5,6 +5,7 @@ import { followTheme } from "./theme";
 interface NoteFile {
   name: string;
   notes: number;
+  done: number;
 }
 
 type Item =
@@ -31,6 +32,9 @@ let selectedItem = -1;
 
 const dateOf = (name: string) => name.replace(/\.md$/, "");
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+/** "12 notes · 3 done", or just "12 notes" when none are done. */
+const counts = (notes: number, done: number) =>
+  plural(notes, "note") + (done > 0 ? ` · ${done} done` : "");
 const noteIndexes = () => items.flatMap((item, i) => (item.kind === "note" ? [i] : []));
 
 /** Today's daily file name, in local time like the notes themselves. */
@@ -40,19 +44,41 @@ function todayFile() {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.md`;
 }
 
-function row(className: string, cells: string[], selected: boolean, onClick?: () => void) {
+function span(text: string, className = "") {
+  const el = document.createElement("span");
+  el.textContent = text;
+  el.className = className;
+  return el;
+}
+
+/** A list row; plain strings become cells, elements are used as they are. */
+function row(
+  className: string,
+  cells: (string | HTMLElement)[],
+  selected: boolean,
+  onClick?: () => void,
+) {
   const li = document.createElement("li");
   li.className = className;
   li.classList.toggle("selected", selected);
-  li.append(
-    ...cells.map((text) => {
-      const span = document.createElement("span");
-      span.textContent = text;
-      return span;
-    }),
-  );
+  li.append(...cells.map((cell) => (typeof cell === "string" ? span(cell) : cell)));
   if (onClick) li.addEventListener("click", onClick);
   return li;
+}
+
+const BAR_CELLS = 8;
+
+/**
+ * Progress bar like ▰▰▰▱▱▱▱▱. It is only full once every note is done, and shows at least one
+ * cell as soon as one is.
+ */
+function progressBar(notes: number, done: number) {
+  let filled = Math.round((done / notes) * BAR_CELLS);
+  if (done > 0) filled = Math.max(filled, 1);
+  if (done < notes) filled = Math.min(filled, BAR_CELLS - 1);
+  const bar = span("", "bar");
+  bar.append(span("▰".repeat(filled), "filled"), span("▱".repeat(BAR_CELLS - filled)));
+  return bar;
 }
 
 function renderFiles() {
@@ -62,31 +88,39 @@ function renderFiles() {
   empty.textContent = "No notes yet.";
   empty.hidden = files.length > 0;
   rowsList.replaceChildren(
-    ...files.map((file, i) =>
-      row(
+    ...files.map((file, i) => {
+      const complete = file.notes > 0 && file.done === file.notes;
+      const li = row(
         "row file",
         [
           i === selectedFile ? "❯" : "",
-          file.name === "inbox.md" ? file.name : dateOf(file.name),
+          span(file.name === "inbox.md" ? file.name : dateOf(file.name), "name"),
           file.name === today ? "today" : "",
-          plural(file.notes, "note"),
+          file.notes > 0 ? progressBar(file.notes, file.done) : "",
+          span(
+            complete ? "✓ all done" : file.notes > 0 ? `${file.done}/${file.notes}` : "empty",
+            "count",
+          ),
         ],
         i === selectedFile,
         () => {
           selectedFile = i;
           render();
         },
-      ),
-    ),
+      );
+      li.classList.toggle("complete", complete);
+      return li;
+    }),
   );
   rowsList.children[selectedFile]?.scrollIntoView({ block: "nearest" });
 }
 
 function renderNotes() {
   const count = noteIndexes().length;
+  const done = items.filter((item) => item.kind === "note" && item.done).length;
   const title = openFile === "inbox.md" ? openFile : dateOf(openFile);
-  header.textContent = `Quicklly · ${title} · ${plural(count, "note")}`;
-  help.textContent = "↑↓ select · ← back · Esc close";
+  header.textContent = `Quicklly · ${title} · ${counts(count, done)}`;
+  help.textContent = "↑↓ select · Space done · ← back · Esc close";
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
@@ -141,8 +175,8 @@ async function loadNotes() {
 }
 
 /** Reloads the current view from disk and redraws it. */
-async function refresh() {
-  error.hidden = true;
+async function refresh(keepError = false) {
+  if (!keepError) error.hidden = true;
   if (view === "files") await loadFiles();
   else await loadNotes();
   render();
@@ -161,6 +195,23 @@ function openSelectedFile() {
 function backToFiles() {
   view = "files";
   void refresh();
+}
+
+/**
+ * Runs a change to the selected note, then reloads the file. If the change fails (for example
+ * because the file changed outside the reader), the error stays visible over the reloaded notes.
+ */
+async function changeNote(command: string, args: Record<string, unknown> = {}) {
+  const note = items[selectedItem];
+  if (note?.kind !== "note") return;
+  let failed = false;
+  try {
+    await invoke(command, { name: openFile, note, ...args });
+  } catch (err) {
+    showError(err);
+    failed = true;
+  }
+  await refresh(failed);
 }
 
 /** Moves an index by `step` through `count` entries, wrapping around. */
@@ -194,6 +245,9 @@ document.addEventListener("keydown", (e) => {
     backToFiles();
   } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
     moveNote(e.key === "ArrowUp" ? -1 : 1);
+  } else if (e.key === " ") {
+    const note = items[selectedItem];
+    if (note?.kind === "note") void changeNote("set_note_done", { done: !note.done });
   }
 });
 

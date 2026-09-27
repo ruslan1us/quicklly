@@ -1,17 +1,35 @@
 /* Reader-specific layout on top of terminal.css. */
 
-/* File list: cursor · name · "today" · note count. */
+/* File list: cursor · name · "today" · progress bar · done/total. */
 .file {
-  grid-template-columns: 2ch 15ch 7ch minmax(0, 1fr);
+  grid-template-columns: 2ch 15ch 7ch 10ch minmax(0, 1fr);
 }
 
-.file span:last-child {
+.file .bar {
+  color: var(--dim);
+}
+
+.file .bar .filled {
+  color: var(--accent);
+}
+
+.file .count {
   color: var(--dim);
   text-align: right;
 }
 
-.file.selected span:last-child {
+.file.selected .count {
   color: var(--fg);
+}
+
+/* Every note done: the file is crossed off. */
+.file.complete .name {
+  color: var(--dim);
+  text-decoration: line-through;
+}
+
+.file.complete .count {
+  color: var(--accent);
 }
 
 /* Notes: cursor · time · done mark · text (multi-line notes keep their lines). */
@@ -31,6 +49,7 @@
 
 .note.done span:last-child {
   color: var(--dim);
+  text-decoration: line-through;
 }
 
 /* Day separator in the inbox. */

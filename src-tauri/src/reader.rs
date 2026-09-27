@@ -1,9 +1,10 @@
 use std::fs;
 use std::io;
+use std::ops::Range;
 use std::path::Path;
 
 use chrono::NaiveDate;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::notes::INBOX_FILE;
 
@@ -12,6 +13,8 @@ use crate::notes::INBOX_FILE;
 pub struct NoteFile {
     pub name: String,
     pub notes: usize,
+    /// How many of the notes are marked done.
+    pub done: usize,
 }
 
 /// One entry of a notes file, as shown in the reader.
@@ -45,8 +48,8 @@ pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
         if !is_notes_file(&name) || !entry.file_type()?.is_file() {
             continue;
         }
-        let notes = count_notes(&fs::read_to_string(entry.path())?);
-        files.push(NoteFile { name, notes });
+        let (notes, done) = count_notes(&fs::read_to_string(entry.path())?);
+        files.push(NoteFile { name, notes, done });
     }
     // Daily names are ISO dates, so reverse name order is newest first.
     files.sort_by(|a, b| {
@@ -102,11 +105,14 @@ fn parse_note_line(line: &str) -> Option<(bool, &str, &str)> {
     }
 }
 
-fn count_notes(content: &str) -> usize {
+/// Counts (all notes, done notes).
+fn count_notes(content: &str) -> (usize, usize) {
     content
         .lines()
-        .filter(|line| parse_note_line(line).is_some())
-        .count()
+        .filter_map(parse_note_line)
+        .fold((0, 0), |(notes, done), (is_done, _, _)| {
+            (notes + 1, done + usize::from(is_done))
+        })
 }
 
 /// Parses a notes file into day headings and notes; everything else is skipped.
@@ -144,9 +150,149 @@ pub fn parse(content: &str) -> Vec<Item> {
     items
 }
 
+/// A note as the reader last saw it, so a change is only made to that exact note.
+#[derive(Debug, Deserialize)]
+pub struct NoteRef {
+    pub line: usize,
+    pub time: String,
+    pub done: bool,
+    pub text: String,
+}
+
+/// Marks a note as done (`- [x] HH:MM text`) or not done (`- HH:MM text`).
+pub fn set_done(dir: &Path, name: &str, note: &NoteRef, done: bool) -> io::Result<()> {
+    edit_note(dir, name, note, |lines, span| {
+        let first = note.text.lines().next().unwrap_or("");
+        lines[span.start] = note_line(done, &note.time, first);
+    })
+}
+
+fn note_line(done: bool, time: &str, text: &str) -> String {
+    let checkbox = if done { "[x] " } else { "" };
+    if text.is_empty() {
+        format!("- {checkbox}{time}")
+    } else {
+        format!("- {checkbox}{time} {text}")
+    }
+}
+
+/// Applies `change` to the lines of `note` in a notes file, leaving everything else as is.
+/// Fails without writing if the file no longer has that note where the reader saw it.
+fn edit_note(
+    dir: &Path,
+    name: &str,
+    note: &NoteRef,
+    change: impl FnOnce(&mut Vec<String>, Range<usize>),
+) -> io::Result<()> {
+    if !is_notes_file(name) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{name} is not a notes file"),
+        ));
+    }
+    let path = dir.join(name);
+    let content = fs::read_to_string(&path)?;
+    let unchanged = parse(&content).iter().any(|item| {
+        matches!(item, Item::Note { line, time, done, text }
+            if *line == note.line && *time == note.time && *done == note.done && *text == note.text)
+    });
+    if !unchanged {
+        return Err(io::Error::other(
+            "the file has changed since it was shown, so it has been reloaded",
+        ));
+    }
+
+    let newline = if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let mut lines: Vec<String> = content.lines().map(String::from).collect();
+    let span = note.line..note.line + note.text.lines().count().max(1);
+    change(&mut lines, span);
+    let mut updated = lines.join(newline);
+    if content.ends_with('\n') && !lines.is_empty() {
+        updated.push_str(newline);
+    }
+    // Write a copy and swap it in, so a failed write can't leave a half-written file.
+    let tmp = path.with_extension("md.tmp");
+    fs::write(&tmp, updated)?;
+    fs::rename(&tmp, &path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn temp_dir(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("quicklly-test-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn note_ref(line: usize, time: &str, done: bool, text: &str) -> NoteRef {
+        NoteRef {
+            line,
+            time: time.into(),
+            done,
+            text: text.into(),
+        }
+    }
+
+    #[test]
+    fn toggles_done_and_keeps_the_rest_of_the_file() {
+        let dir = temp_dir("done");
+        let path = dir.join("2026-09-26.md");
+        fs::write(
+            &path,
+            "# 2026-09-26\r\n\r\n- 14:32 one\r\n  two\r\n- 15:00 three\r\n",
+        )
+        .unwrap();
+
+        set_done(
+            &dir,
+            "2026-09-26.md",
+            &note_ref(2, "14:32", false, "one\ntwo"),
+            true,
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# 2026-09-26\r\n\r\n- [x] 14:32 one\r\n  two\r\n- 15:00 three\r\n"
+        );
+
+        set_done(
+            &dir,
+            "2026-09-26.md",
+            &note_ref(2, "14:32", true, "one\ntwo"),
+            false,
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# 2026-09-26\r\n\r\n- 14:32 one\r\n  two\r\n- 15:00 three\r\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn refuses_to_change_a_note_that_moved() {
+        let dir = temp_dir("stale");
+        let path = dir.join("2026-09-26.md");
+        let content = "# 2026-09-26\n\n- 09:00 inserted meanwhile\n- 14:32 one\n";
+        fs::write(&path, content).unwrap();
+
+        assert!(set_done(
+            &dir,
+            "2026-09-26.md",
+            &note_ref(2, "14:32", false, "one"),
+            true
+        )
+        .is_err());
+        assert_eq!(fs::read_to_string(&path).unwrap(), content);
+        fs::remove_dir_all(&dir).unwrap();
+    }
 
     fn note(line: usize, time: &str, done: bool, text: &str) -> Item {
         Item::Note {
@@ -226,15 +372,15 @@ mod tests {
         let names = |files: Vec<NoteFile>| {
             files
                 .into_iter()
-                .map(|f| (f.name, f.notes))
+                .map(|f| (f.name, f.notes, f.done))
                 .collect::<Vec<_>>()
         };
         assert_eq!(
             names(list_files(&dir).unwrap()),
             [
-                ("inbox.md".to_string(), 0),
-                ("2026-09-26.md".to_string(), 2),
-                ("2026-09-25.md".to_string(), 1),
+                ("inbox.md".to_string(), 0, 0),
+                ("2026-09-26.md".to_string(), 2, 1),
+                ("2026-09-25.md".to_string(), 1, 0),
             ]
         );
         assert!(list_files(&dir.join("missing")).unwrap().is_empty());

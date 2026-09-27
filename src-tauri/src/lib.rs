@@ -102,6 +102,18 @@ fn read_note_file(app: AppHandle, name: String) -> Result<Vec<reader::Item>, Str
     reader::read_file(&dir, &name).map_err(|e| format!("Failed to read {name}: {e}"))
 }
 
+/// Marks a note in a notes file as done or not done.
+#[tauri::command]
+fn set_note_done(
+    app: AppHandle,
+    name: String,
+    note: reader::NoteRef,
+    done: bool,
+) -> Result<(), String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::set_done(&dir, &name, &note, done).map_err(|e| format!("Couldn't update {name}: {e}"))
+}
+
 /// Goes back from the reader to the note input (→ in the file list).
 #[tauri::command]
 fn open_input(app: AppHandle) {
@@ -213,6 +225,7 @@ pub fn run() {
             open_input,
             list_note_files,
             read_note_file,
+            set_note_done,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
