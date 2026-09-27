@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { blockCaret } from "./blockCaret";
 import { appWindow, fitToContent, reveal } from "./popup";
 import { followTheme } from "./theme";
@@ -218,10 +219,36 @@ function openSelectedFile() {
   void refresh();
 }
 
-function backToFiles() {
+/** Goes back to the file list, with the file that was open selected. */
+async function backToFiles() {
   view = "files";
-  void refresh();
+  await refresh();
+  const i = files.findIndex((file) => file.name === openFile);
+  if (i >= 0) {
+    selectedFile = i;
+    render();
+  }
 }
+
+/** Opens the note the input window asked for (a search result), if there is one. */
+async function openTarget() {
+  const target = await invoke<{ file: string; line: number } | null>("take_reader_target");
+  if (!target) return;
+  view = "notes";
+  openFile = target.file;
+  selectedItem = -1;
+  editing = false;
+  confirmingDelete = false;
+  await refresh();
+  const i = items.findIndex((item) => item.kind === "note" && item.line === target.line);
+  if (i >= 0) {
+    selectedItem = i;
+    render();
+  }
+}
+
+// A search result opened while the reader is already open.
+void listen("reader-target", () => void openTarget());
 
 /**
  * Runs a change to the selected note, then reloads the file. If the change fails (for example
@@ -344,7 +371,7 @@ document.addEventListener("keydown", (e) => {
       render();
     }
   } else if (e.key === "ArrowLeft") {
-    backToFiles();
+    void backToFiles();
   } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
     moveNote(e.key === "ArrowUp" ? -1 : 1);
   } else if (e.key === " ") {
@@ -368,4 +395,6 @@ rowsList.addEventListener("dblclick", () => view === "files" && openSelectedFile
 window.addEventListener("focus", () => !editing && void refresh());
 
 // Shown only once themed and filled in, so it never flickers.
-void Promise.all([followTheme(), refresh()]).then(reveal);
+void Promise.all([followTheme(), refresh()])
+  .then(openTarget)
+  .then(reveal);

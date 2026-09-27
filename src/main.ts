@@ -9,6 +9,7 @@ const appWindow = getCurrentWindow();
 const measure = document.querySelector<HTMLDivElement>("#measure")!;
 const caret = document.querySelector<HTMLDivElement>("#caret")!;
 const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
+const results = document.querySelector<HTMLUListElement>("#results")!;
 
 /** The window grows with the note up to 10 lines, then the note scrolls. */
 const LINE_HEIGHT = 26;
@@ -18,17 +19,19 @@ let scrollable = false;
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
 /**
- * Resizes the window to fit the text; the note fills the window and follows it.
+ * Resizes the note and the window to fit the text, plus the search results below it.
  * The height is measured on an invisible copy, so the note itself never jumps.
  */
 async function fit() {
   // A trailing new line only counts as a line if something follows it.
   measure.textContent = input.value + ZERO_WIDTH_SPACE;
   const needed = measure.offsetHeight;
-  const height = Math.min(needed, MAX_HEIGHT);
+  const noteHeight = Math.min(needed, MAX_HEIGHT);
   scrollable = needed > MAX_HEIGHT;
+  input.style.height = `${noteHeight}px`;
   input.style.overflowY = scrollable ? "auto" : "hidden";
   if (!scrollable) input.scrollTop = 0;
+  const height = noteHeight + (results.hidden ? 0 : results.offsetHeight);
   if (height !== windowHeight) {
     windowHeight = height;
     await appWindow.setSize(new LogicalSize(window.innerWidth, height));
@@ -66,6 +69,138 @@ function remember(text: string) {
   if (history.length > HISTORY_LIMIT) history.shift();
 }
 
+/** A note found by search. */
+interface Hit {
+  file: string;
+  line: number;
+  day: string;
+  time: string;
+  done: boolean;
+  text: string;
+}
+
+let hits: Hit[] = [];
+let selectedHit = 0;
+/** Numbers the searches, so a slow one can't overwrite the results of a newer one. */
+let searchCount = 0;
+
+/**
+ * Search mode: typing `?` into an empty note switches to it, like `!` in a terminal prompt.
+ * The `?` becomes a prompt in front of the text, and Backspace on an empty query leaves it.
+ */
+let searchMode = false;
+const searching = () => searchMode;
+const searchQuery = () => input.value.trim();
+const NOTE_PLACEHOLDER = input.placeholder;
+
+function setSearchMode(on: boolean) {
+  searchMode = on;
+  document.body.classList.toggle("search", on);
+  input.placeholder = on ? "Search notes…" : NOTE_PLACEHOLDER;
+  updateCaret();
+}
+
+/** `text` as nodes, with each occurrence of `query` (ignoring case) marked. */
+function highlight(text: string, query: string) {
+  const parts: Node[] = [];
+  const lower = text.toLowerCase();
+  const needle = query.toLowerCase();
+  let from = 0;
+  for (let at = lower.indexOf(needle); needle && at >= 0; at = lower.indexOf(needle, from)) {
+    parts.push(document.createTextNode(text.slice(from, at)));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(at, at + needle.length);
+    parts.push(mark);
+    from = at + needle.length;
+  }
+  parts.push(document.createTextNode(text.slice(from)));
+  return parts;
+}
+
+function cell(text: string, className = "") {
+  const span = document.createElement("span");
+  span.textContent = text;
+  span.className = className;
+  return span;
+}
+
+function renderResults() {
+  results.hidden = !searching();
+  if (results.hidden) {
+    results.replaceChildren();
+    return;
+  }
+  const query = searchQuery();
+  if (!query || hits.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = query ? "No matches" : "Type to search your notes";
+    results.replaceChildren(li);
+    return;
+  }
+  results.replaceChildren(
+    ...hits.map((hit, i) => {
+      const li = document.createElement("li");
+      li.className = "hit";
+      li.classList.toggle("selected", i === selectedHit);
+      li.classList.toggle("done", hit.done);
+      // One line per result: extra lines of a note follow a ⏎.
+      const text = cell("", "text");
+      text.append(...highlight(hit.text.split("\n").join(" ⏎ "), query));
+      li.append(
+        cell(i === selectedHit ? "❯" : ""),
+        cell(hit.day),
+        cell(hit.time),
+        cell(hit.done ? "✓" : ""),
+        text,
+      );
+      // mousedown, so the note keeps the focus.
+      li.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        selectedHit = i;
+        void openHit();
+      });
+      return li;
+    }),
+  );
+  results.children[selectedHit]?.scrollIntoView({ block: "nearest" });
+}
+
+async function search() {
+  const count = ++searchCount;
+  let found: Hit[] = [];
+  if (searching() && searchQuery()) {
+    try {
+      found = await invoke<Hit[]>("search_notes", { query: searchQuery() });
+    } catch (err) {
+      showError(err);
+    }
+  }
+  if (count !== searchCount) return;
+  hits = found;
+  selectedHit = 0;
+  renderResults();
+  await fit();
+}
+
+/** Opens the selected result in the reader. */
+async function openHit() {
+  const hit = hits[selectedHit];
+  if (!hit) return;
+  await invoke("open_note", { file: hit.file, line: hit.line });
+  await hide();
+}
+
+function moveHit(step: number) {
+  if (hits.length === 0) return;
+  selectedHit = (selectedHit + step + hits.length) % hits.length;
+  renderResults();
+}
+
+function showError(err: unknown) {
+  input.classList.add("error");
+  input.title = String(err);
+}
+
 function clearError() {
   input.classList.remove("error");
   input.title = "";
@@ -73,8 +208,12 @@ function clearError() {
 
 async function hide() {
   input.value = "";
+  setSearchMode(false);
   historyIndex = history.length;
+  hits = [];
+  searchCount++;
   clearError();
+  renderResults();
   await appWindow.hide();
   await fit();
 }
@@ -83,6 +222,10 @@ async function save() {
   const text = input.value.trim();
   if (!text) {
     await hide();
+    return;
+  }
+  if (searching()) {
+    await openHit();
     return;
   }
   if (text === "/config") {
@@ -99,8 +242,7 @@ async function save() {
     remember(text);
     await hide();
   } catch (err) {
-    input.classList.add("error");
-    input.title = String(err);
+    showError(err);
   }
 }
 
@@ -119,6 +261,15 @@ input.addEventListener("keydown", (e) => {
     void hide();
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
+  } else if (searching() && e.key === "Backspace" && input.value === "") {
+    // Backspace on an empty query leaves search mode.
+    e.preventDefault();
+    setSearchMode(false);
+    void search();
+  } else if (searching() && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+    // While searching, ↑/↓ pick a result.
+    e.preventDefault();
+    moveHit(e.key === "ArrowUp" ? -1 : 1);
   } else if (e.key === "ArrowLeft" && input.value === "") {
     // ← in an empty note opens the notes reader.
     e.preventDefault();
@@ -134,9 +285,13 @@ input.addEventListener("keydown", (e) => {
 });
 
 input.addEventListener("input", () => {
+  if (!searchMode && input.value === "?") {
+    input.value = "";
+    setSearchMode(true);
+  }
   clearError();
   updateCaret();
-  void fit();
+  void search();
 });
 
 // The window is hidden rather than destroyed, so refocus the input on every show.

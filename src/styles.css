@@ -13,13 +13,14 @@ body {
 body {
   position: relative;
   display: flex;
+  flex-direction: column;
   background: var(--bg);
 }
 
-/* The note fills the window; one row is 2 + 13 + 26 + 13 + 2 = 56px. */
+/* The note's height is set to fit its text; one row is 2 + 13 + 26 + 13 + 2 = 56px. */
 #note,
 .mirror {
-  flex: 1;
+  flex: none;
   box-sizing: border-box;
   margin: 0;
   padding: 13px 16px;
@@ -88,4 +89,69 @@ body {
 /* Like the placeholder, the hint disappears as soon as something is typed. */
 #note:not(:placeholder-shown) + .hint {
   display: none;
+}
+
+/* Search mode: a "?" prompt in front of the query, like "!" in a terminal. */
+#prompt {
+  display: none;
+  position: absolute;
+  top: 15px;
+  left: 18px;
+  color: var(--accent);
+  line-height: 26px;
+  pointer-events: none;
+}
+
+.search #prompt {
+  display: block;
+}
+
+.search #note,
+.search .mirror {
+  padding-left: calc(16px + 2ch);
+}
+
+.search .hint {
+  display: none;
+}
+
+/* Search results under the query. */
+#results {
+  flex: none;
+  max-height: calc(8 * 22px);
+  margin: 0;
+  padding: 0 16px 10px;
+  overflow-y: auto;
+  list-style: none;
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+#results .hit {
+  display: grid;
+  grid-template-columns: 2ch 11ch 6ch 2ch minmax(0, 1fr);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#results .text {
+  overflow: hidden;
+  color: var(--fg);
+  text-overflow: ellipsis;
+}
+
+#results .hit.done .text {
+  color: var(--dim);
+  text-decoration: line-through;
+}
+
+#results .hit.selected {
+  color: var(--accent);
+}
+
+#results mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
 }

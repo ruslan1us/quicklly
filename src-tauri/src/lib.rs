@@ -3,9 +3,12 @@ mod notes;
 mod reader;
 mod settings;
 
+use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{App, AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+
+use serde::{Deserialize, Serialize};
+use tauri::{App, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 
@@ -133,6 +136,42 @@ fn edit_note(
     reader::set_text(&dir, &name, &note, &text).map_err(|e| format!("Couldn't update {name}: {e}"))
 }
 
+/// Finds notes containing `query` in all notes files, for search in the input window.
+#[tauri::command]
+fn search_notes(app: AppHandle, query: String) -> Result<Vec<reader::Hit>, String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::search(&dir, &query, 50).map_err(|e| format!("Search failed: {e}"))
+}
+
+/// A note for the reader to open, e.g. a search result.
+#[derive(Clone, Serialize, Deserialize)]
+struct ReaderTarget {
+    file: String,
+    line: usize,
+}
+
+/// The note the reader should show next; taken by the reader once it is ready.
+#[derive(Default)]
+struct PendingReaderTarget(Mutex<Option<ReaderTarget>>);
+
+/// Opens the reader on a note (Enter on a search result).
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+async fn open_note(app: AppHandle, file: String, line: usize) {
+    *app.state::<PendingReaderTarget>().0.lock().unwrap() = Some(ReaderTarget { file, line });
+    if app.get_webview_window(READER_WINDOW).is_some() {
+        let _ = app.emit_to(READER_WINDOW, "reader-target", ());
+    }
+    show_popup(&app, READER_WINDOW, "reader.html", "Quicklly Notes");
+}
+
+/// Hands the pending note, if any, to the reader.
+#[tauri::command]
+fn take_reader_target(app: AppHandle) -> Option<ReaderTarget> {
+    app.state::<PendingReaderTarget>().0.lock().unwrap().take()
+}
+
 /// Goes back from the reader to the note input (→ in the file list).
 #[tauri::command]
 fn open_input(app: AppHandle) {
@@ -213,6 +252,7 @@ pub fn run() {
                 })
                 .build(),
         )
+        .manage(PendingReaderTarget::default())
         .setup(|app| {
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
@@ -247,6 +287,9 @@ pub fn run() {
             set_note_done,
             delete_note,
             edit_note,
+            search_notes,
+            open_note,
+            take_reader_target,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,

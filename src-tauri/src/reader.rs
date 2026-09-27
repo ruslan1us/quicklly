@@ -60,6 +60,58 @@ pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
     Ok(files)
 }
 
+/// A note found by [`search`].
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Hit {
+    pub file: String,
+    /// First line of the note in the file (0-based), to open it in the reader.
+    pub line: usize,
+    /// The note's day: the daily file's date, or the `## YYYY-MM-DD` heading above it.
+    pub day: String,
+    pub time: String,
+    pub done: bool,
+    pub text: String,
+}
+
+/// Finds the notes in all notes files that contain `query`, ignoring case; newest first,
+/// at most `limit` of them.
+pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut hits = Vec::new();
+    for file in list_files(dir)? {
+        let mut day = file
+            .name
+            .strip_suffix(".md")
+            .unwrap_or_default()
+            .to_string();
+        for item in parse(&fs::read_to_string(dir.join(&file.name))?) {
+            match item {
+                Item::Day { date } => day = date,
+                Item::Note {
+                    line,
+                    time,
+                    done,
+                    text,
+                } if text.to_lowercase().contains(&query) => hits.push(Hit {
+                    file: file.name.clone(),
+                    line,
+                    day: day.clone(),
+                    time,
+                    done,
+                    text,
+                }),
+                Item::Note { .. } => {}
+            }
+        }
+    }
+    hits.sort_by(|a, b| (&b.day, &b.time).cmp(&(&a.day, &a.time)));
+    hits.truncate(limit);
+    Ok(hits)
+}
+
 /// Reads and parses one notes file from `dir`; only notes files can be read.
 pub fn read_file(dir: &Path, name: &str) -> io::Result<Vec<Item>> {
     if !is_notes_file(name) {
@@ -413,6 +465,41 @@ mod tests {
                 note(13, "09:00", false, "next"),
             ]
         );
+    }
+
+    #[test]
+    fn searches_all_files_newest_first() {
+        let dir = temp_dir("search");
+        fs::write(
+            dir.join("2026-09-25.md"),
+            "# 2026-09-25\n\n- 09:00 Buy milk\n- 10:00 other\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("inbox.md"),
+            "# Inbox\n\n## 2026-09-26\n\n- 08:00 more milk\n  and bread\n- [x] 12:00 no\n",
+        )
+        .unwrap();
+
+        let hits = search(&dir, " MILK ", 10).unwrap();
+        let found: Vec<_> = hits
+            .iter()
+            .map(|h| (h.file.as_str(), h.line, h.day.as_str(), h.time.as_str()))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                ("inbox.md", 4, "2026-09-26", "08:00"),
+                ("2026-09-25.md", 2, "2026-09-25", "09:00"),
+            ]
+        );
+        assert_eq!(
+            search(&dir, "bread", 10).unwrap()[0].text,
+            "more milk\nand bread"
+        );
+        assert_eq!(search(&dir, "milk", 1).unwrap().len(), 1);
+        assert!(search(&dir, "  ", 10).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
