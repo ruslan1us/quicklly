@@ -28,6 +28,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
 | Browse notes (see [Reader](#reader)) | <kbd>←</kbd> in an empty field        |
 | Write a longer note in the Pad | <kbd>→</kbd> in an empty field, or `/pad`; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves it as a note |
+| Continue in the Pad            | <kbd>Ctrl</kbd>+<kbd>E</kbd> moves what you typed into the Pad; <kbd>←</kbd> in an empty Pad goes back |
 | Search all notes               | Type `?` in an empty field, then a word; pick a result with <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> to open it in the reader, <kbd>Backspace</kbd> on an empty search to leave |
 | Cancel                         | <kbd>Esc</kbd>, or <kbd>Ctrl</kbd>+<kbd>C</kbd> when no text is selected |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
@@ -130,6 +131,8 @@ keyboard-driven:
 | Setting            | Default                                     | Options                                      |
 | ------------------ | ------------------------------------------- | -------------------------------------------- |
 | Hotkey             | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Any key or combination except <kbd>Esc</kbd> |
+| Hotkey opens       | Quick line                                  | Quick line, Pad                              |
+| Pad position       | Top right                                   | Top right, Top left, Bottom right, Bottom left, Center |
 | Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
 | Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
 | Theme              | Default                                     | Default (dark), Default+ (dark purple), Light |

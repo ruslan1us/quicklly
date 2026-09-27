@@ -250,7 +250,10 @@ pub fn run() {
                 // The only registered shortcut is the new-note hotkey.
                 .with_handler(|app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
-                        show_input(app);
+                        match settings::hotkey_target(app) {
+                            settings::HotkeyTarget::Input => show_input(app),
+                            settings::HotkeyTarget::Pad => pad::show(app),
+                        }
                     }
                 })
                 .build(),
@@ -309,6 +312,9 @@ pub fn run() {
             pad::set_pad_draft,
             pad::get_pad_pinned,
             pad::set_pad_pinned,
+            pad::expand_to_pad,
+            settings::set_hotkey_target,
+            settings::set_pad_position,
             updater::install_update,
             settings::get_settings,
             settings::pick_notes_dir,

@@ -278,6 +278,10 @@ input.addEventListener("keydown", (e) => {
   ) {
     e.preventDefault();
     void hide();
+  } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
+    // Ctrl+E moves what was typed into the Pad, to go on writing there.
+    e.preventDefault();
+    void invoke("expand_to_pad", { text: input.value }).then(hide, showError);
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
   } else if (searching() && e.key === "Backspace" && input.value === "") {

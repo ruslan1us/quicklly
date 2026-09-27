@@ -11,6 +11,8 @@ interface Settings {
   theme: Theme;
   autostart: boolean;
   autoUpdate: boolean;
+  hotkeyTarget: "input" | "pad";
+  padPosition: PadPosition;
 }
 
 /** One line of the settings list. */
@@ -49,6 +51,17 @@ let recording: string | null = null;
 
 const choice = (text: string) => `‹ ${text} ›`;
 
+type PadPosition = "topRight" | "topLeft" | "bottomRight" | "bottomLeft" | "center";
+const PAD_POSITIONS: { position: PadPosition; name: string }[] = [
+  { position: "topRight", name: "Top right" },
+  { position: "topLeft", name: "Top left" },
+  { position: "bottomRight", name: "Bottom right" },
+  { position: "bottomLeft", name: "Bottom left" },
+  { position: "center", name: "Center" },
+];
+const padPositionIndex = (s: Settings) =>
+  PAD_POSITIONS.findIndex((p) => p.position === s.padPosition);
+
 const THEMES: { theme: Theme; name: string }[] = [
   { theme: "default", name: "Default" },
   { theme: "defaultPlus", name: "Default+" },
@@ -65,6 +78,23 @@ const rows: Row[] = [
       render();
     },
     reset: () => void run("reset_hotkey"),
+  },
+  {
+    label: "Hotkey opens",
+    value: (s) => choice(s.hotkeyTarget === "pad" ? "Pad" : "Quick line"),
+    cycle: (s) =>
+      void run("set_hotkey_target", { target: s.hotkeyTarget === "pad" ? "input" : "pad" }),
+    reset: () => void run("set_hotkey_target", { target: "input" }),
+  },
+  {
+    label: "Pad position",
+    value: (s) => choice(PAD_POSITIONS[padPositionIndex(s)]?.name ?? s.padPosition),
+    cycle: (s, step) => {
+      const count = PAD_POSITIONS.length;
+      const next = PAD_POSITIONS[(padPositionIndex(s) + step + count) % count];
+      void run("set_pad_position", { position: next.position });
+    },
+    reset: () => void run("set_pad_position", { position: "topRight" }),
   },
   {
     label: "Notes folder",

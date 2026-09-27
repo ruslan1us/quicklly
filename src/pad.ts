@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
 import { followTheme } from "./theme";
@@ -9,6 +10,7 @@ const numbers = document.querySelector<HTMLDivElement>("#numbers")!;
 const linesMirror = document.querySelector<HTMLDivElement>("#lines-mirror")!;
 const status = document.querySelector<HTMLSpanElement>("#status")!;
 const pin = document.querySelector<HTMLSpanElement>("#pin")!;
+const help = document.querySelector<HTMLSpanElement>("#help")!;
 
 /** A pinned Pad stays open over other windows; an unpinned one hides like the input window. */
 let pinned = false;
@@ -102,9 +104,15 @@ function showError(err: unknown) {
   status.textContent = String(err);
 }
 
+function renderHelp() {
+  const first = text.value === "" ? "← quick line" : "Ctrl+Enter save";
+  help.textContent = `${first} · Ctrl+P pin · Esc close`;
+}
+
 function refresh() {
   renderNumbers();
   renderStatus();
+  renderHelp();
   updateCaret();
 }
 
@@ -156,6 +164,10 @@ text.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.ctrlKey) {
     e.preventDefault();
     void saveNote();
+  } else if (e.key === "ArrowLeft" && text.value === "" && !e.shiftKey && !e.ctrlKey) {
+    // ← in an empty Pad goes back to the input window, the way → came here.
+    e.preventDefault();
+    void invoke("open_input").then(() => (pinned ? undefined : hide()));
   } else if (e.ctrlKey && e.code === "KeyP") {
     e.preventDefault();
     void togglePin();
@@ -180,6 +192,13 @@ text.addEventListener("scroll", () => {
 document.addEventListener("selectionchange", () => {
   renderStatus();
   markCurrentLine();
+});
+
+// Text moved here from the input window with Ctrl+E.
+void listen("pad-draft-changed", async () => {
+  text.value = await invoke<string>("get_pad_draft");
+  text.setSelectionRange(text.value.length, text.value.length);
+  refresh();
 });
 
 // Resizing a pinned Pad changes where lines wrap.

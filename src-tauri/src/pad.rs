@@ -4,12 +4,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, LogicalSize, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder, Window,
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalSize, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder, Window,
 };
 use tauri_plugin_store::StoreExt;
 
-use crate::settings::STORE_FILE;
+use crate::settings::{self, PadPosition, STORE_FILE};
 
 /// The Pad: a bigger editor for longer notes.
 pub const PAD_WINDOW: &str = "pad";
@@ -44,7 +44,7 @@ pub fn set_pad_draft(app: AppHandle, text: String) -> Result<(), String> {
     fs::write(&path, text).map_err(|e| e.to_string())
 }
 
-/// Puts the Pad in the top right corner of the screen it is on.
+/// Puts the Pad where the settings say, on the screen it is on.
 fn place(window: &WebviewWindow) {
     let monitor = window
         .current_monitor()
@@ -56,8 +56,16 @@ fn place(window: &WebviewWindow) {
     };
     let area = monitor.work_area();
     let margin = (MARGIN * monitor.scale_factor()) as i32;
-    let x = area.position.x + area.size.width as i32 - size.width as i32 - margin;
-    let y = area.position.y + margin;
+    let (left, top) = (area.position.x + margin, area.position.y + margin);
+    let right = area.position.x + area.size.width as i32 - size.width as i32 - margin;
+    let bottom = area.position.y + area.size.height as i32 - size.height as i32 - margin;
+    let (x, y) = match settings::pad_position(window.app_handle()) {
+        PadPosition::TopRight => (right, top),
+        PadPosition::TopLeft => (left, top),
+        PadPosition::BottomRight => (right, bottom),
+        PadPosition::BottomLeft => (left, bottom),
+        PadPosition::Center => ((left + right) / 2, (top + bottom) / 2),
+    };
     let _ = window.set_position(PhysicalPosition::new(x, y));
 }
 
@@ -193,4 +201,23 @@ pub fn set_pad_pinned(app: AppHandle, pinned: bool) -> Result<(), String> {
 #[tauri::command]
 pub async fn open_pad(app: AppHandle) {
     show(&app);
+}
+
+/// Moves the text typed in the input window into the Pad (Ctrl+E), after any draft there.
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+pub async fn expand_to_pad(app: AppHandle, text: String) -> Result<(), String> {
+    let draft = get_pad_draft(app.clone());
+    let draft = if draft.trim().is_empty() {
+        text
+    } else {
+        format!("{}\n{text}", draft.trim_end())
+    };
+    set_pad_draft(app.clone(), draft)?;
+    if app.get_webview_window(PAD_WINDOW).is_some() {
+        let _ = app.emit_to(PAD_WINDOW, "pad-draft-changed", ());
+    }
+    show(&app);
+    Ok(())
 }
