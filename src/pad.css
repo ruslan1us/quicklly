@@ -66,7 +66,7 @@ header {
 }
 
 #text,
-.mirror {
+.layer {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
@@ -81,14 +81,16 @@ header {
   overflow-wrap: break-word;
 }
 
+/* The text itself is transparent: what shows is the highlighted backdrop behind it. */
 #text {
   position: absolute;
   inset: 0;
   height: 100%;
   resize: none;
   overflow-y: auto;
-  /* No scrollbar, so the text wraps exactly like its invisible copies. */
+  /* No scrollbar, so the text wraps exactly like its copies. */
   scrollbar-width: none;
+  color: transparent;
   caret-color: transparent;
   user-select: text;
 }
@@ -102,13 +104,35 @@ header {
   color: var(--bg);
 }
 
-/* Invisible copies of the text, to measure lines and find the caret. */
-.mirror {
+/* Copies of the text laid out exactly like it: the highlighted backdrop, and an invisible
+   one to find the caret. */
+.layer {
   position: absolute;
   top: 0;
   left: 0;
-  visibility: hidden;
   pointer-events: none;
+}
+
+.mirror {
+  visibility: hidden;
+}
+
+#backdrop .current {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+#backdrop .tag,
+#backdrop .check {
+  color: var(--accent);
+}
+
+#backdrop .bullet {
+  color: var(--dim);
+}
+
+#backdrop .done {
+  color: var(--dim);
+  text-decoration: line-through;
 }
 
 #caret {

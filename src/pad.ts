@@ -7,7 +7,7 @@ import { followTheme } from "./theme";
 const appWindow = getCurrentWindow();
 const text = document.querySelector<HTMLTextAreaElement>("#text")!;
 const numbers = document.querySelector<HTMLDivElement>("#numbers")!;
-const linesMirror = document.querySelector<HTMLDivElement>("#lines-mirror")!;
+const backdrop = document.querySelector<HTMLDivElement>("#backdrop")!;
 const status = document.querySelector<HTMLSpanElement>("#status")!;
 const pin = document.querySelector<HTMLSpanElement>("#pin")!;
 const help = document.querySelector<HTMLSpanElement>("#help")!;
@@ -40,27 +40,72 @@ const updateCaret = blockCaret(
 
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
+/** A `#tag`, as the notes files understand it: `#` at the start of a word, then a letter. */
+const TAG = /(^|\s)(#\p{L}[\p{L}\p{N}_-]*)/gu;
+/** A list item: indentation, then `- [ ] `, `- [x] `, `- `, `* ` or `1. `. */
+const LIST_ITEM = /^(\s*)(- \[[ xX]\] |- |\* |(\d+)\. )/;
+
 /** Number of the line the cursor is on, counting from 1. */
 const currentLine = () => text.value.slice(0, text.selectionStart).split("\n").length;
 
+function span(content: string, className: string) {
+  const el = document.createElement("span");
+  el.textContent = content;
+  el.className = className;
+  return el;
+}
+
+/** Appends `content` to `parent`, with its `#tags` marked. */
+function appendWithTags(parent: Node, content: string) {
+  let from = 0;
+  for (const match of content.matchAll(TAG)) {
+    const at = match.index + match[1].length;
+    parent.appendChild(document.createTextNode(content.slice(from, at)));
+    parent.appendChild(span(match[2], "tag"));
+    from = at + match[2].length;
+  }
+  parent.appendChild(document.createTextNode(content.slice(from)));
+}
+
+/** One line of text as it is shown under the (transparent) text: list markers and tags marked. */
+function renderLine(line: string) {
+  const div = document.createElement("div");
+  div.className = "line";
+  if (line === "") {
+    div.textContent = ZERO_WIDTH_SPACE;
+    return div;
+  }
+  const item = LIST_ITEM.exec(line);
+  if (!item) {
+    appendWithTags(div, line);
+    return div;
+  }
+  const marker = item[2];
+  const checkbox = marker.startsWith("- [");
+  div.append(item[1], span(marker, checkbox ? "check" : "bullet"));
+  const rest = line.slice(item[0].length);
+  if (checkbox && marker !== "- [ ] ") {
+    // A checked item: its text is done.
+    const done = span("", "done");
+    appendWithTags(done, rest);
+    div.append(done);
+  } else {
+    appendWithTags(div, rest);
+  }
+  return div;
+}
+
 /**
- * Draws one line number per line of text, as tall as the rows that line wraps to, which are
- * measured on an invisible copy of the text.
+ * Draws the text with its highlighting behind the transparent text area, and one line number
+ * per line, as tall as the rows that line wraps to.
  */
-function renderNumbers() {
-  const lines = text.value.split("\n");
-  linesMirror.replaceChildren(
-    ...lines.map((line) => {
-      const div = document.createElement("div");
-      div.textContent = line || ZERO_WIDTH_SPACE;
-      return div;
-    }),
-  );
+function renderLines() {
+  backdrop.replaceChildren(...text.value.split("\n").map(renderLine));
   numbers.replaceChildren(
-    ...[...linesMirror.children].map((row, i) => {
+    ...[...backdrop.children].map((line, i) => {
       const div = document.createElement("div");
       div.textContent = String(i + 1);
-      div.style.height = `${(row as HTMLElement).offsetHeight}px`;
+      div.style.height = `${(line as HTMLElement).offsetHeight}px`;
       return div;
     }),
   );
@@ -69,12 +114,16 @@ function renderNumbers() {
 }
 
 function markCurrentLine() {
-  const current = currentLine();
-  [...numbers.children].forEach((div, i) => div.classList.toggle("current", i + 1 === current));
+  const current = currentLine() - 1;
+  for (const list of [numbers.children, backdrop.children]) {
+    [...list].forEach((el, i) => el.classList.toggle("current", i === current));
+  }
 }
 
 function syncScroll() {
-  numbers.style.transform = `translateY(${-text.scrollTop}px)`;
+  const offset = `translateY(${-text.scrollTop}px)`;
+  numbers.style.transform = offset;
+  backdrop.style.transform = offset;
 }
 
 /** Until when the status says a note was just saved (in a pinned Pad, which stays open). */
@@ -110,10 +159,63 @@ function renderHelp() {
 }
 
 function refresh() {
-  renderNumbers();
+  renderLines();
   renderStatus();
   renderHelp();
   updateCaret();
+}
+
+/** Types `content` over the selection, keeping Ctrl+Z working. */
+function insert(content: string) {
+  document.execCommand("insertText", false, content);
+}
+
+/**
+ * Enter in a list item starts the next one (`- `, `- [ ] `, the next number); Enter in an
+ * empty item ends the list. Returns false when the line is not a list item.
+ */
+function continueList() {
+  const { selectionStart: start, selectionEnd: end, value } = text;
+  if (start !== end) return false;
+  const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+  const item = LIST_ITEM.exec(value.slice(lineStart, start));
+  if (!item) return false;
+  const found = value.indexOf("\n", start);
+  const lineEnd = found < 0 ? value.length : found;
+  if (value.slice(lineStart + item[0].length, lineEnd).trim() === "") {
+    text.setSelectionRange(lineStart, lineEnd);
+    insert("");
+    return true;
+  }
+  const [, indentation, marker, number] = item;
+  const next = number
+    ? `${Number(number) + 1}. `
+    : marker.startsWith("- [")
+      ? "- [ ] "
+      : marker;
+  insert(`\n${indentation}${next}`);
+  return true;
+}
+
+/** Tab indents by two spaces (every selected line, if several); Shift+Tab takes them away. */
+function indent(outdent: boolean) {
+  const { selectionStart: start, selectionEnd: end, value } = text;
+  const multiLine = value.slice(start, end).includes("\n");
+  if (!outdent && !multiLine) {
+    insert("  ");
+    return;
+  }
+  const blockStart = value.lastIndexOf("\n", start - 1) + 1;
+  const found = value.indexOf("\n", end);
+  const blockEnd = found < 0 ? value.length : found;
+  const changed = value
+    .slice(blockStart, blockEnd)
+    .split("\n")
+    .map((line) => (outdent ? line.replace(/^ {1,2}/, "") : `  ${line}`))
+    .join("\n");
+  text.setSelectionRange(blockStart, blockEnd);
+  insert(changed);
+  if (multiLine) text.setSelectionRange(blockStart, blockStart + changed.length);
 }
 
 /** Saves the draft shortly after typing stops, so it survives closing the Pad or the app. */
@@ -161,10 +263,16 @@ async function saveNote() {
 
 text.addEventListener("keydown", (e) => {
   if (e.isComposing) return;
+  const plain = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
   if (e.key === "Enter" && e.ctrlKey) {
     e.preventDefault();
     void saveNote();
-  } else if (e.key === "ArrowLeft" && text.value === "" && !e.shiftKey && !e.ctrlKey) {
+  } else if (e.key === "Enter" && plain) {
+    if (continueList()) e.preventDefault();
+  } else if (e.key === "Tab" && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    indent(e.shiftKey);
+  } else if (e.key === "ArrowLeft" && text.value === "" && plain) {
     // ← in an empty Pad goes back to the input window, the way → came here.
     e.preventDefault();
     void invoke("open_input").then(() => (pinned ? undefined : hide()));
