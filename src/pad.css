@@ -1,0 +1,122 @@
+/* The Pad: a terminal-style editor for longer notes; colours come from themes.css. */
+:root {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  user-select: none;
+}
+
+header {
+  padding: 10px 18px 8px;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: default;
+}
+
+#editor {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Line numbers, one per line of text however many rows it wraps to. */
+#gutter {
+  flex: none;
+  width: 5ch;
+  padding-right: 2ch;
+  overflow: hidden;
+  color: var(--dim);
+  text-align: right;
+}
+
+#numbers .current {
+  color: var(--accent);
+}
+
+#area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+#text,
+.mirror {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0 18px 0 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  line-height: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+#text {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  resize: none;
+  overflow-y: auto;
+  /* No scrollbar, so the text wraps exactly like its invisible copies. */
+  scrollbar-width: none;
+  caret-color: transparent;
+  user-select: text;
+}
+
+#text::placeholder {
+  color: var(--dim);
+}
+
+#text::selection {
+  background: var(--caret);
+  color: var(--bg);
+}
+
+/* Invisible copies of the text, to measure lines and find the caret. */
+.mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#caret {
+  position: absolute;
+  background: var(--caret);
+  color: var(--bg);
+  white-space: pre;
+  pointer-events: none;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 2ch;
+  padding: 8px 18px 10px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+#status.error {
+  color: var(--error);
+  white-space: normal;
+}

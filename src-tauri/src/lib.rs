@@ -1,5 +1,6 @@
 mod hotkey;
 mod notes;
+mod pad;
 mod reader;
 mod settings;
 mod updater;
@@ -263,8 +264,8 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Only the input window lives hidden; other windows close normally.
-            if window.label() != MAIN_WINDOW {
+            // The input window and the Pad live hidden; other windows close normally.
+            if window.label() != MAIN_WINDOW && window.label() != pad::PAD_WINDOW {
                 return;
             }
             match event {
@@ -295,6 +296,9 @@ pub fn run() {
             open_note,
             take_reader_target,
             updater::get_update,
+            pad::open_pad,
+            pad::get_pad_draft,
+            pad::set_pad_draft,
             updater::install_update,
             settings::get_settings,
             settings::pick_notes_dir,

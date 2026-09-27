@@ -34,6 +34,7 @@ export default defineConfig(() => ({
         main: "index.html",
         settings: "settings.html",
         reader: "reader.html",
+        pad: "pad.html",
       },
     },
   },

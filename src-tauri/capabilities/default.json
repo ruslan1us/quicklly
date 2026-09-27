@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "settings",
-    "reader"
+    "reader",
+    "pad"
   ],
   "permissions": [
     "core:default",

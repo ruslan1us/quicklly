@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/themes.css" />
+    <link rel="stylesheet" href="/src/pad.css" />
+    <title>Quicklly Pad</title>
+    <script type="module" src="/src/pad.ts" defer></script>
+  </head>
+
+  <body>
+    <header data-tauri-drag-region>Quicklly · Pad</header>
+    <div id="editor">
+      <div id="gutter"><div id="numbers"></div></div>
+      <div id="area">
+        <textarea id="text" placeholder="Start writing…" spellcheck="false"></textarea>
+        <div id="caret" aria-hidden="true"></div>
+        <div id="caret-mirror" class="mirror" aria-hidden="true"></div>
+        <div id="lines-mirror" class="mirror" aria-hidden="true"></div>
+      </div>
+    </div>
+    <footer>
+      <span id="status"></span>
+      <span id="help">Ctrl+Enter save · Esc close</span>
+    </footer>
+  </body>
+</html>

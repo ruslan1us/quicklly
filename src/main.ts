@@ -235,6 +235,11 @@ async function save() {
     await hide();
     return;
   }
+  if (text === "/pad") {
+    await invoke("open_pad");
+    await hide();
+    return;
+  }
   if (text === "/exit") {
     await invoke("exit_app");
     return;
@@ -288,6 +293,10 @@ input.addEventListener("keydown", (e) => {
     // ← in an empty note opens the notes reader.
     e.preventDefault();
     void invoke("open_reader").then(hide);
+  } else if (e.key === "ArrowRight" && input.value === "" && !searching()) {
+    // → in an empty note opens the Pad for longer notes.
+    e.preventDefault();
+    void invoke("open_pad").then(hide);
   } else if (e.key === "ArrowUp" && (input.value === "" || browsingHistory())) {
     // In an empty field or while browsing, ↑/↓ walk the history; otherwise they move the caret.
     e.preventDefault();
