@@ -91,7 +91,7 @@ body {
 }
 
 /* Like the placeholder, the hint disappears as soon as something is typed. */
-#note:not(:placeholder-shown) + .hint {
+#note:not(:placeholder-shown) ~ .hint {
   display: none;
 }
 
