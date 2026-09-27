@@ -26,7 +26,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Save the note                  | <kbd>Enter</kbd>                            |
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
 | Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
-| Browse notes                   | <kbd>←</kbd> in an empty field              |
+| Browse notes (see [Reader](#reader)) | <kbd>←</kbd> in an empty field        |
 | Cancel                         | <kbd>Esc</kbd>, or <kbd>Ctrl</kbd>+<kbd>C</kbd> when no text is selected |
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
@@ -79,6 +79,32 @@ grouped by day:
 ```
 
 The notes folder can be changed in the settings as well.
+
+## Reader
+
+Press <kbd>←</kbd> in an empty input window to browse your notes. The first screen lists the
+notes files, newest first, each with a progress bar of done notes; a file where every note is
+done is crossed off. Open one to go through its notes one by one (a multi-line note is one
+entry):
+
+| Key                                  | Files                  | Notes                              |
+| ------------------------------------ | ---------------------- | ---------------------------------- |
+| <kbd>↑</kbd> <kbd>↓</kbd>            | Select a file          | Select a note                      |
+| <kbd>Enter</kbd>                     | Open the file          | Edit the note                      |
+| <kbd>Space</kbd>                     |                        | Mark as done / not done            |
+| <kbd>Del</kbd>                       |                        | Delete (press <kbd>Del</kbd> twice) |
+| <kbd>←</kbd>                         |                        | Back to the files                  |
+| <kbd>→</kbd>                         | Back to the input      |                                    |
+| <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close          | Close                              |
+
+A done note is stored as a Markdown task, which Obsidian shows as a checked box:
+
+```markdown
+- [x] 15:10 buy a birthday present
+```
+
+Changes only touch that note; the rest of the file stays as it is. If the file was changed
+elsewhere in the meantime, nothing is written and the reader reloads it.
 
 ## Settings
 
