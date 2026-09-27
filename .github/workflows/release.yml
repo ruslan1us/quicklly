@@ -45,13 +45,19 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # Builds the NSIS and MSI installers and attaches them to a draft release,
-      # which is published by hand after a quick check.
+      # Builds the NSIS and MSI installers and attaches them, with the signed update and
+      # latest.json for the in-app updater, to a draft release, which is published by hand
+      # after a quick check.
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # The key has no password of its own.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Quicklly ${{ github.ref_name }}
           releaseDraft: true
           generateReleaseNotes: true
+          # The updater installs the per-user NSIS setup, not the MSI.
+          updaterJsonPreferNsis: true

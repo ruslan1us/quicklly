@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
 import { followTheme } from "./theme";
@@ -10,6 +11,7 @@ const measure = document.querySelector<HTMLDivElement>("#measure")!;
 const caret = document.querySelector<HTMLDivElement>("#caret")!;
 const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
 const results = document.querySelector<HTMLUListElement>("#results")!;
+const hint = document.querySelector<HTMLSpanElement>(".hint")!;
 
 /** The window grows with the note up to 10 lines, then the note scrolls. */
 const LINE_HEIGHT = 26;
@@ -237,6 +239,18 @@ async function save() {
     await invoke("exit_app");
     return;
   }
+  if (text === "/update") {
+    input.value = "";
+    showHint("updating…");
+    try {
+      // On success the app closes, updates and starts again.
+      await invoke("install_update");
+    } catch (err) {
+      showHint(HINT);
+      showError(err);
+    }
+    return;
+  }
   try {
     await invoke("save_note", { text });
     remember(text);
@@ -294,7 +308,32 @@ input.addEventListener("input", () => {
   void search();
 });
 
+const HINT = hint.textContent ?? "";
+/** Version of a newer release that /update can install. */
+let updateVersion: string | null = null;
+let hintTimer: number | undefined;
+
+function showHint(text: string, className = "") {
+  window.clearTimeout(hintTimer);
+  hint.textContent = text;
+  hint.className = `hint ${className}`.trim();
+}
+
+/** For two seconds after the window opens, the hint announces a waiting update. */
+function announceUpdate() {
+  if (!updateVersion) return;
+  showHint(`update v${updateVersion} available · /update`, "update");
+  hintTimer = window.setTimeout(() => showHint(HINT), 2000);
+}
+
+// A found release, or null once automatic updates are turned off.
+void listen<string | null>("update-available", (event) => (updateVersion = event.payload));
+void invoke<string | null>("get_update").then((version) => (updateVersion = version));
+
 // The window is hidden rather than destroyed, so refocus the input on every show.
-window.addEventListener("focus", () => input.focus());
+window.addEventListener("focus", () => {
+  input.focus();
+  announceUpdate();
+});
 
 void followTheme();

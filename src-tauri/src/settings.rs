@@ -16,6 +16,7 @@ const NOTES_DIR_KEY: &str = "notesDir";
 const MODE_KEY: &str = "mode";
 const HOTKEY_KEY: &str = "hotkey";
 const THEME_KEY: &str = "theme";
+const AUTO_UPDATE_KEY: &str = "autoUpdate";
 
 /// Colour theme of all windows.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +42,7 @@ pub struct SettingsView {
     hotkey_is_default: bool,
     theme: Theme,
     autostart: bool,
+    auto_update: bool,
 }
 
 fn default_notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
@@ -128,6 +130,16 @@ fn theme(app: &AppHandle) -> Theme {
         .unwrap_or_default()
 }
 
+/// Whether new releases are looked for, downloaded and installed by themselves; on unless
+/// turned off in settings. `/update` works either way.
+pub fn auto_update(app: &AppHandle) -> bool {
+    app.store(STORE_FILE)
+        .ok()
+        .and_then(|store| store.get(AUTO_UPDATE_KEY))
+        .and_then(|enabled| enabled.as_bool())
+        .unwrap_or(true)
+}
+
 fn view(app: &AppHandle) -> Result<SettingsView, String> {
     let notes_dir = notes_dir(app).map_err(|e| e.to_string())?;
     let hotkey = hotkey(app);
@@ -139,6 +151,7 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
         hotkey_is_default: hotkey == hotkey::default(),
         theme: theme(app),
         autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
+        auto_update: auto_update(app),
     })
 }
 
@@ -210,6 +223,19 @@ pub fn set_theme(app: AppHandle, theme: Theme) -> Result<SettingsView, String> {
     store.save().map_err(|e| e.to_string())?;
     app.emit("theme-changed", theme)
         .map_err(|e| e.to_string())?;
+    view(&app)
+}
+
+#[tauri::command]
+pub fn set_auto_update(app: AppHandle, enabled: bool) -> Result<SettingsView, String> {
+    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
+    if enabled {
+        store.delete(AUTO_UPDATE_KEY);
+    } else {
+        store.set(AUTO_UPDATE_KEY, false);
+    }
+    store.save().map_err(|e| e.to_string())?;
+    crate::updater::auto_update_changed(&app, enabled);
     view(&app)
 }
 

@@ -2,6 +2,7 @@ mod hotkey;
 mod notes;
 mod reader;
 mod settings;
+mod updater;
 
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -242,6 +243,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 // The only registered shortcut is the new-note hotkey.
@@ -253,9 +255,11 @@ pub fn run() {
                 .build(),
         )
         .manage(PendingReaderTarget::default())
+        .manage(updater::AvailableUpdate::default())
         .setup(|app| {
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
+            updater::start(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -290,6 +294,8 @@ pub fn run() {
             search_notes,
             open_note,
             take_reader_target,
+            updater::get_update,
+            updater::install_update,
             settings::get_settings,
             settings::pick_notes_dir,
             settings::reset_notes_dir,
@@ -297,6 +303,7 @@ pub fn run() {
             settings::set_hotkey,
             settings::reset_hotkey,
             settings::set_autostart,
+            settings::set_auto_update,
             settings::get_theme,
             settings::set_theme,
         ])

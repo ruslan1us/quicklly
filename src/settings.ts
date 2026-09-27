@@ -10,6 +10,7 @@ interface Settings {
   hotkeyIsDefault: boolean;
   theme: Theme;
   autostart: boolean;
+  autoUpdate: boolean;
 }
 
 /** One line of the settings list. */
@@ -91,6 +92,12 @@ const rows: Row[] = [
     value: (s) => choice(s.autostart ? "On" : "Off"),
     cycle: (s) => void run("set_autostart", { enabled: !s.autostart }),
     reset: () => void run("set_autostart", { enabled: false }),
+  },
+  {
+    label: "Auto update",
+    value: (s) => choice(s.autoUpdate ? "On" : "Off"),
+    cycle: (s) => void run("set_auto_update", { enabled: !s.autoUpdate }),
+    reset: () => void run("set_auto_update", { enabled: true }),
   },
 ];
 
