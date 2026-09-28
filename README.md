@@ -91,8 +91,8 @@ The notes folder can be changed in the settings as well.
 ## Reader
 
 Press <kbd>←</kbd> in an empty input window to browse your notes. The first screen lists the
-notes files (the inbox, tag files and any other Markdown files in the folder, then the days,
-newest first), each with a progress bar of done notes; a file where every note is
+notes files (the one you wrote to last first, then the inbox, tag files and any other
+Markdown files in the folder, then the days, newest first), each with a progress bar of done notes; a file where every note is
 done is crossed off. Open one to go through its notes one by one (a multi-line note is one
 entry):
 

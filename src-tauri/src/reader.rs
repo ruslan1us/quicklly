@@ -2,6 +2,7 @@ use std::fs;
 use std::io;
 use std::ops::Range;
 use std::path::Path;
+use std::time::SystemTime;
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -33,8 +34,9 @@ pub enum Item {
     },
 }
 
-/// Lists the Markdown files in `dir`: `inbox.md` first, then tag files and any other `.md`
-/// files by name, then daily files, newest first. A missing folder just has no notes yet.
+/// Lists the Markdown files in `dir`: the one written to last first, then `inbox.md`, tag
+/// files and any other `.md` files by name, then daily files, newest first. A missing folder
+/// just has no notes yet.
 pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
@@ -42,24 +44,32 @@ pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
         Err(e) => return Err(e),
     };
     let mut files = Vec::new();
+    let mut latest: Option<(SystemTime, String)> = None;
     for entry in entries {
         let entry = entry?;
         let name = entry.file_name().to_string_lossy().into_owned();
         if !is_notes_file(&name) || !entry.file_type()?.is_file() {
             continue;
         }
+        if let Ok(modified) = entry.metadata().and_then(|meta| meta.modified()) {
+            if latest.as_ref().is_none_or(|(time, _)| modified > *time) {
+                latest = Some((modified, name.clone()));
+            }
+        }
         let (notes, done) = count_notes(&fs::read_to_string(entry.path())?);
         files.push(NoteFile { name, notes, done });
     }
+    let latest = latest.map(|(_, name)| name);
     let group = |name: &str| match name {
-        INBOX_FILE => 0,
-        _ if daily_date(name).is_none() => 1,
-        _ => 2,
+        _ if Some(name) == latest.as_deref() => 0,
+        INBOX_FILE => 1,
+        _ if daily_date(name).is_none() => 2,
+        _ => 3,
     };
     files.sort_by(|a, b| {
         group(&a.name).cmp(&group(&b.name)).then_with(|| {
             // Daily names are ISO dates, so reverse name order is newest first.
-            if group(&a.name) == 2 {
+            if group(&a.name) == 3 {
                 b.name.cmp(&a.name)
             } else {
                 a.name.cmp(&b.name)
@@ -546,7 +556,7 @@ mod tests {
     }
 
     #[test]
-    fn lists_inbox_then_tag_files_then_days_newest_first() {
+    fn lists_the_latest_file_then_inbox_tags_and_days_newest_first() {
         let dir = temp_dir("list");
         fs::write(dir.join("2026-09-25.md"), "# 2026-09-25\n\n- 09:00 a\n").unwrap();
         fs::write(
@@ -563,6 +573,26 @@ mod tests {
         fs::write(dir.join("ideas.md"), "# ideas\n").unwrap();
         fs::write(dir.join("notes.txt"), "- 12:00 not Markdown\n").unwrap();
 
+        // The file written to last comes first: here the older daily file.
+        let base = SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_800_000_000);
+        for (i, name) in [
+            "inbox.md",
+            "ideas.md",
+            "todo.md",
+            "2026-09-26.md",
+            "2026-09-25.md",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let file = fs::File::options()
+                .write(true)
+                .open(dir.join(name))
+                .unwrap();
+            file.set_modified(base + std::time::Duration::from_secs(i as u64))
+                .unwrap();
+        }
+
         let names = |files: Vec<NoteFile>| {
             files
                 .into_iter()
@@ -572,11 +602,11 @@ mod tests {
         assert_eq!(
             names(list_files(&dir).unwrap()),
             [
+                ("2026-09-25.md".to_string(), 1, 0),
                 ("inbox.md".to_string(), 0, 0),
                 ("ideas.md".to_string(), 0, 0),
                 ("todo.md".to_string(), 1, 0),
                 ("2026-09-26.md".to_string(), 2, 1),
-                ("2026-09-25.md".to_string(), 1, 0),
             ]
         );
         assert!(list_files(&dir.join("missing")).unwrap().is_empty());
