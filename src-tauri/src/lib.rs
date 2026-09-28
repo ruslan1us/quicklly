@@ -12,9 +12,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use serde::{Deserialize, Serialize};
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectsBuilder};
-use tauri::{
-    App, AppHandle, Emitter, LogicalSize, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
-};
+use tauri::{App, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 
@@ -107,17 +105,14 @@ pub(crate) fn blur_behind() -> WindowEffectsConfig {
     EffectsBuilder::new().effect(Effect::Acrylic).build()
 }
 
-/// Zooms every window to the scale from settings, and makes the windows that much wider;
-/// the pages then fit their height to their content.
+/// Zooms every window to the scale from settings. The input window and the popups then size
+/// themselves to their content at the new scale; the Pad is sized here.
 pub(crate) fn apply_scale(app: &AppHandle) {
     let zoom = settings::scale(app);
     for (label, window) in app.webview_windows() {
         let _ = window.set_zoom(zoom);
         if label == pad::PAD_WINDOW {
             pad::rescale(&window);
-        } else if let (Ok(size), Ok(factor)) = (window.inner_size(), window.scale_factor()) {
-            let height = size.to_logical::<f64>(factor).height;
-            let _ = window.set_size(LogicalSize::new(POPUP_WIDTH * zoom, height));
         }
     }
 }
