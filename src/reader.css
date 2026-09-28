@@ -1,4 +1,6 @@
-/* Reader-specific layout on top of terminal.css. */
+/* Reader-specific layout on top of terminal.css, which is imported here (rather than linked
+   separately) so that the build always puts it first. */
+@import "./terminal.css";
 
 /* File list: cursor · name · "today" · progress bar · done/total. */
 .file {
