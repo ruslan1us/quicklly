@@ -116,6 +116,26 @@ A done note is stored as a Markdown task, which Obsidian shows as a checked box:
 Changes only touch that note; the rest of the file stays as it is. If the file was changed
 elsewhere in the meantime, nothing is written and the reader reloads it.
 
+## Pad
+
+For longer notes there is the Pad: a bigger editor with line numbers. Open it with <kbd>→</kbd>
+in an empty input window or `/pad`, or press <kbd>Ctrl</kbd>+<kbd>E</kbd> to carry on there with
+what you already typed. It pops up in the top right corner (see **Pad position** in the settings),
+or opens straight away with the hotkey if **Hotkey opens** is set to **Pad**.
+
+| Key                                  | Action                                                   |
+| ------------------------------------ | -------------------------------------------------------- |
+| <kbd>Ctrl</kbd>+<kbd>Enter</kbd>     | Save the text as a note and start over                   |
+| <kbd>Enter</kbd>                     | New line; in a list (`- `, `- [ ] `, `1. `) the next item |
+| <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | Indent / outdent                             |
+| <kbd>Ctrl</kbd>+<kbd>P</kbd>         | Pin: keep the Pad open over other windows, movable and resizable |
+| <kbd>←</kbd> in an empty Pad         | Back to the input window                                 |
+| <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close; the draft is kept, even across restarts   |
+
+A note saved from the Pad keeps its blank lines and indentation. `#tags` and checkboxes are
+highlighted as you type. In the [reader](#reader), <kbd>Shift</kbd>+<kbd>Enter</kbd> opens a note in
+the Pad to edit it there.
+
 ## Settings
 
 Open the settings with `/config` in the input window or from the tray menu. They are fully
@@ -137,6 +157,8 @@ keyboard-driven:
 | Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
 | Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
 | Theme              | Default                                     | Default (dark), Default+ (dark purple), Light |
+| Transparency       | 30%                                         | Off to 80%: how much of the blurred desktop shows through the windows |
+| Scale              | 100%                                        | 80% to 150%                                  |
 | Start with Windows | Off                                         | On, Off                                      |
 | Auto update        | On                                          | On, Off (`/update` works either way)         |
 
