@@ -39,3 +39,10 @@
 :root {
   --surface: color-mix(in srgb, var(--bg) var(--opacity, 100%), transparent);
 }
+
+/* Thin scrollbars in the theme's colours everywhere, rather than the Windows ones.
+   (A plain `*` rule, so any element can still turn its scrollbar off, like the Pad.) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) transparent;
+}

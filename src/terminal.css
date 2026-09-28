@@ -1,12 +1,21 @@
-/* Terminal-style popups (settings, reader); colours come from themes.css. */
+/* Terminal-style popups (settings, reader, help); colours come from themes.css. */
 :root {
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 14px;
   line-height: 1.6;
 }
 
+/* The page scrolls inside the body rather than the window: the window's own scrollbar gets a
+   black track in a see-through window. */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
+  height: 100%;
   margin: 0;
+  overflow-y: auto;
   background: var(--surface);
   color: var(--fg);
   user-select: none;

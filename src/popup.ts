@@ -1,7 +1,7 @@
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { zoom } from "./theme";
 
-/** Helpers for the terminal-style popup windows (settings, reader). */
+/** Helpers for the terminal-style popup windows (settings, reader, help). */
 export const appWindow = getCurrentWindow();
 
 /** Width of the input window and the popups at normal size, in logical pixels. */
@@ -13,7 +13,9 @@ export const BASE_WIDTH = 640;
  * pixels, so everything is scaled by the zoom.
  */
 export async function fitToContent(maxHeight = Infinity) {
-  const height = Math.min(document.body.scrollHeight, maxHeight);
+  // The body fills the window (it is what scrolls), so measure the content inside it.
+  const content = document.querySelector("main") ?? document.body;
+  const height = Math.min(content.offsetHeight, maxHeight);
   await appWindow.setSize(new LogicalSize(BASE_WIDTH * zoom, height * zoom));
 }
 
