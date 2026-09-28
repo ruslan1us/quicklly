@@ -107,13 +107,17 @@ pub fn get_update(app: AppHandle) -> Option<String> {
 }
 
 /// Installs the newer release now (the `/update` command); the app restarts into it.
+/// Returns false when there is none.
 #[tauri::command]
-pub async fn install_update(app: AppHandle) -> Result<(), String> {
-    let update = find(&app).await?.ok_or("Quicklly is already up to date.")?;
+pub async fn install_update(app: AppHandle) -> Result<bool, String> {
+    let Some(update) = find(&app).await? else {
+        return Ok(false);
+    };
     let downloaded = download_path(&app, &update.version).and_then(|path| fs::read(path).ok());
     let bytes = match downloaded {
         Some(bytes) => bytes,
         None => download(&update).await?,
     };
-    install(&app, &update, bytes)
+    install(&app, &update, bytes)?;
+    Ok(true)
 }

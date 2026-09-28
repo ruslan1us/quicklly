@@ -6,7 +6,8 @@
     "main",
     "settings",
     "reader",
-    "pad"
+    "pad",
+    "help"
   ],
   "permissions": [
     "core:default",

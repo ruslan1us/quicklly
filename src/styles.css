@@ -165,3 +165,16 @@ body {
   color: var(--accent);
   font-weight: 700;
 }
+
+/* A line under the note for errors and the answers to commands. */
+#message {
+  flex: none;
+  padding: 0 16px 10px;
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+#message.error {
+  color: var(--error);
+}

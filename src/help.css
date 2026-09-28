@@ -1,0 +1,34 @@
+/* Help layout on top of terminal.css, which is imported here (rather than linked separately)
+   so that the build always puts it first. */
+@import "./terminal.css";
+
+.intro,
+p {
+  margin: 0;
+}
+
+h2 {
+  margin: 14px 0 4px;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 700;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 16ch minmax(0, 1fr);
+  margin: 0;
+}
+
+dt {
+  color: var(--fg);
+}
+
+dd {
+  margin: 0;
+  color: var(--dim);
+}
+
+.key {
+  color: var(--fg);
+}

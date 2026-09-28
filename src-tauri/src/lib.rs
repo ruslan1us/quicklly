@@ -19,6 +19,7 @@ use tauri_plugin_opener::OpenerExt;
 const MAIN_WINDOW: &str = "main";
 const SETTINGS_WINDOW: &str = "settings";
 const READER_WINDOW: &str = "reader";
+const HELP_WINDOW: &str = "help";
 
 /// Appends `text` to today's note file in the notes folder.
 #[tauri::command]
@@ -119,6 +120,14 @@ pub(crate) fn apply_scale(app: &AppHandle) {
 
 fn show_settings(app: &AppHandle) {
     show_popup(app, SETTINGS_WINDOW, "settings.html", "Quicklly Settings");
+}
+
+/// Opens the help from the input window (the `/help` command).
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+async fn open_help(app: AppHandle) {
+    show_popup(&app, HELP_WINDOW, "help.html", "Quicklly Help");
 }
 
 /// Opens the notes reader from the input window (← in an empty note).
@@ -331,6 +340,7 @@ pub fn run() {
             open_settings,
             exit_app,
             open_reader,
+            open_help,
             open_input,
             list_note_files,
             read_note_file,

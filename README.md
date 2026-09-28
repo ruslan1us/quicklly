@@ -34,6 +34,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Dismiss, keeping the draft     | Click anywhere outside the window           |
 | Open the notes folder          | Tray menu → **Open notes folder**           |
 | Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
+| Help and version               | Type `/help` and press <kbd>Enter</kbd>    |
 | Update                         | When a new version is out, the hint says so for two seconds; type `/update` and press <kbd>Enter</kbd> to install it now. Otherwise it is downloaded in the background and installed on the next start (unless **Auto update** is off in the settings) |
 | Exit                           | Type `/exit` and press <kbd>Enter</kbd>, or tray menu → **Quit** |
 

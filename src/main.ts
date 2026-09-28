@@ -1,3 +1,4 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
@@ -13,6 +14,7 @@ const caret = document.querySelector<HTMLDivElement>("#caret")!;
 const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
 const results = document.querySelector<HTMLUListElement>("#results")!;
 const hint = document.querySelector<HTMLSpanElement>(".hint")!;
+const message = document.querySelector<HTMLDivElement>("#message")!;
 
 /** The window grows with the note up to 10 lines, then the note scrolls. */
 const LINE_HEIGHT = 26;
@@ -34,7 +36,8 @@ async function fit() {
   input.style.height = `${noteHeight}px`;
   input.style.overflowY = scrollable ? "auto" : "hidden";
   if (!scrollable) input.scrollTop = 0;
-  const height = noteHeight + (results.hidden ? 0 : results.offsetHeight);
+  const below = [results, message].filter((el) => !el.hidden);
+  const height = noteHeight + below.reduce((sum, el) => sum + el.offsetHeight, 0);
   if (height !== windowHeight) {
     windowHeight = height;
     // The window is sized in logical pixels: CSS pixels times the zoom.
@@ -200,14 +203,33 @@ function moveHit(step: number) {
   renderResults();
 }
 
+let messageTimer: number | undefined;
+
+/** Shows a line under the note for a few seconds: an error, or the answer to a command. */
+function showMessage(text: string, kind: "error" | "info") {
+  window.clearTimeout(messageTimer);
+  message.textContent = text;
+  message.className = kind;
+  message.hidden = false;
+  void fit();
+  messageTimer = window.setTimeout(hideMessage, 4000);
+}
+
+function hideMessage() {
+  window.clearTimeout(messageTimer);
+  if (message.hidden) return;
+  message.hidden = true;
+  void fit();
+}
+
 function showError(err: unknown) {
   input.classList.add("error");
-  input.title = String(err);
+  showMessage(String(err), "error");
 }
 
 function clearError() {
   input.classList.remove("error");
-  input.title = "";
+  hideMessage();
 }
 
 async function hide() {
@@ -246,14 +268,20 @@ async function save() {
     await invoke("exit_app");
     return;
   }
+  if (text === "/help") {
+    await invoke("open_help");
+    await hide();
+    return;
+  }
   if (text === "/update") {
     input.value = "";
-    showHint("updating…");
+    updateCaret();
+    showMessage("Looking for an update…", "info");
     try {
-      // On success the app closes, updates and starts again.
-      await invoke("install_update");
+      // When there is one, the app closes, updates and starts again.
+      const updating = await invoke<boolean>("install_update");
+      if (!updating) showMessage(`Quicklly is up to date (v${await getVersion()}).`, "info");
     } catch (err) {
-      showHint(HINT);
       showError(err);
     }
     return;

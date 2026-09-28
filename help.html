@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/themes.css" />
+    <link rel="stylesheet" href="/src/help.css" />
+    <title>Quicklly Help</title>
+    <script type="module" src="/src/help.ts" defer></script>
+  </head>
+
+  <body>
+    <main>
+      <header data-tauri-drag-region>Quicklly · Help</header>
+      <p class="intro">
+        Press the hotkey anywhere, type a thought, press Enter: it is added with the time to
+        a Markdown file in your notes folder.
+      </p>
+
+      <h2>Input window</h2>
+      <dl>
+        <dt>Enter</dt><dd>save the note</dd>
+        <dt>Shift+Enter</dt><dd>new line</dd>
+        <dt>↑ ↓</dt><dd>previous / next saved note (in an empty field)</dd>
+        <dt>←</dt><dd>browse your notes in the reader</dd>
+        <dt>→</dt><dd>open the Pad for longer notes</dd>
+        <dt>Ctrl+E</dt><dd>move what you typed into the Pad</dd>
+        <dt>?</dt><dd>search all notes</dd>
+        <dt>Esc, Ctrl+C</dt><dd>close</dd>
+      </dl>
+
+      <h2>Commands</h2>
+      <dl>
+        <dt>/config</dt><dd>settings</dd>
+        <dt>/pad</dt><dd>the Pad</dd>
+        <dt>/help</dt><dd>this help</dd>
+        <dt>/update</dt><dd>install a new version now</dd>
+        <dt>/exit</dt><dd>quit Quicklly</dd>
+      </dl>
+
+      <h2>Tags</h2>
+      <p>
+        A note with a <span class="key">#tag</span> goes to <span class="key">tag.md</span>
+        instead of the file of the day: <span class="key">buy milk #todo</span> →
+        <span class="key">todo.md</span>.
+      </p>
+
+      <h2>Reader</h2>
+      <dl>
+        <dt>Enter</dt><dd>open a file · edit a note</dd>
+        <dt>Shift+Enter</dt><dd>edit a note in the Pad</dd>
+        <dt>Space</dt><dd>mark a note done</dd>
+        <dt>Del</dt><dd>delete a note (press twice)</dd>
+        <dt>← →</dt><dd>back to the files · back to the input</dd>
+      </dl>
+
+      <h2>Pad</h2>
+      <dl>
+        <dt>Ctrl+Enter</dt><dd>save as a note</dd>
+        <dt>Tab</dt><dd>indent (Shift+Tab: outdent)</dd>
+        <dt>Ctrl+P</dt><dd>pin: keep it open over other windows</dd>
+        <dt>←</dt><dd>back to the input (in an empty Pad)</dd>
+      </dl>
+
+      <footer id="footer"></footer>
+    </main>
+  </body>
+</html>
