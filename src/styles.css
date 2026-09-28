@@ -10,6 +10,12 @@ body {
   overflow: hidden;
 }
 
+/* The note grows a moment before the window does. `clip` (unlike `hidden`) cannot be scrolled,
+   so the page never scrolls to the caret on the new line and back, which made the text jump. */
+body {
+  overflow: clip;
+}
+
 body {
   position: relative;
   display: flex;
