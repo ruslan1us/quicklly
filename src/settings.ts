@@ -133,7 +133,7 @@ const rows: Row[] = [
     value: (s) => choice(s.transparency === 0 ? "Off" : `${s.transparency}%`),
     cycle: (s, step) =>
       void run("set_transparency", { percent: stepThrough(TRANSPARENCY, s.transparency, step) }),
-    reset: () => void run("set_transparency", { percent: 0 }),
+    reset: () => void run("set_transparency", { percent: 30 }),
   },
   {
     label: "Scale",

@@ -131,8 +131,10 @@ pub fn pad_position(app: &AppHandle) -> PadPosition {
 
 /// See-through background, in percent: 0 is solid.
 pub fn transparency(app: &AppHandle) -> u32 {
-    stored(app, TRANSPARENCY_KEY)
+    stored::<Option<u32>>(app, TRANSPARENCY_KEY).unwrap_or(DEFAULT_TRANSPARENCY)
 }
+
+const DEFAULT_TRANSPARENCY: u32 = 30;
 
 fn scale_percent(app: &AppHandle) -> u32 {
     stored::<Option<u32>>(app, SCALE_KEY).unwrap_or(100)
