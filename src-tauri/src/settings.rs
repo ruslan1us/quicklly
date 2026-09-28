@@ -21,6 +21,8 @@ const AUTO_UPDATE_KEY: &str = "autoUpdate";
 
 const HOTKEY_TARGET_KEY: &str = "hotkeyOpens";
 const PAD_POSITION_KEY: &str = "padPosition";
+const TRANSPARENCY_KEY: &str = "transparency";
+const SCALE_KEY: &str = "scale";
 
 /// What the global hotkey opens.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,6 +74,17 @@ pub struct SettingsView {
     pad_position: PadPosition,
     autostart: bool,
     auto_update: bool,
+    transparency: u32,
+    scale: u32,
+}
+
+/// How every window looks: its colours, how much of the blurred desktop shows through its
+/// background (in percent), and how big it is drawn (in percent).
+#[derive(Clone, Serialize)]
+pub struct Appearance {
+    theme: Theme,
+    transparency: u32,
+    scale: u32,
 }
 
 fn default_notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
@@ -114,6 +127,34 @@ pub fn hotkey_target(app: &AppHandle) -> HotkeyTarget {
 
 pub fn pad_position(app: &AppHandle) -> PadPosition {
     stored(app, PAD_POSITION_KEY)
+}
+
+/// See-through background, in percent: 0 is solid.
+pub fn transparency(app: &AppHandle) -> u32 {
+    stored(app, TRANSPARENCY_KEY)
+}
+
+fn scale_percent(app: &AppHandle) -> u32 {
+    stored::<Option<u32>>(app, SCALE_KEY).unwrap_or(100)
+}
+
+/// How big the windows are drawn: 1.0 is normal size.
+pub fn scale(app: &AppHandle) -> f64 {
+    f64::from(scale_percent(app)) / 100.0
+}
+
+fn appearance(app: &AppHandle) -> Appearance {
+    Appearance {
+        theme: theme(app),
+        transparency: transparency(app),
+        scale: scale_percent(app),
+    }
+}
+
+/// Tells every window to redraw with the new appearance.
+fn appearance_changed(app: &AppHandle) -> Result<(), String> {
+    app.emit("appearance-changed", appearance(app))
+        .map_err(|e| e.to_string())
 }
 
 /// A setting saved under `key`, or its default.
@@ -171,11 +212,7 @@ fn change_hotkey(app: &AppHandle, new: Shortcut) -> Result<(), String> {
 }
 
 fn theme(app: &AppHandle) -> Theme {
-    app.store(STORE_FILE)
-        .ok()
-        .and_then(|store| store.get(THEME_KEY))
-        .and_then(|theme| serde_json::from_value(theme).ok())
-        .unwrap_or_default()
+    stored(app, THEME_KEY)
 }
 
 /// Whether new releases are looked for, downloaded and installed by themselves; on unless
@@ -200,6 +237,8 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
         theme: theme(app),
         hotkey_target: hotkey_target(app),
         pad_position: pad_position(app),
+        transparency: transparency(app),
+        scale: scale_percent(app),
         autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
         auto_update: auto_update(app),
     })
@@ -258,21 +297,30 @@ pub fn reset_hotkey(app: AppHandle) -> Result<SettingsView, String> {
 }
 
 #[tauri::command]
-pub fn get_theme(app: AppHandle) -> Theme {
-    theme(&app)
+pub fn get_appearance(app: AppHandle) -> Appearance {
+    appearance(&app)
+}
+
+#[tauri::command]
+pub fn set_transparency(app: AppHandle, percent: u32) -> Result<SettingsView, String> {
+    store_setting(&app, TRANSPARENCY_KEY, percent.min(90))?;
+    appearance_changed(&app)?;
+    view(&app)
+}
+
+#[tauri::command]
+pub fn set_scale(app: AppHandle, percent: u32) -> Result<SettingsView, String> {
+    store_setting(&app, SCALE_KEY, percent.clamp(50, 200))?;
+    crate::apply_scale(&app);
+    appearance_changed(&app)?;
+    view(&app)
 }
 
 /// Saves the theme and tells every window to switch to it.
 #[tauri::command]
 pub fn set_theme(app: AppHandle, theme: Theme) -> Result<SettingsView, String> {
-    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
-    store.set(
-        THEME_KEY,
-        serde_json::to_value(theme).map_err(|e| e.to_string())?,
-    );
-    store.save().map_err(|e| e.to_string())?;
-    app.emit("theme-changed", theme)
-        .map_err(|e| e.to_string())?;
+    store_setting(&app, THEME_KEY, theme)?;
+    appearance_changed(&app)?;
     view(&app)
 }
 

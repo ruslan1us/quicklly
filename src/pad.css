@@ -15,7 +15,7 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--fg);
   user-select: none;
 }

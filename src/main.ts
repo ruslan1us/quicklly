@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
-import { followTheme } from "./theme";
+import { followTheme, zoom } from "./theme";
 
 const input = document.querySelector<HTMLTextAreaElement>("#note")!;
 const appWindow = getCurrentWindow();
@@ -36,7 +36,8 @@ async function fit() {
   const height = noteHeight + (results.hidden ? 0 : results.offsetHeight);
   if (height !== windowHeight) {
     windowHeight = height;
-    await appWindow.setSize(new LogicalSize(window.innerWidth, height));
+    // The window is sized in logical pixels: CSS pixels times the zoom.
+    await appWindow.setSize(new LogicalSize(window.innerWidth * zoom, height * zoom));
   }
 }
 
@@ -349,4 +350,8 @@ window.addEventListener("focus", () => {
   announceUpdate();
 });
 
-void followTheme();
+// A new scale needs the window fitted again.
+void followTheme(() => {
+  windowHeight = 0;
+  void fit();
+});

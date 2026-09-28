@@ -7,7 +7,7 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--fg);
   user-select: none;
   cursor: default;

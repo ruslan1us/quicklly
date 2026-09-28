@@ -82,15 +82,20 @@ pub fn show(app: &AppHandle) {
     }
     let result = WebviewWindowBuilder::new(app, PAD_WINDOW, WebviewUrl::App("pad.html".into()))
         .title("Quicklly Pad")
-        .inner_size(WIDTH, HEIGHT)
+        .inner_size(WIDTH * settings::scale(app), HEIGHT * settings::scale(app))
         .visible(false)
+        .transparent(true)
+        .effects(crate::blur_behind())
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)
         .resizable(is_pinned(app))
         .build();
     match result {
-        Ok(window) => arrange(&window),
+        Ok(window) => {
+            let _ = window.set_zoom(settings::scale(app));
+            arrange(&window);
+        }
         Err(e) => eprintln!("Failed to open the Pad: {e}"),
     }
 }
@@ -145,9 +150,18 @@ fn arrange(window: &WebviewWindow) {
             let _ = window.set_position(PhysicalPosition::new(bounds.x, bounds.y));
         }
         _ => {
-            let _ = window.set_size(LogicalSize::new(WIDTH, HEIGHT));
+            let zoom = settings::scale(app);
+            let _ = window.set_size(LogicalSize::new(WIDTH * zoom, HEIGHT * zoom));
             place(window);
         }
+    }
+}
+
+/// After the scale changed: an unpinned Pad gets its default size at the new scale; a pinned
+/// one keeps the size it was given.
+pub fn rescale(window: &WebviewWindow) {
+    if !is_pinned(window.app_handle()) {
+        arrange(window);
     }
 }
 

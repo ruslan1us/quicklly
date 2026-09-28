@@ -33,3 +33,9 @@
   --error: #c62839;
   color-scheme: light;
 }
+
+/* Window background: the theme colour, letting through as much of the blurred desktop behind
+   the window as the transparency setting says (--opacity is set by the page). */
+:root {
+  --surface: color-mix(in srgb, var(--bg) var(--opacity, 100%), transparent);
+}

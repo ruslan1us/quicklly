@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { appWindow, fitToContent, reveal } from "./popup";
-import { type Theme, applyTheme } from "./theme";
+import { type Theme, applyTheme, followTheme } from "./theme";
 
 interface Settings {
   notesDir: string;
@@ -11,6 +11,8 @@ interface Settings {
   theme: Theme;
   autostart: boolean;
   autoUpdate: boolean;
+  transparency: number;
+  scale: number;
   hotkeyTarget: "input" | "pad";
   padPosition: PadPosition;
 }
@@ -50,6 +52,15 @@ let selected = 0;
 let recording: string | null = null;
 
 const choice = (text: string) => `‹ ${text} ›`;
+
+const TRANSPARENCY = [0, 10, 20, 30, 40, 50, 60, 70, 80];
+const SCALES = [80, 90, 100, 110, 125, 150];
+
+/** The value `step` places from `current` in `values`, wrapping around. */
+function stepThrough(values: number[], current: number, step: number) {
+  const at = values.indexOf(current);
+  return values[(Math.max(at, 0) + step + values.length) % values.length];
+}
 
 type PadPosition = "topRight" | "topLeft" | "bottomRight" | "bottomLeft" | "center";
 const PAD_POSITIONS: { position: PadPosition; name: string }[] = [
@@ -116,6 +127,19 @@ const rows: Row[] = [
       void run("set_theme", { theme: next.theme });
     },
     reset: () => void run("set_theme", { theme: "default" }),
+  },
+  {
+    label: "Transparency",
+    value: (s) => choice(s.transparency === 0 ? "Off" : `${s.transparency}%`),
+    cycle: (s, step) =>
+      void run("set_transparency", { percent: stepThrough(TRANSPARENCY, s.transparency, step) }),
+    reset: () => void run("set_transparency", { percent: 0 }),
+  },
+  {
+    label: "Scale",
+    value: (s) => choice(`${s.scale}%`),
+    cycle: (s, step) => void run("set_scale", { percent: stepThrough(SCALES, s.scale, step) }),
+    reset: () => void run("set_scale", { percent: 100 }),
   },
   {
     label: "Start with Windows",
@@ -255,6 +279,7 @@ document.addEventListener("mousedown", () => recording !== null && stopRecording
 window.addEventListener("blur", () => recording !== null && stopRecording());
 
 // The window is created hidden: size it to the content first, then show it.
-void run("get_settings").then(async () => {
-  await reveal();
-});
+// The zoom has to be known before the window is fitted to its content.
+void followTheme(() => void fitToContent())
+  .then(() => run("get_settings"))
+  .then(reveal);

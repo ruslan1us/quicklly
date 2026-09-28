@@ -14,7 +14,7 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--surface);
 }
 
 /* The note's height is set to fit its text; one row is 2 + 13 + 26 + 13 + 2 = 56px. */

@@ -401,6 +401,8 @@ rowsList.addEventListener("dblclick", () => view === "files" && openSelectedFile
 window.addEventListener("focus", () => !editing && void refresh());
 
 // Shown only once themed and filled in, so it never flickers.
-void Promise.all([followTheme(), refresh()])
+// The zoom has to be known before the window is fitted to its content.
+void followTheme(() => void fitToContent(MAX_HEIGHT))
+  .then(() => refresh())
   .then(openTarget)
   .then(reveal);

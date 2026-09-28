@@ -10,7 +10,11 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
 use serde::{Deserialize, Serialize};
-use tauri::{App, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::utils::config::WindowEffectsConfig;
+use tauri::window::{Effect, EffectsBuilder};
+use tauri::{
+    App, AppHandle, Emitter, LogicalSize, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+};
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 
@@ -73,18 +77,48 @@ fn show_popup(app: &AppHandle, label: &str, page: &str, title: &str) {
         let _ = window.set_focus();
         return;
     }
+    let zoom = settings::scale(app);
     let result = WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
         .title(title)
-        .inner_size(640.0, 200.0)
+        .inner_size(POPUP_WIDTH * zoom, 200.0)
         .visible(false)
         // A frameless popup like the input window; it is dragged by its header.
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)
         .resizable(false)
+        .transparent(true)
+        .effects(blur_behind())
         .build();
-    if let Err(e) = result {
-        eprintln!("Failed to open {label} window: {e}");
+    match result {
+        Ok(window) => {
+            let _ = window.set_zoom(zoom);
+        }
+        Err(e) => eprintln!("Failed to open {label} window: {e}"),
+    }
+}
+
+/// Width of the input window and the popups at normal size, in logical pixels.
+const POPUP_WIDTH: f64 = 640.0;
+
+/// The blurred desktop behind every window, which shows through as much as the
+/// transparency setting lets the background through.
+pub(crate) fn blur_behind() -> WindowEffectsConfig {
+    EffectsBuilder::new().effect(Effect::Acrylic).build()
+}
+
+/// Zooms every window to the scale from settings, and makes the windows that much wider;
+/// the pages then fit their height to their content.
+pub(crate) fn apply_scale(app: &AppHandle) {
+    let zoom = settings::scale(app);
+    for (label, window) in app.webview_windows() {
+        let _ = window.set_zoom(zoom);
+        if label == pad::PAD_WINDOW {
+            pad::rescale(&window);
+        } else if let (Ok(size), Ok(factor)) = (window.inner_size(), window.scale_factor()) {
+            let height = size.to_logical::<f64>(factor).height;
+            let _ = window.set_size(LogicalSize::new(POPUP_WIDTH * zoom, height));
+        }
     }
 }
 
@@ -267,6 +301,10 @@ pub fn run() {
             settings::register_hotkey(app.handle());
             updater::start(app.handle());
             pad::load(app.handle());
+            if let Some(input) = app.get_webview_window(MAIN_WINDOW) {
+                let _ = input.set_effects(blur_behind());
+            }
+            apply_scale(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -327,7 +365,9 @@ pub fn run() {
             settings::reset_hotkey,
             settings::set_autostart,
             settings::set_auto_update,
-            settings::get_theme,
+            settings::get_appearance,
+            settings::set_transparency,
+            settings::set_scale,
             settings::set_theme,
         ])
         .run(tauri::generate_context!())
