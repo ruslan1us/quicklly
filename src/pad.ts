@@ -327,7 +327,8 @@ text.addEventListener("keydown", (e) => {
   } else if (e.key === "ArrowLeft" && text.value === "" && plain && !editing) {
     // ← in an empty Pad goes back to the input window, the way → came here.
     e.preventDefault();
-    void invoke("open_input").then(() => (pinned ? undefined : hide()));
+    // An unpinned Pad hides first, so the two windows never show at once.
+    void (pinned ? Promise.resolve() : hide()).then(() => invoke("open_input"));
   } else if (e.ctrlKey && e.code === "KeyP") {
     e.preventDefault();
     void togglePin();

@@ -447,7 +447,11 @@ document.addEventListener("keydown", (e) => {
   if (view === "files") {
     if (e.key === "ArrowRight") {
       // → goes back to the note input, the way ← came here.
-      void invoke("open_input").then(() => appWindow.close());
+      // Hidden first, so the two windows never show at once.
+      void appWindow
+        .hide()
+        .then(() => invoke("open_input"))
+        .then(() => appWindow.close());
     } else if (e.key === "Enter") {
       openSelectedFile();
     } else if (e.key === "Tab") {

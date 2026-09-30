@@ -193,8 +193,7 @@ async function search() {
 async function openHit() {
   const hit = hits[selectedHit];
   if (!hit) return;
-  await invoke("open_note", { file: hit.file, line: hit.line });
-  await hide();
+  await switchTo("open_note", { file: hit.file, line: hit.line });
 }
 
 function moveHit(step: number) {
@@ -244,6 +243,14 @@ async function hide() {
   await fit();
 }
 
+/**
+ * Hides this window, then opens another one with `command`, so the two never show at once.
+ */
+async function switchTo(command: string, args?: Record<string, unknown>) {
+  await hide();
+  await invoke(command, args);
+}
+
 async function save() {
   const text = input.value.trim();
   if (!text) {
@@ -255,13 +262,11 @@ async function save() {
     return;
   }
   if (text === "/config") {
-    await invoke("open_settings");
-    await hide();
+    await switchTo("open_settings");
     return;
   }
   if (text === "/pad") {
-    await invoke("open_pad");
-    await hide();
+    await switchTo("open_pad");
     return;
   }
   if (text === "/exit") {
@@ -269,8 +274,7 @@ async function save() {
     return;
   }
   if (text === "/help") {
-    await invoke("open_help");
-    await hide();
+    await switchTo("open_help");
     return;
   }
   if (text === "/update") {
@@ -311,7 +315,7 @@ input.addEventListener("keydown", (e) => {
   } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
     // Ctrl+E moves what was typed into the Pad, to go on writing there.
     e.preventDefault();
-    void invoke("expand_to_pad", { text: input.value }).then(hide, showError);
+    void switchTo("expand_to_pad", { text: input.value });
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
   } else if (searching() && e.key === "Backspace" && input.value === "") {
@@ -326,11 +330,11 @@ input.addEventListener("keydown", (e) => {
   } else if (e.key === "ArrowLeft" && input.value === "") {
     // ← in an empty note opens the notes reader.
     e.preventDefault();
-    void invoke("open_reader").then(hide);
+    void switchTo("open_reader");
   } else if (e.key === "ArrowRight" && input.value === "" && !searching()) {
     // → in an empty note opens the Pad for longer notes.
     e.preventDefault();
-    void invoke("open_pad").then(hide);
+    void switchTo("open_pad");
   } else if (e.key === "ArrowUp" && (input.value === "" || browsingHistory())) {
     // In an empty field or while browsing, ↑/↓ walk the history; otherwise they move the caret.
     e.preventDefault();
