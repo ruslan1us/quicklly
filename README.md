@@ -104,6 +104,7 @@ entry):
 | <kbd>Shift</kbd>+<kbd>Enter</kbd>    |                        | Edit the note in the Pad           |
 | <kbd>Space</kbd>                     |                        | Mark as done / not done            |
 | <kbd>Del</kbd>                       |                        | Delete (press <kbd>Del</kbd> twice) |
+| <kbd>Ctrl</kbd>+<kbd>P</kbd>         |                        | Pin: keep the reader open over other windows, resizable and up to date |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
 | <kbd>→</kbd>                         | Back to the input      |                                    |
 | <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close          | Close                              |

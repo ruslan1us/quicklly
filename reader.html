@@ -11,7 +11,10 @@
 
   <body>
     <main>
-      <header data-tauri-drag-region>Quicklly · Notes</header>
+      <header data-tauri-drag-region>
+        <span id="title" data-tauri-drag-region>Quicklly · Notes</span>
+        <span id="pin" title="Ctrl+P" hidden></span>
+      </header>
       <ul id="rows"></ul>
       <p id="empty" class="dim" hidden>No notes yet.</p>
       <p id="error" class="error" hidden></p>

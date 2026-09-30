@@ -2,6 +2,43 @@
    separately) so that the build always puts it first. */
 @import "./terminal.css";
 
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 2ch;
+}
+
+/* Pin a file to keep the reader open over other windows. */
+#pin {
+  flex: none;
+  color: var(--dim);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+#pin.pinned {
+  color: var(--accent);
+}
+
+/* A pinned reader has the size it was given: the header stays at the top, the help at the
+   bottom, and the list in between scrolls. */
+body.pinned {
+  overflow: hidden;
+}
+
+body.pinned main {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+body.pinned #rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* File list: cursor · name · "today" · progress bar · done/total. */
 .file {
   grid-template-columns: 2ch 15ch 7ch 10ch minmax(0, 1fr);

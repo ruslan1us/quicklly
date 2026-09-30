@@ -2,8 +2,10 @@ mod hotkey;
 mod notes;
 mod pad;
 mod reader;
+mod reader_window;
 mod settings;
 mod updater;
+mod window_bounds;
 
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -16,9 +18,10 @@ use tauri::{App, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, 
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 
+use reader_window::READER_WINDOW;
+
 const MAIN_WINDOW: &str = "main";
 const SETTINGS_WINDOW: &str = "settings";
-const READER_WINDOW: &str = "reader";
 const HELP_WINDOW: &str = "help";
 
 /// Appends `text` to today's note file in the notes folder.
@@ -28,7 +31,13 @@ fn save_note(app: AppHandle, text: String) -> Result<(), String> {
     let mode = settings::mode(&app);
     notes::append_note(&dir, mode, chrono::Local::now().naive_local(), &text)
         .map_err(|e| format!("Failed to save note in {}: {e}", dir.display()))?;
+    notes_changed(&app);
     Ok(())
+}
+
+/// Tells the reader that a notes file changed, so a pinned reader shows it right away.
+fn notes_changed(app: &AppHandle) {
+    let _ = app.emit_to(READER_WINDOW, "notes-changed", ());
 }
 
 fn show_input(app: &AppHandle) {
@@ -81,6 +90,8 @@ fn show_popup(app: &AppHandle, label: &str, page: &str, title: &str) {
         .title(title)
         .inner_size(POPUP_WIDTH * zoom, 200.0)
         .visible(false)
+        // The page shows and focuses the window once it is ready.
+        .focused(false)
         // A frameless popup like the input window; it is dragged by its header.
         .decorations(false)
         .always_on_top(true)
@@ -92,6 +103,9 @@ fn show_popup(app: &AppHandle, label: &str, page: &str, title: &str) {
     match result {
         Ok(window) => {
             let _ = window.set_zoom(zoom);
+            if label == READER_WINDOW {
+                reader_window::arrange(&window);
+            }
         }
         Err(e) => eprintln!("Failed to open {label} window: {e}"),
     }
@@ -154,14 +168,19 @@ fn set_note_done(
     done: bool,
 ) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::set_done(&dir, &name, &note, done).map_err(|e| format!("Couldn't update {name}: {e}"))
+    reader::set_done(&dir, &name, &note, done)
+        .map_err(|e| format!("Couldn't update {name}: {e}"))?;
+    notes_changed(&app);
+    Ok(())
 }
 
 /// Deletes a note from a notes file.
 #[tauri::command]
 fn delete_note(app: AppHandle, name: String, note: reader::NoteRef) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))
+    reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))?;
+    notes_changed(&app);
+    Ok(())
 }
 
 /// Replaces the text of a note in a notes file.
@@ -173,7 +192,10 @@ fn edit_note(
     text: String,
 ) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::set_text(&dir, &name, &note, &text).map_err(|e| format!("Couldn't update {name}: {e}"))
+    reader::set_text(&dir, &name, &note, &text)
+        .map_err(|e| format!("Couldn't update {name}: {e}"))?;
+    notes_changed(&app);
+    Ok(())
 }
 
 /// Finds notes containing `query` in all notes files, for search in the input window.
@@ -299,12 +321,14 @@ pub fn run() {
         .manage(PendingReaderTarget::default())
         .manage(updater::AvailableUpdate::default())
         .manage(pad::Pinned::default())
+        .manage(reader_window::Pinned::default())
         .manage(pad::PendingEdit::default())
         .setup(|app| {
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
             updater::start(app.handle());
             pad::load(app.handle());
+            reader_window::load(app.handle());
             if let Some(input) = app.get_webview_window(MAIN_WINDOW) {
                 let _ = input.set_effects(blur_behind());
             }
@@ -312,6 +336,23 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() == READER_WINDOW {
+                let pinned = reader_window::is_pinned(window.app_handle());
+                match event {
+                    // Clicking elsewhere closes an unpinned reader; not while it is still being
+                    // set up hidden, when Windows may already report it losing the focus.
+                    WindowEvent::Focused(false)
+                        if !pinned && window.is_visible().unwrap_or(false) =>
+                    {
+                        let _ = window.close();
+                    }
+                    WindowEvent::Moved(_) | WindowEvent::Resized(_) if pinned => {
+                        reader_window::remember_bounds(window);
+                    }
+                    _ => {}
+                }
+                return;
+            }
             // The input window and the Pad live hidden; other windows close normally.
             if window.label() != MAIN_WINDOW && window.label() != pad::PAD_WINDOW {
                 return;
@@ -341,6 +382,8 @@ pub fn run() {
             exit_app,
             open_reader,
             open_help,
+            reader_window::get_reader_pin,
+            reader_window::set_reader_pin,
             open_input,
             list_note_files,
             read_note_file,

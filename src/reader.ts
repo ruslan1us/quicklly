@@ -14,7 +14,8 @@ type Item =
   | { kind: "day"; date: string }
   | { kind: "note"; line: number; time: string; done: boolean; text: string };
 
-const header = document.querySelector<HTMLElement>("header")!;
+const title = document.querySelector<HTMLSpanElement>("#title")!;
+const pin = document.querySelector<HTMLSpanElement>("#pin")!;
 const rowsList = document.querySelector<HTMLUListElement>("#rows")!;
 const empty = document.querySelector<HTMLParagraphElement>("#empty")!;
 const error = document.querySelector<HTMLParagraphElement>("#error")!;
@@ -105,8 +106,8 @@ function progressBar(notes: number, done: number) {
 
 function renderFiles() {
   const today = todayFile();
-  header.textContent = "Quicklly · Notes";
-  help.textContent = "↑↓ select · Enter open · → new note · Esc close";
+  title.textContent = "Quicklly · Notes";
+  help.textContent = `↑↓ select · Enter open · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
   empty.textContent = "No notes yet.";
   empty.hidden = files.length > 0;
   rowsList.replaceChildren(
@@ -140,13 +141,12 @@ function renderFiles() {
 function renderNotes() {
   const count = noteIndexes().length;
   const done = items.filter((item) => item.kind === "note" && item.done).length;
-  const title = displayName(openFile);
-  header.textContent = `Quicklly · ${title} · ${counts(count, done)}`;
+  title.textContent = `Quicklly · ${displayName(openFile)} · ${counts(count, done)}`;
   help.textContent = editing
     ? "Enter save · Shift+Enter new line · Esc cancel"
     : confirmingDelete
       ? "Del again to delete · any other key cancels"
-      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · Del delete · ← back · Esc close";
+      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · Del delete · Ctrl+P pin · ← back · Esc close";
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
@@ -174,6 +174,49 @@ function renderNotes() {
 function render() {
   if (view === "files") renderFiles();
   else renderNotes();
+  renderPin();
+}
+
+/**
+ * A pinned reader stays open over other windows, can be moved and resized, updates itself
+ * as notes change, and reopens on the same file; an unpinned one closes when another window
+ * is clicked. A file has to be open to pin the reader.
+ */
+let pinned = false;
+
+function renderPin() {
+  pin.hidden = !pinned && view !== "notes";
+  pin.textContent = pinned ? "● pinned" : "○ pin";
+  pin.classList.toggle("pinned", pinned);
+  document.body.classList.toggle("pinned", pinned);
+}
+
+/** Saves the pin state with the file on show, so a pinned reader reopens on it. */
+async function savePin() {
+  await invoke("set_reader_pin", { pinned, file: view === "notes" ? openFile : null });
+}
+
+async function togglePin() {
+  if (!pinned && view !== "notes") return;
+  pinned = !pinned;
+  try {
+    await savePin();
+  } catch (err) {
+    pinned = !pinned;
+    showError(err);
+  }
+  render();
+  if (!pinned) {
+    await fit();
+    await appWindow.center();
+  }
+}
+
+pin.addEventListener("click", () => void togglePin());
+
+/** Fits the window to its content, unless it is pinned: then it keeps the size it was given. */
+async function fit() {
+  if (!pinned) await fitToContent(MAX_HEIGHT);
 }
 
 function showError(err: unknown) {
@@ -209,7 +252,7 @@ async function refresh(keepError = false) {
   if (view === "files") await loadFiles();
   else await loadNotes();
   render();
-  await fitToContent(MAX_HEIGHT);
+  await fit();
 }
 
 function openSelectedFile() {
@@ -218,12 +261,14 @@ function openSelectedFile() {
   view = "notes";
   openFile = file.name;
   selectedItem = -1;
+  if (pinned) void savePin();
   void refresh();
 }
 
 /** Goes back to the file list, with the file that was open selected. */
 async function backToFiles() {
   view = "files";
+  if (pinned) void savePin();
   await refresh();
   const i = files.findIndex((file) => file.name === openFile);
   if (i >= 0) {
@@ -285,7 +330,7 @@ function fitEditor() {
   editor.style.height = "0";
   editor.style.height = `${editor.scrollHeight}px`;
   updateEditorCaret();
-  void fitToContent(MAX_HEIGHT);
+  void fit();
 }
 
 function startEdit() {
@@ -302,7 +347,7 @@ function startEdit() {
 function cancelEdit() {
   editing = false;
   render();
-  void fitToContent(MAX_HEIGHT);
+  void fit();
 }
 
 /** Saves the edited text; a blank or unchanged text just ends the edit (Del deletes a note). */
@@ -351,6 +396,10 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   e.preventDefault();
+  if (e.ctrlKey && e.code === "KeyP") {
+    void togglePin();
+    return;
+  }
   // Esc or Ctrl+C (by physical key, so any keyboard layout works) closes like in a terminal.
   if (e.key === "Escape" || (e.ctrlKey && e.code === "KeyC")) {
     void appWindow.close();
@@ -399,10 +448,27 @@ rowsList.addEventListener("dblclick", () => view === "files" && openSelectedFile
 
 // Notes may have changed since the reader was last shown (but don't lose an edit in progress).
 window.addEventListener("focus", () => !editing && void refresh());
+// A pinned reader stays up to date as notes are added or changed anywhere.
+void listen("notes-changed", () => !editing && void refresh());
+
+/** A pinned reader reopens on its file, where it was left; an unpinned one is centred. */
+async function start() {
+  const state = await invoke<{ pinned: boolean; file: string | null }>("get_reader_pin");
+  pinned = state.pinned;
+  if (pinned && state.file) {
+    view = "notes";
+    openFile = state.file;
+  }
+  await refresh();
+  await openTarget();
+  if (pinned) {
+    await appWindow.show();
+    await appWindow.setFocus();
+  } else {
+    await reveal();
+  }
+}
 
 // Shown only once themed and filled in, so it never flickers.
 // The zoom has to be known before the window is fitted to its content.
-void followTheme(() => void fitToContent(MAX_HEIGHT))
-  .then(() => refresh())
-  .then(openTarget)
-  .then(reveal);
+void followTheme(() => void fit()).then(start);
