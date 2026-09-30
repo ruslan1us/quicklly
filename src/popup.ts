@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { zoom } from "./theme";
 
@@ -36,9 +37,12 @@ function nextResize() {
   });
 }
 
-/** Shows the window, which is created hidden so it can be sized to its content first. */
+/**
+ * Shows the window, which is created hidden so it can be sized to its content first, in the
+ * middle of the screen in use.
+ */
 export async function reveal() {
-  await appWindow.center();
+  await invoke("center_window");
   await appWindow.show();
   await appWindow.setFocus();
 }

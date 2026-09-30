@@ -1,4 +1,5 @@
 mod hotkey;
+mod monitor;
 mod notes;
 mod pad;
 mod reader;
@@ -42,7 +43,7 @@ fn notes_changed(app: &AppHandle) {
 
 fn show_input(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
-        let _ = window.center();
+        monitor::center_on_active(&window);
         let _ = window.show();
         let _ = window.set_focus();
     }
@@ -383,6 +384,7 @@ pub fn run() {
             open_reader,
             open_help,
             reader_window::get_reader_pin,
+            monitor::center_window,
             reader_window::set_reader_pin,
             open_input,
             list_note_files,

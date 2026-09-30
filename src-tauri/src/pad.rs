@@ -10,6 +10,7 @@ use tauri::{
 };
 use tauri_plugin_store::StoreExt;
 
+use crate::monitor;
 use crate::reader::NoteRef;
 use crate::settings::{self, PadPosition, STORE_FILE};
 use crate::window_bounds;
@@ -47,13 +48,9 @@ pub fn set_pad_draft(app: AppHandle, text: String) -> Result<(), String> {
     fs::write(&path, text).map_err(|e| e.to_string())
 }
 
-/// Puts the Pad where the settings say, on the screen it is on.
+/// Puts the Pad where the settings say, on the screen in use.
 fn place(window: &WebviewWindow) {
-    let monitor = window
-        .current_monitor()
-        .ok()
-        .flatten()
-        .or_else(|| window.primary_monitor().ok().flatten());
+    let monitor = monitor::active(window.app_handle());
     let (Some(monitor), Ok(size)) = (monitor, window.outer_size()) else {
         return;
     };
