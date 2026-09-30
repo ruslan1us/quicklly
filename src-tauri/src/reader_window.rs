@@ -14,6 +14,7 @@ const MIN_SIZE: (f64, f64) = (440.0, 200.0);
 const PINNED_KEY: &str = "readerPinned";
 const BOUNDS_KEY: &str = "readerBounds";
 const FILE_KEY: &str = "readerFile";
+const SORT_KEY: &str = "readerSort";
 
 /// Whether the reader is pinned: then it stays open while other windows are used, can be
 /// resized, keeps its place and reopens on the same file. Unpinned, it closes when another
@@ -90,5 +91,22 @@ pub fn set_reader_pin(app: AppHandle, pinned: bool, file: Option<String>) -> Res
             window_bounds::save_webview(&window, BOUNDS_KEY);
         }
     }
+    store.save().map_err(|e| e.to_string())
+}
+
+/// How the reader sorts the files: `recent` (the default) or `name`.
+#[tauri::command]
+pub fn get_reader_sort(app: AppHandle) -> String {
+    app.store(STORE_FILE)
+        .ok()
+        .and_then(|store| store.get(SORT_KEY))
+        .and_then(|sort| sort.as_str().map(String::from))
+        .unwrap_or_else(|| "recent".into())
+}
+
+#[tauri::command]
+pub fn set_reader_sort(app: AppHandle, sort: String) -> Result<(), String> {
+    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
+    store.set(SORT_KEY, sort);
     store.save().map_err(|e| e.to_string())
 }

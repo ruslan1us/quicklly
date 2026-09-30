@@ -16,7 +16,10 @@ export const BASE_WIDTH = 640;
 export async function fitToContent(maxHeight = Infinity) {
   // The height depends on where lines wrap, so a window of another width (a pinned one that
   // was resized) first gets the usual width, and is measured once the page has followed.
-  if (Math.abs(window.innerWidth - BASE_WIDTH) > 1) {
+  // The window's own size is compared, as the page may not have its zoom yet.
+  const factor = await appWindow.scaleFactor();
+  const width = (await appWindow.innerSize()).width / factor;
+  if (Math.abs(width - BASE_WIDTH * zoom) > 1) {
     const resized = nextResize();
     await appWindow.setSize(new LogicalSize(BASE_WIDTH * zoom, window.innerHeight * zoom));
     await resized;

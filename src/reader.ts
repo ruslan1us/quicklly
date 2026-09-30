@@ -8,6 +8,40 @@ interface NoteFile {
   name: string;
   notes: number;
   done: number;
+  /** When the file last changed, in milliseconds since 1970. */
+  changed: number;
+}
+
+/**
+ * How the files are listed: `recent` puts the file changed last on top (just opening a file
+ * doesn't move it); `name` lists the inbox and tag files by name, then the days, newest first.
+ * Tab switches between them.
+ */
+type Sort = "recent" | "name";
+let sort: Sort = "recent";
+
+/** The files as they come (by name), in the chosen order. */
+function sortFiles(list: NoteFile[]) {
+  return sort === "recent" ? [...list].sort((a, b) => b.changed - a.changed) : list;
+}
+
+async function toggleSort() {
+  const current = files[selectedFile]?.name;
+  sort = sort === "recent" ? "name" : "recent";
+  void invoke("set_reader_sort", { sort });
+  await refresh();
+  // Keep the same file selected in its new place.
+  const i = files.findIndex((file) => file.name === current);
+  if (i >= 0) {
+    selectedFile = i;
+    render();
+  }
+}
+
+/** Opens a file's notes. */
+function showFile(name: string) {
+  view = "notes";
+  openFile = name;
 }
 
 type Item =
@@ -106,8 +140,8 @@ function progressBar(notes: number, done: number) {
 
 function renderFiles() {
   const today = todayFile();
-  title.textContent = "Quicklly · Notes";
-  help.textContent = `↑↓ select · Enter open · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
+  title.textContent = `Quicklly · Notes · ${sort === "recent" ? "recent first" : "by name"}`;
+  help.textContent = `↑↓ select · Enter open · Tab sort · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
   empty.textContent = "No notes yet.";
   empty.hidden = files.length > 0;
   rowsList.replaceChildren(
@@ -226,7 +260,7 @@ function showError(err: unknown) {
 
 async function loadFiles() {
   try {
-    files = await invoke<NoteFile[]>("list_note_files");
+    files = sortFiles(await invoke<NoteFile[]>("list_note_files"));
   } catch (err) {
     files = [];
     showError(err);
@@ -258,8 +292,7 @@ async function refresh(keepError = false) {
 function openSelectedFile() {
   const file = files[selectedFile];
   if (!file) return;
-  view = "notes";
-  openFile = file.name;
+  showFile(file.name);
   selectedItem = -1;
   if (pinned) void savePin();
   void refresh();
@@ -282,7 +315,7 @@ async function openTarget() {
   const target = await invoke<{ file: string; line: number } | null>("take_reader_target");
   if (!target) return;
   view = "notes";
-  openFile = target.file;
+  showFile(target.file);
   selectedItem = -1;
   editing = false;
   confirmingDelete = false;
@@ -417,6 +450,8 @@ document.addEventListener("keydown", (e) => {
       void invoke("open_input").then(() => appWindow.close());
     } else if (e.key === "Enter") {
       openSelectedFile();
+    } else if (e.key === "Tab") {
+      void toggleSort();
     } else if (files.length > 0 && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       selectedFile = wrap(selectedFile, e.key === "ArrowUp" ? -1 : 1, files.length);
       render();
@@ -454,6 +489,7 @@ void listen("notes-changed", () => !editing && void refresh());
 /** A pinned reader reopens on its file, where it was left; an unpinned one is centred. */
 async function start() {
   const state = await invoke<{ pinned: boolean; file: string | null }>("get_reader_pin");
+  sort = await invoke<Sort>("get_reader_sort");
   pinned = state.pinned;
   if (pinned && state.file) {
     view = "notes";

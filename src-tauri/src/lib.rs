@@ -384,6 +384,8 @@ pub fn run() {
             open_reader,
             open_help,
             reader_window::get_reader_pin,
+            reader_window::get_reader_sort,
+            reader_window::set_reader_sort,
             monitor::center_window,
             reader_window::set_reader_pin,
             open_input,
