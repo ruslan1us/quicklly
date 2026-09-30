@@ -258,7 +258,32 @@ pub fn set_done(dir: &Path, name: &str, note: &NoteRef, done: bool) -> io::Resul
 pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<()> {
     edit_note(dir, name, note, |lines, span| {
         lines.drain(span);
+        remove_empty_days(lines);
     })
+}
+
+/// Drops the `## YYYY-MM-DD` headings that have nothing but blank lines under them any more,
+/// and blank lines left at the end. Text written under a heading by hand keeps it.
+fn remove_empty_days(lines: &mut Vec<String>) {
+    let mut i = 0;
+    while i < lines.len() {
+        if !lines[i].starts_with("## ") {
+            i += 1;
+            continue;
+        }
+        let end = lines[i + 1..]
+            .iter()
+            .position(|line| line.starts_with("## "))
+            .map_or(lines.len(), |next| i + 1 + next);
+        if lines[i + 1..end].iter().all(|line| line.trim().is_empty()) {
+            lines.drain(i..end);
+        } else {
+            i = end;
+        }
+    }
+    while lines.last().is_some_and(|line| line.trim().is_empty()) {
+        lines.pop();
+    }
 }
 
 /// Replaces the text of a note, keeping its time and done mark. Extra lines are indented
@@ -403,6 +428,30 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
             "# Inbox\n\n## 2026-09-26\n\n- 15:00 three\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn deleting_the_last_note_of_a_day_drops_its_heading() {
+        let dir = temp_dir("delete-day");
+        let path = dir.join("idea.md");
+        fs::write(
+            &path,
+            "# idea\n\n## 2026-09-26\n\n- 09:00 one\n\n## 2026-09-27\n\nby hand\n\n\
+             ## 2026-09-28\n\n- 10:00 two\n",
+        )
+        .unwrap();
+
+        delete(&dir, "idea.md", &note_ref(4, "09:00", false, "one")).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# idea\n\n## 2026-09-27\n\nby hand\n\n## 2026-09-28\n\n- 10:00 two\n"
+        );
+        delete(&dir, "idea.md", &note_ref(8, "10:00", false, "two")).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# idea\n\n## 2026-09-27\n\nby hand\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }
