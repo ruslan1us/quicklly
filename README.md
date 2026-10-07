@@ -106,6 +106,7 @@ entry):
 | <kbd>Tab</kbd>                       | Sort: recent first / by name |                              |
 | <kbd>Shift</kbd>+<kbd>Enter</kbd>    |                        | Edit the note in the Pad           |
 | <kbd>Space</kbd>                     |                        | Mark as done / not done            |
+| <kbd>C</kbd>                         |                        | Copy the note's links              |
 | <kbd>Del</kbd>                       | Move to the Recycle Bin (press <kbd>Del</kbd> twice) | Delete (press <kbd>Del</kbd> twice) |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd>         |                        | Pin: keep the reader open over other windows, resizable and up to date |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
@@ -120,6 +121,12 @@ A done note is stored as a Markdown task, which Obsidian shows as a checked box:
 
 Changes only touch that note; the rest of the file stays as it is. If the file was changed
 elsewhere in the meantime, nothing is written and the reader reloads it.
+
+Links (`https://…`, or just a domain like `google.com` or `github.com/ruslan1us`) are
+underlined as you type, in the input window and in the Pad. The reader and the search results show them short, without the protocol
+and with only the start of the path (`https://github.com/ruslan1us/quicklly/releases` →
+`github.com/rusl...`); the file keeps the whole link, and <kbd>C</kbd> copies the selected
+note's links, one per line.
 
 ## Pad
 

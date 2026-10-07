@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import { linkNodes } from "./links";
 import { tagSuggest } from "./tagSuggest";
 import { followTheme } from "./theme";
 
@@ -80,19 +81,22 @@ function span(content: string, className: string) {
   return el;
 }
 
-/** Appends `content` to `parent`, with its `#tags` marked. */
-function appendWithTags(parent: Node, content: string) {
+/** Appends `content` to `parent`, with its `#tags` and links marked. */
+function appendWithTags(parent: ParentNode, content: string) {
   let from = 0;
   for (const match of content.matchAll(TAG)) {
     const at = match.index + match[1].length;
-    parent.appendChild(document.createTextNode(content.slice(from, at)));
-    parent.appendChild(span(match[2], "tag"));
+    parent.append(...linkNodes(content.slice(from, at)));
+    parent.append(span(match[2], "tag"));
     from = at + match[2].length;
   }
-  parent.appendChild(document.createTextNode(content.slice(from)));
+  parent.append(...linkNodes(content.slice(from)));
 }
 
-/** One line of text as it is shown under the (transparent) text: list markers and tags marked. */
+/**
+ * One line of text as it is shown under the (transparent) text: list markers, tags and links
+ * marked.
+ */
 function renderLine(line: string) {
   const div = document.createElement("div");
   div.className = "line";

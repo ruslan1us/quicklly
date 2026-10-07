@@ -82,19 +82,30 @@ body.pinned #rows {
   grid-template-columns: 2ch 6ch 2ch minmax(0, 1fr);
 }
 
-.note span:last-child {
+/* `>`: the cells only, not the links inside the text. */
+.note > span:last-child {
   color: var(--fg);
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
 
-.note:not(.selected) span:nth-child(2) {
+.note:not(.selected) > span:nth-child(2) {
   color: var(--dim);
 }
 
-.note.done span:last-child {
+.note.done > span:last-child {
   color: var(--dim);
   text-decoration: line-through;
+}
+
+/* Links are shown short (see links.ts) and underlined. */
+.note .link {
+  text-decoration: underline;
+}
+
+/* An answer in front of the help, like "Copied 1 link". */
+#help .message {
+  color: var(--accent);
 }
 
 /* Waiting for the second Del. */

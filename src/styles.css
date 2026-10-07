@@ -25,7 +25,8 @@ body {
 
 /* The note's height is set to fit its text; one row is 2 + 13 + 26 + 13 + 2 = 56px. */
 #note,
-.mirror {
+.mirror,
+#backdrop-text {
   flex: none;
   box-sizing: border-box;
   margin: 0;
@@ -40,7 +41,11 @@ body {
   overflow-y: hidden;
 }
 
+/* The text itself is transparent: what shows is the backdrop behind it, with links underlined.
+   Positioned, so it is drawn over the backdrop and its selection covers the backdrop's text. */
 #note {
+  position: relative;
+  color: transparent;
   /* The native caret is replaced by the block caret below. */
   caret-color: transparent;
 }
@@ -59,6 +64,27 @@ body {
   white-space: pre-wrap;
   overflow-wrap: break-word;
   pointer-events: none;
+}
+
+/* Behind the note, as tall as it: a copy of its text laid out exactly like it, moved with the
+   note's scroll and cut off where the note ends. */
+#backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#backdrop-text {
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+#backdrop .link {
+  text-decoration: underline;
 }
 
 #note.error {
@@ -117,7 +143,8 @@ body {
 }
 
 .search #note,
-.search .mirror {
+.search .mirror,
+.search #backdrop-text {
   padding-left: calc(16px + 2ch);
 }
 
@@ -154,6 +181,10 @@ body {
 #results .hit.done .text {
   color: var(--dim);
   text-decoration: line-through;
+}
+
+#results .link {
+  text-decoration: underline;
 }
 
 #results .hit.selected {

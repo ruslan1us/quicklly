@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import { linkNodes, shortLink, splitLinks } from "./links";
 import { BASE_WIDTH } from "./popup";
 import { tagSuggest } from "./tagSuggest";
 import { followTheme, zoom } from "./theme";
@@ -10,6 +11,8 @@ import { followTheme, zoom } from "./theme";
 const input = document.querySelector<HTMLTextAreaElement>("#note")!;
 const appWindow = getCurrentWindow();
 
+const backdrop = document.querySelector<HTMLDivElement>("#backdrop")!;
+const backdropText = document.querySelector<HTMLDivElement>("#backdrop-text")!;
 const measure = document.querySelector<HTMLDivElement>("#measure")!;
 const caret = document.querySelector<HTMLDivElement>("#caret")!;
 const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
@@ -25,6 +28,16 @@ let windowHeight = 0;
 let scrollable = false;
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
+/** Draws the note's text, with its links underlined, behind the transparent note. */
+function renderBackdrop() {
+  backdropText.replaceChildren(...linkNodes(input.value));
+  syncBackdrop();
+}
+
+function syncBackdrop() {
+  backdropText.style.transform = `translateY(${-input.scrollTop}px)`;
+}
+
 /**
  * Resizes the note and the window to fit the text, plus the search results or the tag
  * suggestions below it.
@@ -38,7 +51,11 @@ async function fit() {
   scrollable = needed > MAX_HEIGHT;
   input.style.height = `${noteHeight}px`;
   input.style.overflowY = scrollable ? "auto" : "hidden";
+  backdrop.style.height = `${noteHeight}px`;
+  // A scrolling note has a scrollbar, which narrows its lines: the backdrop gets one too.
+  backdropText.style.overflowY = scrollable ? "scroll" : "hidden";
   if (!scrollable) input.scrollTop = 0;
+  renderBackdrop();
   const below = [results, tagList, message].filter((el) => !el.hidden);
   const height = noteHeight + below.reduce((sum, el) => sum + el.offsetHeight, 0);
   if (height !== windowHeight) {
@@ -51,6 +68,7 @@ async function fit() {
 // Until the window has grown, a new line would scroll the note to the caret and back.
 input.addEventListener("scroll", () => {
   if (!scrollable) input.scrollTop = 0;
+  syncBackdrop();
   updateCaret();
 });
 
@@ -134,6 +152,19 @@ function highlight(text: string, query: string) {
   return parts;
 }
 
+/**
+ * `text` as nodes, with its links shown short and underlined like in the reader, and each
+ * occurrence of `query` in what is shown marked.
+ */
+function highlightWithLinks(text: string, query: string) {
+  return splitLinks(text).flatMap((part) => {
+    if (!part.link) return highlight(part.text, query);
+    const link = cell("", "link");
+    link.append(...highlight(shortLink(part.text), query));
+    return [link];
+  });
+}
+
 function cell(text: string, className = "") {
   const span = document.createElement("span");
   span.textContent = text;
@@ -162,7 +193,7 @@ function renderResults() {
       li.classList.toggle("done", hit.done);
       // One line per result: extra lines of a note follow a ⏎.
       const text = cell("", "text");
-      text.append(...highlight(hit.text.split("\n").join(" ⏎ "), query));
+      text.append(...highlightWithLinks(hit.text.split("\n").join(" ⏎ "), query));
       li.append(
         cell(i === selectedHit ? "❯" : ""),
         cell(hit.day),
@@ -368,6 +399,7 @@ input.addEventListener("input", () => {
     setSearchMode(true);
   }
   clearError();
+  renderBackdrop();
   updateCaret();
   void search();
 });

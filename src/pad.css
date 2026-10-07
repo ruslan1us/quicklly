@@ -126,6 +126,10 @@ header {
   color: var(--accent);
 }
 
+#backdrop .link {
+  text-decoration: underline;
+}
+
 #backdrop .bullet {
   color: var(--dim);
 }

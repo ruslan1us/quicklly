@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { blockCaret } from "./blockCaret";
+import { findLinks, linkNodes, shortLink } from "./links";
 import { appWindow, fitToContent, reveal } from "./popup";
 import { followTheme } from "./theme";
 
@@ -195,21 +196,58 @@ function renderFiles() {
   );
 }
 
-function renderNotes() {
-  const count = noteIndexes().length;
-  const done = items.filter((item) => item.kind === "note" && item.done).length;
-  title.textContent = `Quicklly · ${displayName(openFile)} · ${counts(count, done)}`;
+/** A short answer shown in front of the notes view's help, like "Copied 1 link". */
+let footerMessage = "";
+let footerTimer: number | undefined;
+
+function renderNotesHelp() {
   help.textContent = editing
     ? "Enter save · Shift+Enter new line · Esc cancel"
     : confirmingDelete
       ? "Del again to delete · any other key cancels"
-      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · Del delete · Ctrl+P pin · ← back · Esc close";
+      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · Del delete · Ctrl+P pin · ← back · Esc close";
+  if (footerMessage && !editing && !confirmingDelete) {
+    help.prepend(span(footerMessage, "message"), " · ");
+  }
+}
+
+/**
+ * Shows `message` in front of the help for two seconds. The help keeps its place, so the
+ * footer does not shrink and leave a gap; the window is refitted in case it takes a line more.
+ */
+function showFooterMessage(message: string) {
+  window.clearTimeout(footerTimer);
+  footerMessage = message;
+  renderNotesHelp();
+  void fit();
+  footerTimer = window.setTimeout(() => {
+    footerMessage = "";
+    // Only the footer is redrawn: redrawing the rows would take the focus from an editor.
+    if (view === "notes") {
+      renderNotesHelp();
+      void fit();
+    }
+  }, 2000);
+}
+
+/** The note's text, with its links shown short and underlined (the file keeps them whole). */
+function noteText(text: string) {
+  const cell = span("");
+  cell.append(...linkNodes(text, shortLink));
+  return cell;
+}
+
+function renderNotes() {
+  const count = noteIndexes().length;
+  const done = items.filter((item) => item.kind === "note" && item.done).length;
+  title.textContent = `Quicklly · ${displayName(openFile)} · ${counts(count, done)}`;
+  renderNotesHelp();
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
     ...items.map((item, i) => {
       if (item.kind === "day") return row("row day", ["", `── ${item.date}`], false);
-      const text = editing && i === selectedItem ? editorBox : item.text;
+      const text = editing && i === selectedItem ? editorBox : noteText(item.text);
       const li = row(
         "row note",
         [i === selectedItem ? "❯" : "", item.time, item.done ? "✓" : "", text],
@@ -404,6 +442,24 @@ async function deleteFile() {
   await refresh(failed);
 }
 
+/** Copies the selected note's links, whole and one per line, and says how many in the footer. */
+async function copyLinks() {
+  const note = items[selectedItem];
+  if (note?.kind !== "note") return;
+  const links = findLinks(note.text).map((link) => link.url);
+  if (links.length === 0) {
+    showFooterMessage("No links in this note");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(links.join("\n"));
+  } catch (err) {
+    showError(err);
+    return;
+  }
+  showFooterMessage(`Copied ${plural(links.length, "link")}`);
+}
+
 /** Grows the editor with its text, and the window with it. */
 function fitEditor() {
   editor.style.height = "0";
@@ -523,6 +579,9 @@ document.addEventListener("keydown", (e) => {
     if (note?.kind === "note") void invoke("edit_in_pad", { name: openFile, note });
   } else if (e.key === "Enter") {
     startEdit();
+  } else if (e.code === "KeyC" && !e.altKey && !e.metaKey) {
+    // By physical key, so any keyboard layout works; Ctrl+C closed the reader above.
+    void copyLinks();
   } else if (e.key === "Delete" && items[selectedItem]?.kind === "note") {
     confirmingDelete = true;
     render();
