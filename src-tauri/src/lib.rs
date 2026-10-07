@@ -271,6 +271,13 @@ fn list_note_files(app: AppHandle) -> Result<Vec<reader::NoteFile>, String> {
     reader::list_files(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
 }
 
+/// Lists the tags that have their own file, to suggest them while a `#tag` is typed.
+#[tauri::command]
+fn list_tags(app: AppHandle) -> Result<Vec<String>, String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::list_tags(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+}
+
 fn setup_tray(app: &App) -> tauri::Result<()> {
     let new_note = MenuItem::with_id(app, "new_note", "New note", true, None::<&str>)?;
     let open_folder =
@@ -414,6 +421,7 @@ pub fn run() {
             reader_window::set_reader_pin,
             open_input,
             list_note_files,
+            list_tags,
             read_note_file,
             delete_note_file,
             set_note_done,

@@ -166,6 +166,41 @@ body {
   font-weight: 700;
 }
 
+/* Existing tags suggested under the note while a #tag is typed, looking like the results. */
+#tags {
+  flex: none;
+  max-height: calc(8 * 22px);
+  margin: 0;
+  padding: 0 16px 10px;
+  overflow-y: auto;
+  list-style: none;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+#tags li {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#tags li > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tags li.selected {
+  color: var(--accent);
+}
+
+#tags mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* A line under the note for errors and the answers to commands. */
 #message {
   flex: none;

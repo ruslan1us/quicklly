@@ -143,6 +143,39 @@ header {
   pointer-events: none;
 }
 
+/* Existing tags suggested while a #tag is typed: between the text, which makes room for them,
+   and the footer. The ❯ sits in the gutter, the tags line up with the text. */
+#tags {
+  flex: none;
+  max-height: calc(6 * 22px);
+  margin: 0;
+  padding: 6px 18px 0 5ch;
+  overflow-y: auto;
+  list-style: none;
+}
+
+#tags li {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#tags li > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tags li.selected {
+  color: var(--accent);
+}
+
+#tags mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
+}
+
 footer {
   display: flex;
   justify-content: space-between;

@@ -25,6 +25,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon |
 | Save the note                  | <kbd>Enter</kbd>                            |
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
+| Pick an existing tag           | Type `#` and the start of a tag; pick one with <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or <kbd>Tab</kbd>, <kbd>Esc</kbd> closes the list (also in the Pad) |
 | Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
 | Browse notes (see [Reader](#reader)) | <kbd>←</kbd> in an empty field        |
 | Write a longer note in the Pad | <kbd>→</kbd> in an empty field, or `/pad`; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves it as a note |

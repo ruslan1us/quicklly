@@ -10,6 +10,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Move a notes file to the Recycle Bin from the reader with Del (press it twice).
+- Typing a `#tag` suggests your existing tags, in the input window and in the Pad.
 
 ### Fixed
 

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import { tagSuggest } from "./tagSuggest";
 import { followTheme } from "./theme";
 
 const appWindow = getCurrentWindow();
@@ -12,6 +13,7 @@ const status = document.querySelector<HTMLSpanElement>("#status")!;
 const pin = document.querySelector<HTMLSpanElement>("#pin")!;
 const help = document.querySelector<HTMLSpanElement>("#help")!;
 const title = document.querySelector<HTMLSpanElement>("#title")!;
+const caret = document.querySelector<HTMLDivElement>("#caret")!;
 
 /** A note from the reader (Shift+Enter there), edited here in place of the draft. */
 interface PadEdit {
@@ -42,9 +44,24 @@ pin.addEventListener("click", () => void togglePin());
 
 const updateCaret = blockCaret(
   text,
-  document.querySelector<HTMLDivElement>("#caret")!,
+  caret,
   document.querySelector<HTMLDivElement>("#caret-mirror")!,
 );
+
+/**
+ * The suggested tags take their room from the text, so scroll the line being typed back into
+ * view if they cover it.
+ */
+function keepCaretVisible() {
+  updateCaret();
+  const below = caret.offsetTop + caret.offsetHeight - text.clientHeight;
+  if (!caret.hidden && below > 0) text.scrollTop += below;
+}
+
+/** Existing tags offered while a `#tag` is typed, above the footer. */
+const suggestions = tagSuggest(text, document.querySelector<HTMLUListElement>("#tags")!, {
+  onChange: keepCaretVisible,
+});
 
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
@@ -176,6 +193,8 @@ function refresh() {
   renderStatus();
   renderHelp();
   updateCaret();
+  // The text may have been replaced from code, e.g. emptied after saving.
+  suggestions.update();
 }
 
 /** Types `content` over the selection, keeping Ctrl+Z working. */
@@ -315,6 +334,9 @@ async function saveNote() {
 
 text.addEventListener("keydown", (e) => {
   if (e.isComposing) return;
+  // While tags are suggested, Enter and Tab pick one (rather than continue a list or indent),
+  // ↑ ↓ choose and Esc closes the list.
+  if (suggestions.keydown(e)) return;
   const plain = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
   if (e.key === "Enter" && e.ctrlKey) {
     e.preventDefault();
@@ -373,6 +395,7 @@ window.addEventListener("resize", refresh);
 window.addEventListener("focus", () => {
   text.focus();
   refresh();
+  void suggestions.load();
 });
 
 // Shown only once themed and filled with the draft, so it never flickers.

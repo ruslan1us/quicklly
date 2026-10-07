@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
 import { BASE_WIDTH } from "./popup";
+import { tagSuggest } from "./tagSuggest";
 import { followTheme, zoom } from "./theme";
 
 const input = document.querySelector<HTMLTextAreaElement>("#note")!;
@@ -13,6 +14,7 @@ const measure = document.querySelector<HTMLDivElement>("#measure")!;
 const caret = document.querySelector<HTMLDivElement>("#caret")!;
 const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
 const results = document.querySelector<HTMLUListElement>("#results")!;
+const tagList = document.querySelector<HTMLUListElement>("#tags")!;
 const hint = document.querySelector<HTMLSpanElement>(".hint")!;
 const message = document.querySelector<HTMLDivElement>("#message")!;
 
@@ -24,7 +26,8 @@ let scrollable = false;
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
 /**
- * Resizes the note and the window to fit the text, plus the search results below it.
+ * Resizes the note and the window to fit the text, plus the search results or the tag
+ * suggestions below it.
  * The height is measured on an invisible copy, so the note itself never jumps.
  */
 async function fit() {
@@ -36,7 +39,7 @@ async function fit() {
   input.style.height = `${noteHeight}px`;
   input.style.overflowY = scrollable ? "auto" : "hidden";
   if (!scrollable) input.scrollTop = 0;
-  const below = [results, message].filter((el) => !el.hidden);
+  const below = [results, tagList, message].filter((el) => !el.hidden);
   const height = noteHeight + below.reduce((sum, el) => sum + el.offsetHeight, 0);
   if (height !== windowHeight) {
     windowHeight = height;
@@ -68,6 +71,7 @@ function showHistory(index: number) {
   historyIndex = index;
   input.value = history[index] ?? "";
   input.setSelectionRange(input.value.length, input.value.length);
+  suggestions.update();
   void fit();
 }
 
@@ -106,6 +110,12 @@ function setSearchMode(on: boolean) {
   input.placeholder = on ? "Search notes…" : NOTE_PLACEHOLDER;
   updateCaret();
 }
+
+/** Existing tags offered while a `#tag` is typed; not in search mode. */
+const suggestions = tagSuggest(input, tagList, {
+  enabled: () => !searching(),
+  onChange: () => void fit(),
+});
 
 /** `text` as nodes, with each occurrence of `query` (ignoring case) marked. */
 function highlight(text: string, query: string) {
@@ -239,6 +249,7 @@ async function hide() {
   searchCount++;
   clearError();
   renderResults();
+  suggestions.update();
   await appWindow.hide();
   await fit();
 }
@@ -305,6 +316,8 @@ async function save() {
 
 input.addEventListener("keydown", (e) => {
   if (e.isComposing) return;
+  // While tags are suggested, ↑ ↓ Enter Tab Esc work the list instead.
+  if (suggestions.keydown(e)) return;
   // Shift+Enter keeps its default: a new line in the note.
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -385,6 +398,7 @@ void invoke<string | null>("get_update").then((version) => (updateVersion = vers
 window.addEventListener("focus", () => {
   input.focus();
   announceUpdate();
+  void suggestions.load();
 });
 
 // The window is fitted to the note once the scale is known, and again whenever it changes.

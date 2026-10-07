@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::notes::{format_note, note_lines, INBOX_FILE};
+use crate::notes::{first_tag, format_note, note_lines, INBOX_FILE};
 
 /// A notes file as listed in the reader.
 #[derive(Debug, PartialEq, Serialize)]
@@ -82,6 +82,20 @@ pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
         })
     });
     Ok(files)
+}
+
+/// The tags that have a file of their own: the names, without `.md`, of the notes files that
+/// are neither the inbox nor daily files, sorted. Suggested while a `#tag` is typed.
+pub fn list_tags(dir: &Path) -> io::Result<Vec<String>> {
+    let mut tags: Vec<String> = list_files(dir)?
+        .into_iter()
+        .filter(|file| file.name != INBOX_FILE && daily_date(&file.name).is_none())
+        .filter_map(|file| file.name.strip_suffix(".md").map(String::from))
+        // Only names a note's `#tag` can lead to: `My Notes.md` is no tag file.
+        .filter(|name| first_tag(&format!("#{name}")).as_deref() == Some(name.as_str()))
+        .collect();
+    tags.sort();
+    Ok(tags)
 }
 
 /// A note found by [`search`].
@@ -681,6 +695,26 @@ mod tests {
         assert!(read_file(&dir, "../2026-09-26.md").is_err());
         assert!(read_file(&dir, "..\\2026-09-26.md").is_err());
         assert_eq!(search(&dir, "#todo", 10).unwrap()[0].day, "2026-09-26");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn lists_tags_from_the_tag_files() {
+        let dir = temp_dir("tags");
+        for name in [
+            "inbox.md",
+            "2026-09-26.md",
+            "todo.md",
+            "ideas.md",
+            "My Notes.md",
+            "notes.txt",
+        ] {
+            fs::write(dir.join(name), "").unwrap();
+        }
+        fs::create_dir_all(dir.join("folder.md")).unwrap();
+
+        assert_eq!(list_tags(&dir).unwrap(), ["ideas", "todo"]);
+        assert!(list_tags(&dir.join("missing")).unwrap().is_empty());
         fs::remove_dir_all(&dir).unwrap();
     }
 
