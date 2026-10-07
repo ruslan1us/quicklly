@@ -7,8 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-08
+
 ### Added
 
+- This changelog: `/changelog` in the input window shows what's new, and each release on
+  GitHub takes its notes from it.
 - Move a notes file to the Recycle Bin from the reader with Del (press it twice).
 - Typing a `#tag` suggests your existing tags, in the input window and in the Pad.
 - Links in notes are underlined; the reader shows them short and copies a note's links with C.
@@ -155,7 +159,8 @@ The first version, published as source code only.
 - A tray icon to write a new note, open the notes folder or quit.
 - Only one copy of Quicklly runs at a time.
 
-[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/ruslan1us/quicklly/compare/v0.7.4...v0.8.0
 [0.7.4]: https://github.com/ruslan1us/quicklly/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/ruslan1us/quicklly/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/ruslan1us/quicklly/compare/v0.7.1...v0.7.2
