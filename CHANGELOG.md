@@ -18,6 +18,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The reader shows its header and footer again when you reach either end of a list.
+- The cursor goes back to the start when ↓ in the input window's history empties the field.
 
 ## [0.7.4] - 2026-09-30
 

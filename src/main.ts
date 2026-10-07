@@ -108,6 +108,8 @@ function showHistory(index: number) {
   historyIndex = index;
   ({ text: input.value, images } = fromMarkdown(history[index] ?? ""));
   input.setSelectionRange(input.value.length, input.value.length);
+  // Clearing the field moves the cursor without a selection change event, so it is drawn here.
+  updateCaret();
   suggestions.update();
   void fit();
 }
