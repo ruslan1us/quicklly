@@ -160,6 +160,15 @@ fn read_note_file(app: AppHandle, name: String) -> Result<Vec<reader::Item>, Str
     reader::read_file(&dir, &name).map_err(|e| format!("Failed to read {name}: {e}"))
 }
 
+/// Moves a notes file to the Recycle Bin, from the reader's file list.
+#[tauri::command]
+fn delete_note_file(app: AppHandle, name: String) -> Result<(), String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::trash_file(&dir, &name).map_err(|e| format!("Couldn't delete {name}: {e}"))?;
+    notes_changed(&app);
+    Ok(())
+}
+
 /// Marks a note in a notes file as done or not done.
 #[tauri::command]
 fn set_note_done(
@@ -391,6 +400,7 @@ pub fn run() {
             open_input,
             list_note_files,
             read_note_file,
+            delete_note_file,
             set_note_done,
             delete_note,
             edit_note,

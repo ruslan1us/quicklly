@@ -99,7 +99,9 @@ body.pinned #rows {
 
 /* Waiting for the second Del. */
 .note.deleting,
-.note.deleting span {
+.note.deleting span,
+.file.deleting,
+.file.deleting span {
   color: var(--error) !important;
 }
 

@@ -144,6 +144,18 @@ pub fn read_file(dir: &Path, name: &str) -> io::Result<Vec<Item>> {
     Ok(parse(&fs::read_to_string(dir.join(name))?))
 }
 
+/// Moves one notes file from `dir` to the Recycle Bin, so a file deleted by mistake can be
+/// restored; only notes files can be deleted.
+pub fn trash_file(dir: &Path, name: &str) -> io::Result<()> {
+    if !is_notes_file(name) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{name} is not a notes file"),
+        ));
+    }
+    trash::delete(dir.join(name)).map_err(io::Error::other)
+}
+
 /// Any Markdown file directly in the notes folder: a plain `name.md`, no paths.
 fn is_notes_file(name: &str) -> bool {
     name.len() > ".md".len()
@@ -669,6 +681,23 @@ mod tests {
         assert!(read_file(&dir, "../2026-09-26.md").is_err());
         assert!(read_file(&dir, "..\\2026-09-26.md").is_err());
         assert_eq!(search(&dir, "#todo", 10).unwrap()[0].day, "2026-09-26");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn refuses_to_trash_anything_but_a_notes_file() {
+        let dir = temp_dir("trash");
+        let inner = dir.join("notes");
+        fs::create_dir_all(&inner).unwrap();
+        fs::write(dir.join("outside.md"), "# outside\n").unwrap();
+        fs::write(inner.join("notes.txt"), "not Markdown\n").unwrap();
+
+        for name in ["../outside.md", "..\\outside.md", "notes.txt", ".md", ""] {
+            let err = trash_file(&inner, name).unwrap_err();
+            assert_eq!(err.kind(), io::ErrorKind::InvalidInput, "{name}");
+        }
+        assert!(dir.join("outside.md").exists());
+        assert!(inner.join("notes.txt").exists());
         fs::remove_dir_all(&dir).unwrap();
     }
 }

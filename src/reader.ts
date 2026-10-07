@@ -66,7 +66,10 @@ let openFile = "";
 let items: Item[] = [];
 /** Index into `items` of the selected note (day headings are skipped). */
 let selectedItem = -1;
-/** Set after the first Del: a second Del deletes the selected note, anything else cancels. */
+/**
+ * Set after the first Del: a second Del deletes the selected note (or, in the file list, moves
+ * the selected file to the Recycle Bin), anything else cancels.
+ */
 let confirmingDelete = false;
 /** While true, the selected note is shown in `editor` for editing. */
 let editing = false;
@@ -154,7 +157,9 @@ function revealSelected(row: Element | undefined, isFirst: boolean, isLast: bool
 function renderFiles() {
   const today = todayFile();
   title.textContent = `Quicklly · Notes · ${sort === "recent" ? "recent first" : "by name"}`;
-  help.textContent = `↑↓ select · Enter open · Tab sort · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
+  help.textContent = confirmingDelete
+    ? "Del again to move it to the Recycle Bin · any other key cancels"
+    : `↑↓ select · Enter open · Tab sort · Del delete · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
   empty.textContent = "No notes yet.";
   empty.hidden = files.length > 0;
   rowsList.replaceChildren(
@@ -179,6 +184,7 @@ function renderFiles() {
         },
       );
       li.classList.toggle("complete", complete);
+      li.classList.toggle("deleting", confirmingDelete && i === selectedFile);
       return li;
     }),
   );
@@ -381,6 +387,23 @@ async function deleteNote() {
   }
 }
 
+/**
+ * Moves the selected file to the Recycle Bin and reloads the list; the selection stays at the
+ * same place (or on the new last file). An error stays visible over the reloaded list.
+ */
+async function deleteFile() {
+  const file = files[selectedFile];
+  if (!file) return;
+  let failed = false;
+  try {
+    await invoke("delete_note_file", { name: file.name });
+  } catch (err) {
+    showError(err);
+    failed = true;
+  }
+  await refresh(failed);
+}
+
 /** Grows the editor with its text, and the window with it. */
 function fitEditor() {
   editor.style.height = "0";
@@ -463,8 +486,9 @@ document.addEventListener("keydown", (e) => {
   }
   if (confirmingDelete) {
     confirmingDelete = false;
-    if (e.key === "Delete") void deleteNote();
-    else render();
+    if (e.key !== "Delete") render();
+    else if (view === "files") void deleteFile();
+    else void deleteNote();
     return;
   }
   if (view === "files") {
@@ -479,6 +503,9 @@ document.addEventListener("keydown", (e) => {
       openSelectedFile();
     } else if (e.key === "Tab") {
       void toggleSort();
+    } else if (e.key === "Delete" && files[selectedFile]) {
+      confirmingDelete = true;
+      render();
     } else if (files.length > 0 && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       selectedFile = wrap(selectedFile, e.key === "ArrowUp" ? -1 : 1, files.length);
       render();
