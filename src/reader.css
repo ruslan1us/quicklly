@@ -103,6 +103,11 @@ body.pinned #rows {
   text-decoration: underline;
 }
 
+/* Images are shown as their `[Image #N]` label (see images.ts). */
+.note .image {
+  color: var(--accent);
+}
+
 /* An answer in front of the help, like "Copied 1 link". */
 #help .message {
   color: var(--accent);

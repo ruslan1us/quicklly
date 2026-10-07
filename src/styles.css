@@ -87,6 +87,12 @@ body {
   text-decoration: underline;
 }
 
+/* A pasted image's `[Image #N]` label (see images.ts). */
+#backdrop .image,
+#results .image {
+  color: var(--accent);
+}
+
 #note.error {
   border-color: var(--error);
 }

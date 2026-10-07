@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { blockCaret } from "./blockCaret";
+import { type Images, fromMarkdown, imagePaths, markdownNodes, toMarkdown } from "./images";
 import { findLinks, linkNodes, shortLink } from "./links";
 import { appWindow, fitToContent, reveal } from "./popup";
 import { followTheme } from "./theme";
@@ -74,6 +75,8 @@ let selectedItem = -1;
 let confirmingDelete = false;
 /** While true, the selected note is shown in `editor` for editing. */
 let editing = false;
+/** The images of the note being edited, shown in `editor` as `[Image #N]` labels. */
+let editorImages: Images = new Map();
 
 /** Inline editor for a note, with the same block caret as the note input. */
 const editorBox = document.createElement("div");
@@ -205,7 +208,7 @@ function renderNotesHelp() {
     ? "Enter save · Shift+Enter new line · Esc cancel"
     : confirmingDelete
       ? "Del again to delete · any other key cancels"
-      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · Del delete · Ctrl+P pin · ← back · Esc close";
+      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · Del delete · Ctrl+P pin · ← back · Esc close";
   if (footerMessage && !editing && !confirmingDelete) {
     help.prepend(span(footerMessage, "message"), " · ");
   }
@@ -230,10 +233,13 @@ function showFooterMessage(message: string) {
   }, 2000);
 }
 
-/** The note's text, with its links shown short and underlined (the file keeps them whole). */
+/**
+ * The note's text, with its links shown short and underlined (the file keeps them whole) and
+ * its images as `[Image #N]` labels.
+ */
 function noteText(text: string) {
   const cell = span("");
-  cell.append(...linkNodes(text, shortLink));
+  cell.append(...markdownNodes(text, (part) => linkNodes(part, shortLink)));
   return cell;
 }
 
@@ -460,6 +466,26 @@ async function copyLinks() {
   showFooterMessage(`Copied ${plural(links.length, "link")}`);
 }
 
+/**
+ * Opens the selected note's images in the default viewer, and says how many in the footer.
+ */
+async function openImages() {
+  const note = items[selectedItem];
+  if (note?.kind !== "note") return;
+  const paths = imagePaths(note.text);
+  if (paths.length === 0) {
+    showFooterMessage("No images in this note");
+    return;
+  }
+  try {
+    await invoke("open_images", { paths });
+  } catch (err) {
+    showError(err);
+    return;
+  }
+  showFooterMessage(`Opened ${plural(paths.length, "image")}`);
+}
+
 /** Grows the editor with its text, and the window with it. */
 function fitEditor() {
   editor.style.height = "0";
@@ -472,7 +498,7 @@ function startEdit() {
   const note = items[selectedItem];
   if (note?.kind !== "note") return;
   editing = true;
-  editor.value = note.text;
+  ({ text: editor.value, images: editorImages } = fromMarkdown(note.text));
   render();
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
@@ -488,7 +514,7 @@ function cancelEdit() {
 /** Saves the edited text; a blank or unchanged text just ends the edit (Del deletes a note). */
 async function saveEdit() {
   const note = items[selectedItem];
-  const text = editor.value;
+  const text = toMarkdown(editor.value, editorImages);
   if (note?.kind !== "note" || text.trim() === "" || text === note.text) {
     cancelEdit();
     return;
@@ -582,6 +608,8 @@ document.addEventListener("keydown", (e) => {
   } else if (e.code === "KeyC" && !e.altKey && !e.metaKey) {
     // By physical key, so any keyboard layout works; Ctrl+C closed the reader above.
     void copyLinks();
+  } else if (e.code === "KeyO" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    void openImages();
   } else if (e.key === "Delete" && items[selectedItem]?.kind === "note") {
     confirmingDelete = true;
     render();

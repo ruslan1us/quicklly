@@ -1,4 +1,5 @@
 mod hotkey;
+mod images;
 mod monitor;
 mod notes;
 mod pad;
@@ -34,6 +35,40 @@ fn save_note(app: AppHandle, text: String) -> Result<(), String> {
     notes::append_note(&dir, mode, chrono::Local::now().naive_local(), &text)
         .map_err(|e| format!("Failed to save note in {}: {e}", dir.display()))?;
     notes_changed(&app);
+    Ok(())
+}
+
+/// Saves an image pasted into the input window or the Pad in the notes folder's `images/`, and
+/// returns its path relative to the notes folder for the note to link to.
+///
+/// The image comes as the raw request body, its MIME type in the `Image-Type` header.
+#[tauri::command]
+fn save_image(app: AppHandle, request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("No image to save".into());
+    };
+    let mime = request
+        .headers()
+        .get("Image-Type")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    images::save(&dir, chrono::Local::now().naive_local(), mime, bytes)
+        .map_err(|e| format!("Failed to save the image in {}: {e}", dir.display()))
+}
+
+/// Opens a note's images (paths relative to the notes folder) in the default viewer, from the
+/// reader.
+#[tauri::command]
+fn open_images(app: AppHandle, paths: Vec<String>) -> Result<(), String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    for path in paths {
+        let file = images::resolve(&dir, &path)
+            .ok_or_else(|| format!("{path} is not in the notes folder"))?;
+        app.opener()
+            .open_path(file.to_string_lossy(), None::<&str>)
+            .map_err(|e| format!("Couldn't open {path}: {e}"))?;
+    }
     Ok(())
 }
 
@@ -174,13 +209,19 @@ fn read_note_file(app: AppHandle, name: String) -> Result<Vec<reader::Item>, Str
     reader::read_file(&dir, &name).map_err(|e| format!("Failed to read {name}: {e}"))
 }
 
-/// Moves a notes file to the Recycle Bin, from the reader's file list.
+/// Moves a notes file to the Recycle Bin, from the reader's file list, with its images.
 #[tauri::command]
 fn delete_note_file(app: AppHandle, name: String) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    let content = std::fs::read_to_string(dir.join(&name)).unwrap_or_default();
     reader::trash_file(&dir, &name).map_err(|e| format!("Couldn't delete {name}: {e}"))?;
     notes_changed(&app);
-    Ok(())
+    trash_images(&dir, images::paths_in(&content))
+}
+
+/// Moves images that notes no longer link to to the Recycle Bin.
+fn trash_images(dir: &std::path::Path, paths: Vec<String>) -> Result<(), String> {
+    images::trash_unused(dir, &paths).map_err(|e| format!("Couldn't delete the images: {e}"))
 }
 
 /// Marks a note in a notes file as done or not done.
@@ -198,16 +239,16 @@ fn set_note_done(
     Ok(())
 }
 
-/// Deletes a note from a notes file.
+/// Deletes a note from a notes file, with its images.
 #[tauri::command]
 fn delete_note(app: AppHandle, name: String, note: reader::NoteRef) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
     reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    Ok(())
+    trash_images(&dir, images::paths_in(&note.text))
 }
 
-/// Replaces the text of a note in a notes file.
+/// Replaces the text of a note in a notes file; images taken out of it are deleted.
 #[tauri::command]
 fn edit_note(
     app: AppHandle,
@@ -219,7 +260,7 @@ fn edit_note(
     reader::set_text(&dir, &name, &note, &text)
         .map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    Ok(())
+    trash_images(&dir, images::paths_in(&note.text))
 }
 
 /// Finds notes containing `query` in all notes files, for search in the input window.
@@ -409,6 +450,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             save_note,
+            save_image,
+            open_images,
             open_settings,
             exit_app,
             open_reader,

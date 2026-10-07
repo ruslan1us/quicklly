@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import { type Images, fromMarkdown, labelNodes, pasteImages, toMarkdown } from "./images";
 import { linkNodes } from "./links";
 import { tagSuggest } from "./tagSuggest";
 import { followTheme } from "./theme";
@@ -22,6 +23,18 @@ interface PadEdit {
   note: { line: number; time: string; done: boolean; text: string };
 }
 let editing: PadEdit | null = null;
+
+/** The images pasted into the text, by the number in their `[Image #N]` label. */
+let images: Images = new Map();
+
+/**
+ * Shows `markdown` (the draft, or a note to edit) in the text area, its images as labels, with
+ * the caret at the end.
+ */
+function setText(markdown: string) {
+  ({ text: text.value, images } = fromMarkdown(markdown));
+  text.setSelectionRange(text.value.length, text.value.length);
+}
 
 /** A pinned Pad stays open over other windows; an unpinned one hides like the input window. */
 let pinned = false;
@@ -64,6 +77,9 @@ const suggestions = tagSuggest(text, document.querySelector<HTMLUListElement>("#
   onChange: keepCaretVisible,
 });
 
+// An image pasted into the text is saved right away and shows as `[Image #N]`.
+pasteImages(text, { images: () => images, onError: showError });
+
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
 /** A `#tag`, as the notes files understand it: `#` at the start of a word, then a letter. */
@@ -81,21 +97,22 @@ function span(content: string, className: string) {
   return el;
 }
 
-/** Appends `content` to `parent`, with its `#tags` and links marked. */
+/** Appends `content` to `parent`, with its `#tags`, links and images marked. */
 function appendWithTags(parent: ParentNode, content: string) {
+  const other = (part: string) => labelNodes(part, images, linkNodes);
   let from = 0;
   for (const match of content.matchAll(TAG)) {
     const at = match.index + match[1].length;
-    parent.append(...linkNodes(content.slice(from, at)));
+    parent.append(...other(content.slice(from, at)));
     parent.append(span(match[2], "tag"));
     from = at + match[2].length;
   }
-  parent.append(...linkNodes(content.slice(from)));
+  parent.append(...other(content.slice(from)));
 }
 
 /**
- * One line of text as it is shown under the (transparent) text: list markers, tags and links
- * marked.
+ * One line of text as it is shown under the (transparent) text: list markers, tags, links and
+ * images marked.
  */
 function renderLine(line: string) {
   const div = document.createElement("div");
@@ -264,7 +281,7 @@ function saveDraftSoon() {
 async function saveDraft() {
   window.clearTimeout(draftTimer);
   try {
-    await invoke("set_pad_draft", { text: text.value });
+    await invoke("set_pad_draft", { text: toMarkdown(text.value, images) });
   } catch (err) {
     showError(err);
   }
@@ -283,16 +300,14 @@ async function startEditing() {
   if (!edit) return;
   if (!editing) await saveDraft();
   editing = edit;
-  text.value = edit.note.text;
-  text.setSelectionRange(text.value.length, text.value.length);
+  setText(edit.note.text);
   refresh();
 }
 
 /** Ends an edit and brings the draft back. */
 async function stopEditing() {
   editing = null;
-  text.value = await invoke<string>("get_pad_draft");
-  text.setSelectionRange(text.value.length, text.value.length);
+  setText(await invoke<string>("get_pad_draft"));
   refresh();
 }
 
@@ -300,7 +315,11 @@ async function stopEditing() {
 async function saveEdit(edit: PadEdit) {
   if (!text.value.trim()) return;
   try {
-    await invoke("edit_note", { name: edit.name, note: edit.note, text: text.value });
+    await invoke("edit_note", {
+      name: edit.name,
+      note: edit.note,
+      text: toMarkdown(text.value, images),
+    });
   } catch (err) {
     showError(err);
     return;
@@ -321,12 +340,13 @@ async function saveNote() {
   }
   if (!text.value.trim()) return;
   try {
-    await invoke("save_note", { text: text.value });
+    await invoke("save_note", { text: toMarkdown(text.value, images) });
   } catch (err) {
     showError(err);
     return;
   }
   text.value = "";
+  images = new Map();
   refresh();
   if (pinned) {
     flashSaved();
@@ -387,8 +407,7 @@ void listen("pad-edit", () => void startEditing());
 // Text moved here from the input window with Ctrl+E (it shows once an edit is over).
 void listen("pad-draft-changed", async () => {
   if (editing) return;
-  text.value = await invoke<string>("get_pad_draft");
-  text.setSelectionRange(text.value.length, text.value.length);
+  setText(await invoke<string>("get_pad_draft"));
   refresh();
 });
 
@@ -410,8 +429,7 @@ void Promise.all([
 ]).then(async ([, draft, isPinned]) => {
   pinned = isPinned;
   renderPin();
-  text.value = draft;
-  text.setSelectionRange(draft.length, draft.length);
+  setText(draft);
   await startEditing();
   await appWindow.show();
   await appWindow.setFocus();

@@ -12,6 +12,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Move a notes file to the Recycle Bin from the reader with Del (press it twice).
 - Typing a `#tag` suggests your existing tags, in the input window and in the Pad.
 - Links in notes are underlined; the reader shows them short and copies a note's links with C.
+- Paste an image with Ctrl+V in the input window or the Pad: it is saved next to the notes as
+  `[Image #1]`, and the reader opens a note's images with O.
 
 ### Fixed
 

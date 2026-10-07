@@ -3,6 +3,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import {
+  type Images,
+  fromMarkdown,
+  labelNodes,
+  markdownNodes,
+  pasteImages,
+  toMarkdown,
+} from "./images";
 import { linkNodes, shortLink, splitLinks } from "./links";
 import { BASE_WIDTH } from "./popup";
 import { tagSuggest } from "./tagSuggest";
@@ -28,9 +36,15 @@ let windowHeight = 0;
 let scrollable = false;
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
-/** Draws the note's text, with its links underlined, behind the transparent note. */
+/** The images pasted into the note, by the number in their `[Image #N]` label. */
+let images: Images = new Map();
+
+/**
+ * Draws the note's text, with its links underlined and its images marked, behind the
+ * transparent note.
+ */
 function renderBackdrop() {
-  backdropText.replaceChildren(...linkNodes(input.value));
+  backdropText.replaceChildren(...labelNodes(input.value, images, linkNodes));
   syncBackdrop();
 }
 
@@ -74,7 +88,10 @@ input.addEventListener("scroll", () => {
 
 const updateCaret = blockCaret(input, caret, caretMeasure);
 
-/** Notes saved while the app runs, oldest first; browsed with ↑/↓ like a shell history. */
+/**
+ * Notes saved while the app runs, oldest first; browsed with ↑/↓ like a shell history. They
+ * are kept as saved, in Markdown.
+ */
 const history: string[] = [];
 const HISTORY_LIMIT = 100;
 /** Position while browsing; `history.length` stands for the empty field. */
@@ -82,12 +99,14 @@ let historyIndex = 0;
 
 /** True while the field shows an unedited note from the history. */
 function browsingHistory() {
-  return historyIndex < history.length && input.value === history[historyIndex];
+  return (
+    historyIndex < history.length && toMarkdown(input.value, images) === history[historyIndex]
+  );
 }
 
 function showHistory(index: number) {
   historyIndex = index;
-  input.value = history[index] ?? "";
+  ({ text: input.value, images } = fromMarkdown(history[index] ?? ""));
   input.setSelectionRange(input.value.length, input.value.length);
   suggestions.update();
   void fit();
@@ -135,6 +154,9 @@ const suggestions = tagSuggest(input, tagList, {
   onChange: () => void fit(),
 });
 
+// An image pasted into the note is saved right away and shows as `[Image #N]`; not in search.
+pasteImages(input, { images: () => images, enabled: () => !searching(), onError: showError });
+
 /** `text` as nodes, with each occurrence of `query` (ignoring case) marked. */
 function highlight(text: string, query: string) {
   const parts: Node[] = [];
@@ -153,9 +175,18 @@ function highlight(text: string, query: string) {
 }
 
 /**
- * `text` as nodes, with its links shown short and underlined like in the reader, and each
- * occurrence of `query` in what is shown marked.
+ * A note's `text` as nodes, with its links shown short and underlined and its images as labels
+ * like in the reader, and each occurrence of `query` in what is shown marked.
  */
+function highlightNote(text: string, query: string) {
+  return markdownNodes(
+    text,
+    (part) => highlightWithLinks(part, query),
+    (label) => highlight(label, query),
+  );
+}
+
+/** `text` as nodes, with its links shown short and underlined, and `query` marked. */
 function highlightWithLinks(text: string, query: string) {
   return splitLinks(text).flatMap((part) => {
     if (!part.link) return highlight(part.text, query);
@@ -193,7 +224,7 @@ function renderResults() {
       li.classList.toggle("done", hit.done);
       // One line per result: extra lines of a note follow a ⏎.
       const text = cell("", "text");
-      text.append(...highlightWithLinks(hit.text.split("\n").join(" ⏎ "), query));
+      text.append(...highlightNote(hit.text.split("\n").join(" ⏎ "), query));
       li.append(
         cell(i === selectedHit ? "❯" : ""),
         cell(hit.day),
@@ -274,6 +305,7 @@ function clearError() {
 
 async function hide() {
   input.value = "";
+  images = new Map();
   setSearchMode(false);
   historyIndex = history.length;
   hits = [];
@@ -294,7 +326,7 @@ async function switchTo(command: string, args?: Record<string, unknown>) {
 }
 
 async function save() {
-  const text = input.value.trim();
+  const text = toMarkdown(input.value, images).trim();
   if (!text) {
     await hide();
     return;
@@ -363,7 +395,7 @@ input.addEventListener("keydown", (e) => {
   } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
     // Ctrl+E moves what was typed into the Pad, to go on writing there.
     e.preventDefault();
-    void switchTo("expand_to_pad", { text: input.value });
+    void switchTo("expand_to_pad", { text: toMarkdown(input.value, images) });
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
   } else if (searching() && e.key === "Backspace" && input.value === "") {

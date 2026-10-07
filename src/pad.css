@@ -122,7 +122,8 @@ header {
 }
 
 #backdrop .tag,
-#backdrop .check {
+#backdrop .check,
+#backdrop .image {
   color: var(--accent);
 }
 

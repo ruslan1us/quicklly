@@ -25,6 +25,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon |
 | Save the note                  | <kbd>Enter</kbd>                            |
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
+| Paste an image                 | <kbd>Ctrl</kbd>+<kbd>V</kbd> with an image in the clipboard (also in the Pad); see [Reader](#reader) |
 | Pick an existing tag           | Type `#` and the start of a tag; pick one with <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or <kbd>Tab</kbd>, <kbd>Esc</kbd> closes the list (also in the Pad) |
 | Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
 | Browse notes (see [Reader](#reader)) | <kbd>←</kbd> in an empty field        |
@@ -107,6 +108,7 @@ entry):
 | <kbd>Shift</kbd>+<kbd>Enter</kbd>    |                        | Edit the note in the Pad           |
 | <kbd>Space</kbd>                     |                        | Mark as done / not done            |
 | <kbd>C</kbd>                         |                        | Copy the note's links              |
+| <kbd>O</kbd>                         |                        | Open the note's images             |
 | <kbd>Del</kbd>                       | Move to the Recycle Bin (press <kbd>Del</kbd> twice) | Delete (press <kbd>Del</kbd> twice) |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd>         |                        | Pin: keep the reader open over other windows, resizable and up to date |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
@@ -127,6 +129,14 @@ underlined as you type, in the input window and in the Pad. The reader and the s
 and with only the start of the path (`https://github.com/ruslan1us/quicklly/releases` →
 `github.com/rusl...`); the file keeps the whole link, and <kbd>C</kbd> copies the selected
 note's links, one per line.
+
+To add a screenshot or any other image, copy it and paste it with <kbd>Ctrl</kbd>+<kbd>V</kbd> in
+the input window or the Pad: it shows as `[Image #1]` (then `[Image #2]`, …) and is saved right
+away in an `images` folder next to the notes. The note gets a Markdown image instead of the
+label, `![Image #1](images/2026-10-07_14-32-05.png)`, so Obsidian shows the picture; the reader
+shows the label again, and <kbd>O</kbd> opens the selected note's images in the default viewer.
+Deleting a note or a notes file in the reader, or taking an image out of a note, moves its images
+to the Recycle Bin too, unless another note still links to them.
 
 ## Pad
 
