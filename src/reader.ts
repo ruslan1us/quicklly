@@ -138,6 +138,19 @@ function progressBar(notes: number, done: number) {
   return bar;
 }
 
+/**
+ * Keeps the selected row in view. On the first or last row the list scrolls all the way, so
+ * the header and any day heading above the first note, or the footer below the last one, show
+ * too. A pinned reader scrolls the rows; otherwise the whole page scrolls.
+ */
+function revealSelected(row: Element | undefined, isFirst: boolean, isLast: boolean) {
+  if (!row) return;
+  const scroller = pinned ? rowsList : document.body;
+  if (isFirst) scroller.scrollTop = 0;
+  else if (isLast) scroller.scrollTop = scroller.scrollHeight;
+  else row.scrollIntoView({ block: "nearest" });
+}
+
 function renderFiles() {
   const today = todayFile();
   title.textContent = `Quicklly · Notes · ${sort === "recent" ? "recent first" : "by name"}`;
@@ -169,7 +182,11 @@ function renderFiles() {
       return li;
     }),
   );
-  rowsList.children[selectedFile]?.scrollIntoView({ block: "nearest" });
+  revealSelected(
+    rowsList.children[selectedFile],
+    selectedFile === 0,
+    selectedFile === files.length - 1,
+  );
 }
 
 function renderNotes() {
@@ -202,13 +219,19 @@ function renderNotes() {
       return li;
     }),
   );
-  rowsList.children[selectedItem]?.scrollIntoView({ block: "nearest" });
+  const notes = noteIndexes();
+  revealSelected(
+    rowsList.children[selectedItem],
+    selectedItem === notes[0],
+    selectedItem === notes[notes.length - 1],
+  );
 }
 
 function render() {
+  // The pin decides what scrolls (see revealSelected), so it is drawn first.
+  renderPin();
   if (view === "files") renderFiles();
   else renderNotes();
-  renderPin();
 }
 
 /**
