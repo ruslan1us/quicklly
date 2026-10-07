@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { zoom } from "./theme";
 
-/** Helpers for the terminal-style popup windows (settings, reader, help). */
+/** Helpers for the terminal-style popup windows (settings, reader, help, changelog). */
 export const appWindow = getCurrentWindow();
 
 /** Width of the input window and the popups at normal size, in logical pixels. */

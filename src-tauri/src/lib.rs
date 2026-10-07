@@ -24,6 +24,7 @@ use reader_window::READER_WINDOW;
 const MAIN_WINDOW: &str = "main";
 const SETTINGS_WINDOW: &str = "settings";
 const HELP_WINDOW: &str = "help";
+const CHANGELOG_WINDOW: &str = "changelog";
 
 /// Appends `text` to today's note file in the notes folder.
 #[tauri::command]
@@ -143,6 +144,19 @@ fn show_settings(app: &AppHandle) {
 #[tauri::command]
 async fn open_help(app: AppHandle) {
     show_popup(&app, HELP_WINDOW, "help.html", "Quicklly Help");
+}
+
+/// Opens the changelog from the input window (the `/changelog` command).
+///
+/// Async on purpose: creating a window from a sync command deadlocks on Windows.
+#[tauri::command]
+async fn open_changelog(app: AppHandle) {
+    show_popup(
+        &app,
+        CHANGELOG_WINDOW,
+        "changelog.html",
+        "Quicklly Changelog",
+    );
 }
 
 /// Opens the notes reader from the input window (← in an empty note).
@@ -392,6 +406,7 @@ pub fn run() {
             exit_app,
             open_reader,
             open_help,
+            open_changelog,
             reader_window::get_reader_pin,
             reader_window::get_reader_sort,
             reader_window::set_reader_sort,

@@ -45,6 +45,31 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # The release notes are the version's section of CHANGELOG.md, so a release can't go out
+      # without them.
+      - name: Read the release notes from CHANGELOG.md
+        id: changelog
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The lines after "## [X.Y.Z]" up to the next "## [" heading (or the link
+          # definitions at the bottom), without leading and trailing blank lines.
+          notes=$(awk -v heading="## [$version]" '
+            index($0, "## [") == 1 { if (found) exit; found = index($0, heading) == 1; next }
+            found && /^\[[^]]*\]: / { exit }
+            found
+          ' CHANGELOG.md | sed '/./,$!d')
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has no notes for $version: add a \"## [$version]\" section with its changes"
+            exit 1
+          fi
+          printf '%s\n' "$notes"
+          {
+            echo "notes<<EOF"
+            printf '%s\n' "$notes"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       # Builds the NSIS and MSI installers and attaches them, with the signed update and
       # latest.json for the in-app updater, to a draft release, which is published by hand
       # after a quick check.
@@ -57,7 +82,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Quicklly ${{ github.ref_name }}
+          releaseBody: ${{ steps.changelog.outputs.notes }}
           releaseDraft: true
-          generateReleaseNotes: true
           # The updater installs the per-user NSIS setup, not the MSI.
           updaterJsonPreferNsis: true

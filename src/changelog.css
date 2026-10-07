@@ -1,0 +1,43 @@
+/* Changelog layout on top of terminal.css, which is imported here (rather than linked
+   separately) so that the build always puts it first. */
+@import "./terminal.css";
+
+h2 {
+  margin: 14px 0 4px;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 700;
+}
+
+h2:first-child {
+  margin-top: 0;
+}
+
+h3 {
+  margin: 4px 0 0;
+  color: var(--dim);
+  font-size: inherit;
+  font-weight: 400;
+}
+
+p {
+  margin: 0;
+  color: var(--dim);
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A wrapped entry lines up under its own text, not under the dash. */
+li {
+  padding-left: 2ch;
+  text-indent: -2ch;
+}
+
+li::before {
+  content: "- ";
+  color: var(--dim);
+}

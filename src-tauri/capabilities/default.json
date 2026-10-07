@@ -7,7 +7,8 @@
     "settings",
     "reader",
     "pad",
-    "help"
+    "help",
+    "changelog"
   ],
   "permissions": [
     "core:default",

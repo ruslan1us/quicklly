@@ -1,4 +1,4 @@
-/* Terminal-style popups (settings, reader, help); colours come from themes.css. */
+/* Terminal-style popups (settings, reader, help, changelog); colours come from themes.css. */
 :root {
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 14px;

@@ -36,6 +36,7 @@ export default defineConfig(() => ({
         reader: "reader.html",
         pad: "pad.html",
         help: "help.html",
+        changelog: "changelog.html",
       },
     },
   },

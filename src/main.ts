@@ -277,6 +277,10 @@ async function save() {
     await switchTo("open_help");
     return;
   }
+  if (text === "/changelog") {
+    await switchTo("open_changelog");
+    return;
+  }
   if (text === "/update") {
     input.value = "";
     updateCaret();
