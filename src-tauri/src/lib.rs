@@ -59,13 +59,13 @@ fn save_image(app: AppHandle, request: tauri::ipc::Request<'_>) -> Result<String
         .map_err(|e| format!("Failed to save the image in {}: {e}", dir.display()))
 }
 
-/// Opens a note's images (paths relative to the notes folder) in the default viewer, from the
-/// reader.
+/// Opens a note's images (paths relative to the folder of its notes file `name`) in the default
+/// viewer, from the reader.
 #[tauri::command]
-fn open_images(app: AppHandle, paths: Vec<String>) -> Result<(), String> {
+fn open_images(app: AppHandle, name: String, paths: Vec<String>) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
     for path in paths {
-        let file = images::resolve(&dir, &path)
+        let file = images::resolve(&dir, &name, &path)
             .ok_or_else(|| format!("{path} is not in the notes folder"))?;
         app.opener()
             .open_path(file.to_string_lossy(), None::<&str>)
@@ -217,15 +217,18 @@ fn read_note_file(app: AppHandle, name: String) -> Result<Vec<reader::Item>, Str
 #[tauri::command]
 fn delete_note_file(app: AppHandle, name: String) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    let content = std::fs::read_to_string(dir.join(&name)).unwrap_or_default();
+    let content = reader::notes_file(&dir, &name)
+        .and_then(std::fs::read_to_string)
+        .unwrap_or_default();
     reader::trash_file(&dir, &name).map_err(|e| format!("Couldn't delete {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, images::paths_in(&content))
+    trash_images(&dir, &name, images::paths_in(&content))
 }
 
-/// Moves images that notes no longer link to to the Recycle Bin.
-fn trash_images(dir: &std::path::Path, paths: Vec<String>) -> Result<(), String> {
-    images::trash_unused(dir, &paths).map_err(|e| format!("Couldn't delete the images: {e}"))
+/// Moves images that notes no longer link to to the Recycle Bin; `paths` as the notes file
+/// `name` links to them.
+fn trash_images(dir: &std::path::Path, name: &str, paths: Vec<String>) -> Result<(), String> {
+    images::trash_unused(dir, name, &paths).map_err(|e| format!("Couldn't delete the images: {e}"))
 }
 
 /// Marks a note in a notes file as done or not done.
@@ -249,7 +252,7 @@ fn delete_note(app: AppHandle, name: String, note: reader::NoteRef) -> Result<()
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
     reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, images::paths_in(&note.text))
+    trash_images(&dir, &name, images::paths_in(&note.text))
 }
 
 /// Replaces the text of a note in a notes file; images taken out of it are deleted.
@@ -264,7 +267,7 @@ fn edit_note(
     reader::set_text(&dir, &name, &note, &text)
         .map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, images::paths_in(&note.text))
+    trash_images(&dir, &name, images::paths_in(&note.text))
 }
 
 /// Finds notes containing `query` in all notes files, for search in the input window.

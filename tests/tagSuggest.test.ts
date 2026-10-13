@@ -78,3 +78,25 @@ test("offers nothing when the tag is already typed in full", async () => {
   type(field, "#work");
   expect(list.hidden).toBe(true);
 });
+
+test("suggests nested tags and types the whole tag", async () => {
+  await setUp(["todo", "work", "work/quicklly"]);
+  type(field, "#wo");
+  expect(shown()).toEqual(["❯#work", "#work/quicklly"]);
+  type(field, "rk/");
+  expect(shown()).toEqual(["❯#work/quicklly"]);
+  type(field, "q");
+  expect(shown()).toEqual(["❯#work/quicklly"]);
+  expect(suggestions.keydown(keydown("Enter"))).toBe(true);
+  expect(field.value).toBe("#work/quicklly ");
+});
+
+test("picking in the middle of a nested tag replaces all of it", async () => {
+  await setUp(["work/quicklly"]);
+  type(field, "#work/qx");
+  field.setSelectionRange(3, 3);
+  field.dispatchEvent(new Event("input"));
+  expect(shown()).toEqual(["❯#work/quicklly"]);
+  suggestions.keydown(keydown("Enter"));
+  expect(field.value).toBe("#work/quicklly ");
+});

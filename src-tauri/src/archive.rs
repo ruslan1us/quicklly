@@ -6,6 +6,7 @@ use std::path::Path;
 use chrono::{Local, NaiveDate};
 use tauri::AppHandle;
 
+use crate::images::IMAGES_DIR;
 use crate::reader::{self, Item};
 use crate::settings;
 
@@ -91,15 +92,21 @@ fn archive_entry(
     entry
 }
 
-/// A note's line as it goes to the archive: its images are linked from one folder down.
-fn archived_line(line: &str) -> String {
-    line.replace("](images/", "](../images/")
+/// A note's line from the notes file `name` as it goes to the archive: its images are linked
+/// from one folder further down.
+fn archived_line(line: &str, name: &str) -> String {
+    let up = "../".repeat(name.matches('/').count());
+    line.replace(
+        &format!("]({up}{IMAGES_DIR}/"),
+        &format!("](../{up}{IMAGES_DIR}/"),
+    )
 }
 
 /// Moves the notes of the notes file `name` in `dir` that were done at least `days` days
-/// before `today` to `archive/<name>`, keeping their lines and their day. Returns how many.
+/// before `today` to `archive/<name>` (in the same folders), keeping their lines and their day.
+/// Returns how many.
 fn archive_file(dir: &Path, name: &str, today: NaiveDate, days: i64) -> io::Result<usize> {
-    let path = dir.join(name);
+    let path = reader::notes_file(dir, name)?;
     let content = fs::read_to_string(&path)?;
     let due = due_for_archive(&content, today, days);
     if due.is_empty() {
@@ -111,7 +118,7 @@ fn archive_file(dir: &Path, name: &str, today: NaiveDate, days: i64) -> io::Resu
         .map(|moved| {
             let note = lines[moved.lines.clone()]
                 .iter()
-                .map(|line| archived_line(line))
+                .map(|line| archived_line(line, name))
                 .collect();
             (moved.day.clone(), note)
         })
@@ -119,9 +126,8 @@ fn archive_file(dir: &Path, name: &str, today: NaiveDate, days: i64) -> io::Resu
 
     // The archive is written first: if the notes file can't be written after it, the notes
     // are in both rather than lost.
-    let folder = dir.join(ARCHIVE_DIR);
-    fs::create_dir_all(&folder)?;
-    let archive = folder.join(name);
+    let archive = reader::path_of(&dir.join(ARCHIVE_DIR), name);
+    fs::create_dir_all(archive.parent().unwrap_or(dir))?;
     let existing = match fs::read_to_string(&archive) {
         Ok(existing) => existing,
         Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
@@ -318,6 +324,31 @@ mod tests {
         assert_eq!(
             read(&dir.join("archive").join("My Notes.md")),
             "# My Notes\n\n- [x] 09:00 one ✅ 2026-10-05\n- [x] 10:00 two ✅ 2026-10-06\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn archives_a_nested_file_into_the_same_folders() {
+        let dir = temp_dir("archive-nested");
+        fs::create_dir_all(dir.join("work")).unwrap();
+        let path = dir.join("work").join("quicklly.md");
+        fs::write(
+            &path,
+            "# work/quicklly\n\n## 2026-10-01\n\n\
+             - [x] 09:00 ship ![Image #1](../images/a.png) ✅ 2026-10-05\n- 10:00 open\n",
+        )
+        .unwrap();
+
+        assert_eq!(archive_all(&dir, today(), 7).unwrap(), 1);
+        assert_eq!(
+            read(&path),
+            "# work/quicklly\n\n## 2026-10-01\n\n- 10:00 open\n"
+        );
+        assert_eq!(
+            read(&dir.join("archive").join("work").join("quicklly.md")),
+            "# work/quicklly\n\n## 2026-10-01\n\n\
+             - [x] 09:00 ship ![Image #1](../../images/a.png) ✅ 2026-10-05\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

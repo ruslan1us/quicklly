@@ -26,8 +26,8 @@ interface NoteFile {
 
 /**
  * How the files are listed: `recent` puts the file changed last on top (just opening a file
- * doesn't move it); `name` lists the inbox and tag files by name, then the days, newest first.
- * Tab switches between them.
+ * doesn't move it); `name` lists the inbox and tag files by name, then the days, newest first,
+ * then each folder with its files the same way, as a tree. Tab switches between them.
  */
 type Sort = "recent" | "name";
 let sort: Sort = "recent";
@@ -179,6 +179,13 @@ function revealSelected(row: Element | undefined, isFirst: boolean, isLast: bool
   else row.scrollIntoView({ block: "nearest" });
 }
 
+/** A name in the file list, `depth` folders in: indented under its folder. */
+function nameCell(name: string, className: string, depth: number) {
+  const cell = span(name, className);
+  cell.style.paddingLeft = `${2 * depth}ch`;
+  return cell;
+}
+
 function renderFiles() {
   const today = todayFile();
   title.textContent = `Quicklly · Notes · ${sort === "recent" ? "recent first" : "by name"}`;
@@ -187,37 +194,52 @@ function renderFiles() {
     : `↑↓ select · Enter open · Tab sort · Del delete · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
   empty.textContent = "No notes yet.";
   empty.hidden = files.length > 0;
-  rowsList.replaceChildren(
-    ...files.map((file, i) => {
-      const complete = file.notes > 0 && file.done === file.notes;
-      const li = row(
-        "row file",
-        [
-          i === selectedFile ? "❯" : "",
-          span(displayName(file.name), "name"),
-          file.name === today ? "today" : "",
-          file.notes > 0 ? progressBar(file.notes, file.done) : "",
-          span(
-            complete ? "✓ all done" : file.notes > 0 ? `${file.done}/${file.notes}` : "empty",
-            "count",
-          ),
-        ],
-        i === selectedFile,
-        () => {
-          selectedFile = i;
-          render();
-        },
-      );
-      li.classList.toggle("complete", complete);
-      li.classList.toggle("deleting", confirmingDelete && i === selectedFile);
-      return li;
-    }),
-  );
-  revealSelected(
-    rowsList.children[selectedFile],
-    selectedFile === 0,
-    selectedFile === files.length - 1,
-  );
+  const rows: HTMLLIElement[] = [];
+  let selectedRow: HTMLLIElement | undefined;
+  // By name the files come as a tree (see `list_files`): each folder is shown once, above its
+  // files, which show just their own name. Recent first, they show their whole path.
+  let folders: string[] = [];
+  files.forEach((file, i) => {
+    const parts = file.name.split("/");
+    const own = parts.pop()!;
+    if (sort === "name") {
+      let same = 0;
+      while (same < parts.length && parts[same] === folders[same]) same++;
+      for (let depth = same; depth < parts.length; depth++) {
+        rows.push(row("row folder", ["", nameCell(`${parts[depth]}/`, "", depth)], false));
+      }
+      folders = parts;
+    }
+    const name =
+      sort === "name"
+        ? nameCell(displayName(own), "name", parts.length)
+        : span(displayName(file.name), "name");
+    const complete = file.notes > 0 && file.done === file.notes;
+    const li = row(
+      "row file",
+      [
+        i === selectedFile ? "❯" : "",
+        name,
+        file.name === today ? "today" : "",
+        file.notes > 0 ? progressBar(file.notes, file.done) : "",
+        span(
+          complete ? "✓ all done" : file.notes > 0 ? `${file.done}/${file.notes}` : "empty",
+          "count",
+        ),
+      ],
+      i === selectedFile,
+      () => {
+        selectedFile = i;
+        render();
+      },
+    );
+    li.classList.toggle("complete", complete);
+    li.classList.toggle("deleting", confirmingDelete && i === selectedFile);
+    if (i === selectedFile) selectedRow = li;
+    rows.push(li);
+  });
+  rowsList.replaceChildren(...rows);
+  revealSelected(selectedRow, selectedFile === 0, selectedFile === files.length - 1);
 }
 
 /** A short answer shown in front of the notes view's help, like "Copied 1 link". */
@@ -522,7 +544,7 @@ async function openImages() {
     return;
   }
   try {
-    await invoke("open_images", { paths });
+    await invoke("open_images", { name: openFile, paths });
   } catch (err) {
     showError(err);
     return;

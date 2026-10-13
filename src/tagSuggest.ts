@@ -2,11 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 
 /**
  * A `#tag` being typed right before the caret: `#` at the start of a word, then nothing yet or
- * a letter and more tag characters, like the notes files understand tags.
+ * a letter and more tag characters, like the notes files understand tags. A nested tag has more
+ * parts after a `/`, `#work/quicklly`; the `/` before the next part may already be typed.
  */
-const PARTIAL_TAG = /(?:^|\s)#((?:\p{L}[\p{L}\p{N}_-]*)?)$/u;
+const PARTIAL_TAG = /(?:^|\s)#((?:\p{L}[\p{L}\p{N}_-]*(?:\/\p{L}[\p{L}\p{N}_-]*)*\/?)?)$/u;
 /** Tag characters right after the caret: picking a tag in the middle of one replaces them too. */
-const TAG_REST = /^[\p{L}\p{N}_-]*/u;
+const TAG_REST = /^[\p{L}\p{N}_/-]*/u;
 
 /** The partial tag before the caret: where its `#` is and what follows the `#`. */
 interface TypedTag {

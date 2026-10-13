@@ -103,8 +103,11 @@ deleteDatesWhole(text);
 
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
-/** A `#tag`, as the notes files understand it: `#` at the start of a word, then a letter. */
-const TAG = /(^|\s)(#\p{L}[\p{L}\p{N}_-]*)/gu;
+/**
+ * A `#tag`, as the notes files understand it: `#` at the start of a word, then a letter; a
+ * nested tag has more such parts after a `/`, `#work/quicklly`.
+ */
+const TAG = /(^|\s)(#\p{L}[\p{L}\p{N}_-]*(?:\/\p{L}[\p{L}\p{N}_-]*)*)/gu;
 /** A list item: indentation, then `- [ ] `, `- [x] `, `- `, `* ` or `1. `. */
 const LIST_ITEM = /^(\s*)(- \[[ xX]\] |- |\* |(\d+)\. )/;
 

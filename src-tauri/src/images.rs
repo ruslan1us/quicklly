@@ -5,6 +5,7 @@ use std::path::{Component, Path, PathBuf};
 use chrono::NaiveDateTime;
 
 use crate::archive::ARCHIVE_DIR;
+use crate::reader;
 
 /// Folder in the notes folder that pasted images are saved to.
 pub const IMAGES_DIR: &str = "images";
@@ -51,17 +52,52 @@ pub fn save(dir: &Path, now: NaiveDateTime, mime: &str, bytes: &[u8]) -> io::Res
     }
 }
 
-/// The file an image path from a note points to, inside `dir`; `None` for a path that could
-/// lead outside it (absolute, or with `..`). Joined part by part, so the path gets Windows
+/// `text` with its images, saved as `images/…` from the notes folder, linked from the notes
+/// file `name` instead: one `../` for each folder it is in, so `work/quicklly.md` links
+/// `../images/…`, as Obsidian expects.
+pub fn link_from(text: &str, name: &str) -> String {
+    let up = "../".repeat(name.matches('/').count());
+    text.replace(&format!("]({IMAGES_DIR}/"), &format!("]({up}{IMAGES_DIR}/"))
+}
+
+/// The image that a note in the notes file `file` (a path from the notes folder) links to as
+/// `path` (from the file's folder), as the parts of its path from the notes folder; `None` for
+/// a path that could lead outside it (absolute, or with too many `..`).
+fn from_notes_folder(file: &str, path: &str) -> Option<Vec<String>> {
+    let mut parts: Vec<String> = Vec::new();
+    for c in Path::new(file).parent()?.components() {
+        let Component::Normal(part) = c else {
+            return None;
+        };
+        parts.push(part.to_string_lossy().into_owned());
+    }
+    for c in Path::new(path).components() {
+        match c {
+            Component::Normal(part) => parts.push(part.to_string_lossy().into_owned()),
+            Component::ParentDir => {
+                parts.pop()?;
+            }
+            _ => return None,
+        }
+    }
+    // An image, not the folder it is in.
+    let names_a_file = matches!(
+        Path::new(path).components().next_back(),
+        Some(Component::Normal(_))
+    );
+    names_a_file.then_some(parts)
+}
+
+/// The file an image path from a note in the notes file `file` points to, inside `dir`; `None`
+/// for a path that could lead outside it. Joined part by part, so the path gets Windows
 /// separators.
-pub fn resolve(dir: &Path, path: &str) -> Option<PathBuf> {
-    let path = Path::new(path);
-    let inside = path.components().next().is_some()
-        && path.components().all(|c| matches!(c, Component::Normal(_)));
-    inside.then(|| {
-        path.components()
-            .fold(dir.to_path_buf(), |file, c| file.join(c))
-    })
+pub fn resolve(dir: &Path, file: &str, path: &str) -> Option<PathBuf> {
+    let parts = from_notes_folder(file, path)?;
+    Some(
+        parts
+            .iter()
+            .fold(dir.to_path_buf(), |dir, part| dir.join(part)),
+    )
 }
 
 /// The image paths in a note's text, `![Image #N](path)` as notes store them, each once.
@@ -85,45 +121,45 @@ pub fn paths_in(text: &str) -> Vec<String> {
     paths
 }
 
-/// The image files at `paths` that no notes file in `dir` or its archive links to any more;
-/// missing ones are left out.
-fn unused(dir: &Path, paths: &[String]) -> io::Result<Vec<PathBuf>> {
+/// The image files at `paths` (linked from the notes file `file`) that no notes file in `dir`
+/// or its archive, in any folder, links to any more; missing ones are left out.
+fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> {
     if paths.is_empty() {
         return Ok(Vec::new());
     }
     let mut used = Vec::new();
-    // Archived notes link to the images from one folder down.
-    for (folder, up) in [(dir.to_path_buf(), ""), (dir.join(ARCHIVE_DIR), "../")] {
-        let entries = match fs::read_dir(&folder) {
-            Ok(entries) => entries,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
-            Err(e) => return Err(e),
-        };
-        for entry in entries {
-            let path = entry?.path();
-            if path.extension().is_some_and(|ext| ext == "md") && path.is_file() {
-                used.extend(
-                    paths_in(&fs::read_to_string(path)?)
-                        .into_iter()
-                        .map(|p| p.strip_prefix(up).map(String::from).unwrap_or(p)),
-                );
-            }
+    // Each link is resolved from the folder of the file it is in.
+    let archive = (dir.join(ARCHIVE_DIR), format!("{ARCHIVE_DIR}/"));
+    for (folder, prefix) in [(dir.to_path_buf(), String::new()), archive] {
+        for note_file in reader::list_files(&folder)? {
+            let name = format!("{prefix}{}", note_file.name);
+            let content = fs::read_to_string(reader::path_of(&folder, &note_file.name))?;
+            used.extend(
+                paths_in(&content)
+                    .iter()
+                    .filter_map(|path| from_notes_folder(&name, path)),
+            );
         }
     }
     Ok(paths
         .iter()
-        .filter(|path| !used.contains(path))
-        .filter_map(|path| resolve(dir, path))
-        .filter(|file| file.is_file())
+        .filter_map(|path| from_notes_folder(file, path))
+        .filter(|parts| !used.contains(parts))
+        .map(|parts| {
+            parts
+                .iter()
+                .fold(dir.to_path_buf(), |dir, part| dir.join(part))
+        })
+        .filter(|image| image.is_file())
         .collect())
 }
 
-/// Moves the images at `paths` (from a deleted or edited note, or a deleted file) to the Recycle
-/// Bin, unless a notes file in `dir` still links to them, like a note saved twice from the
-/// input window's history, or an archived note.
-pub fn trash_unused(dir: &Path, paths: &[String]) -> io::Result<()> {
-    for file in unused(dir, paths)? {
-        trash::delete(&file).map_err(io::Error::other)?;
+/// Moves the images at `paths` (from a deleted or edited note, or a deleted file, in the notes
+/// file `file`) to the Recycle Bin, unless a notes file in `dir` still links to them, like a
+/// note saved twice from the input window's history, or an archived note.
+pub fn trash_unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<()> {
+    for image in unused(dir, file, paths)? {
+        trash::delete(&image).map_err(io::Error::other)?;
     }
     Ok(())
 }
@@ -206,12 +242,20 @@ mod tests {
         let free = save(&dir, now(), "image/png", b"free").unwrap();
         fs::write(
             dir.join("todo.md"),
-            format!("- 10:00 still here ![Image #1]({kept})\n"),
+            format!(
+                "- 10:00 still here ![Image #1]({kept})
+"
+            ),
         )
         .unwrap();
         assert_eq!(
-            unused(&dir, &[kept, free.clone(), "images/gone.png".into()]).unwrap(),
-            [resolve(&dir, &free).unwrap()]
+            unused(
+                &dir,
+                "todo.md",
+                &[kept, free.clone(), "images/gone.png".into()]
+            )
+            .unwrap(),
+            [resolve(&dir, "todo.md", &free).unwrap()]
         );
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -220,32 +264,99 @@ mod tests {
     fn keeps_images_an_archived_note_links_to() {
         let dir = temp_dir("archived-images");
         let archived = save(&dir, now(), "image/png", b"archived").unwrap();
+        let nested = save(&dir, now(), "image/png", b"nested").unwrap();
         let free = save(&dir, now(), "image/png", b"free").unwrap();
-        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::create_dir_all(dir.join("archive").join("work")).unwrap();
         fs::write(
             dir.join("archive").join("todo.md"),
-            format!("- [x] 10:00 old ![Image #1](../{archived}) ✅ 2026-10-01\n"),
+            format!(
+                "- [x] 10:00 old ![Image #1](../{archived}) ✅ 2026-10-01
+"
+            ),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("archive").join("work").join("q.md"),
+            format!(
+                "- [x] 10:00 old ![Image #1](../../{nested}) ✅ 2026-10-01
+"
+            ),
         )
         .unwrap();
         assert_eq!(
-            unused(&dir, &[archived, free.clone()]).unwrap(),
-            [resolve(&dir, &free).unwrap()]
+            unused(&dir, "todo.md", &[archived, nested, free.clone()]).unwrap(),
+            [resolve(&dir, "todo.md", &free).unwrap()]
         );
         fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
+    fn keeps_images_a_nested_note_links_to() {
+        let dir = temp_dir("nested-images");
+        let kept = save(&dir, now(), "image/png", b"kept").unwrap();
+        let free = save(&dir, now(), "image/png", b"free").unwrap();
+        fs::create_dir_all(dir.join("work")).unwrap();
+        fs::write(
+            dir.join("work").join("quicklly.md"),
+            format!(
+                "- 10:00 here ![Image #1](../{kept})
+"
+            ),
+        )
+        .unwrap();
+        // A note deleted from another nested file linked them from its own folder.
+        let paths = [format!("../../{kept}"), format!("../../{free}")];
+        assert_eq!(
+            unused(&dir, "a/b/c.md", &paths).unwrap(),
+            [dir.join("images").join(&free["images/".len()..])]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn links_images_from_the_file_folder() {
+        let text = "a ![Image #1](images/a.png) b ![Image #2](images/b.png)";
+        assert_eq!(link_from(text, "todo.md"), text);
+        assert_eq!(
+            link_from(text, "work/quicklly.md"),
+            "a ![Image #1](../images/a.png) b ![Image #2](../images/b.png)"
+        );
+        assert_eq!(
+            link_from("![Image #1](images/a.png)", "a/b/c.md"),
+            "![Image #1](../../images/a.png)"
+        );
+        // Already linked from the folder: left as it is.
+        assert_eq!(
+            link_from("![Image #1](../images/a.png)", "work/q.md"),
+            "![Image #1](../images/a.png)"
+        );
+    }
+
+    #[test]
     fn resolves_only_paths_inside_the_notes_folder() {
         let dir = Path::new("notes");
+        let image = Some(dir.join("images").join("a.png"));
+        assert_eq!(resolve(dir, "todo.md", "images/a.png"), image);
+        assert_eq!(resolve(dir, "work/q.md", "../images/a.png"), image);
+        assert_eq!(resolve(dir, "a/b/c.md", "../../images/a.png"), image);
         assert_eq!(
-            resolve(dir, "images/a.png"),
-            Some(dir.join("images").join("a.png"))
+            resolve(dir, "archive/work/q.md", "../../images/a.png"),
+            image
         );
-        assert_eq!(resolve(dir, "../secret.png"), None);
-        assert_eq!(resolve(dir, "images/../../secret.png"), None);
-        assert_eq!(resolve(dir, "./images/a.png"), None);
-        assert_eq!(resolve(dir, "C:/Windows/a.png"), None);
-        assert_eq!(resolve(dir, "/a.png"), None);
-        assert_eq!(resolve(dir, ""), None);
+        assert_eq!(
+            resolve(dir, "work/q.md", "images/../../images/a.png"),
+            image
+        );
+        assert_eq!(resolve(dir, "todo.md", "../secret.png"), None);
+        assert_eq!(resolve(dir, "work/q.md", "../../secret.png"), None);
+        assert_eq!(resolve(dir, "todo.md", "images/../../secret.png"), None);
+        assert_eq!(resolve(dir, "../x/q.md", "images/a.png"), None);
+        assert_eq!(resolve(dir, "C:/x/q.md", "images/a.png"), None);
+        assert_eq!(resolve(dir, "todo.md", "./images/a.png"), None);
+        assert_eq!(resolve(dir, "todo.md", "C:/Windows/a.png"), None);
+        assert_eq!(resolve(dir, "todo.md", "/a.png"), None);
+        assert_eq!(resolve(dir, "todo.md", ""), None);
+        assert_eq!(resolve(dir, "work/q.md", ".."), None);
+        assert_eq!(resolve(dir, "work/q.md", "a/.."), None);
     }
 }

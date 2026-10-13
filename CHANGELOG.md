@@ -17,6 +17,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Archive: marking a note done adds the day, `✅ 2026-10-13` like Obsidian Tasks, and done notes
   move to `archive/<file>` after 7 days (see **Archive done notes** in the settings); the reader
   and the search leave the archive out.
+- Nested tags: `#work/quicklly` goes to `work/quicklly.md` in a folder, and the reader sorted by
+  name shows the folders as a tree.
 
 ## [0.8.0] - 2026-10-08
 

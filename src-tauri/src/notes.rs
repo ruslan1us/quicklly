@@ -5,6 +5,10 @@ use std::path::{Path, PathBuf};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
+use crate::archive::ARCHIVE_DIR;
+use crate::images::{self, IMAGES_DIR};
+use crate::reader;
+
 /// File that collects all notes in inbox mode.
 pub const INBOX_FILE: &str = "inbox.md";
 
@@ -54,6 +58,11 @@ pub fn format_note(lines: &[&str]) -> String {
 
 /// The first `#tag` in `text`, lowercased: a `#` at the start of a word, then a letter, then
 /// letters, digits, `_` or `-`. So `#1`, `#2026-09-26` and `C#` are not tags.
+///
+/// A tag can be nested, `#work/quicklly`: more parts after a `/`, each like a tag of its own.
+/// A part that isn't one ends the tag, so `#work/` and `#work//x` are just `work`. The notes
+/// folder keeps the archive and the images in folders of its own, so a nested tag starting with
+/// `archive` or `images` is just that first part: `#archive/x` goes to `archive.md`.
 pub fn first_tag(text: &str) -> Option<String> {
     let mut previous = ' ';
     let mut chars = text.char_indices().peekable();
@@ -65,19 +74,28 @@ pub fn first_tag(text: &str) -> Option<String> {
         if !starts_tag {
             continue;
         }
-        let tag: String = text[i + 1..]
+        let word: String = text[i + 1..]
             .chars()
-            .take_while(|&c| c.is_alphanumeric() || c == '_' || c == '-')
+            .take_while(|&c| c.is_alphanumeric() || c == '_' || c == '-' || c == '/')
             .collect();
-        return Some(tag.to_lowercase());
+        let parts: Vec<&str> = word
+            .split('/')
+            .take_while(|part| part.starts_with(char::is_alphabetic))
+            .collect();
+        let tag = parts.join("/").to_lowercase();
+        return Some(match tag.split_once('/') {
+            Some((first, _)) if [ARCHIVE_DIR, IMAGES_DIR].contains(&first) => first.to_string(),
+            _ => tag,
+        });
     }
     None
 }
 
 /// Appends a note as `- HH:MM text` to its notes file in `dir`: the file of its first
-/// `#tag` (`tag.md`), otherwise the daily file or the inbox, depending on `mode`.
+/// `#tag` (`tag.md`, or `work/quicklly.md` in a folder for `#work/quicklly`), otherwise the
+/// daily file or the inbox, depending on `mode`. Its images are linked from the file's folder.
 ///
-/// The file (and `dir`) are created on first write. A daily file starts with a
+/// The file (and `dir` and its folders) are created on first write. A daily file starts with a
 /// `# YYYY-MM-DD` heading; the inbox and tag files start with `# Inbox` / `# tag` and get a
 /// `## YYYY-MM-DD` heading whenever the first note of a new day is added.
 /// A multi-line note stays one list item: further lines are indented under the first one
@@ -94,14 +112,16 @@ pub fn append_note(
         return Ok(None);
     }
 
-    fs::create_dir_all(dir)?;
     let date = now.format("%Y-%m-%d").to_string();
     // A grouped file has a title and a heading per day; a daily file needs neither.
-    let (path, grouped_title) = match (first_tag(&text), mode) {
-        (Some(tag), _) => (dir.join(format!("{tag}.md")), Some(tag)),
-        (None, Mode::Inbox) => (dir.join(INBOX_FILE), Some("Inbox".to_string())),
-        (None, Mode::Daily) => (dir.join(format!("{date}.md")), None),
+    let (name, grouped_title) = match (first_tag(&text), mode) {
+        (Some(tag), _) => (format!("{tag}.md"), Some(tag)),
+        (None, Mode::Inbox) => (INBOX_FILE.to_string(), Some("Inbox".to_string())),
+        (None, Mode::Daily) => (format!("{date}.md"), None),
     };
+    let text = images::link_from(&text, &name);
+    let path = reader::path_of(dir, &name);
+    fs::create_dir_all(path.parent().unwrap_or(dir))?;
     let existing = match fs::read_to_string(&path) {
         Ok(content) => content,
         Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
@@ -225,6 +245,71 @@ mod tests {
             "# 2026-09-26\n\n- 09:00 untagged\n"
         );
         assert!(!dir.join("work.md").exists());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn finds_nested_tags() {
+        assert_eq!(
+            first_tag("#Work/Quicklly now"),
+            Some("work/quicklly".into())
+        );
+        assert_eq!(first_tag("#a/b-2/c_3."), Some("a/b-2/c_3".into()));
+        assert_eq!(first_tag("#work/ next"), Some("work".into()));
+        assert_eq!(first_tag("#work//x"), Some("work".into()));
+        assert_eq!(first_tag("#work/1x/y"), Some("work".into()));
+        assert_eq!(first_tag("#archive/x"), Some("archive".into()));
+        assert_eq!(first_tag("#Images/x/y"), Some("images".into()));
+        assert_eq!(first_tag("#work/archive"), Some("work/archive".into()));
+    }
+
+    #[test]
+    fn nested_tags_go_to_files_in_folders_with_their_images() {
+        let dir = temp_dir("nested");
+        let path = append_note(
+            &dir,
+            Mode::Daily,
+            at(26, 10, 0),
+            "plan #Work/Quicklly ![Image #1](images/a.png)",
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(path, dir.join("work").join("quicklly.md"));
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# work/quicklly\n\n## 2026-09-26\n\n\
+             - 10:00 plan #Work/Quicklly ![Image #1](../images/a.png)\n"
+        );
+
+        let path = append_note(
+            &dir,
+            Mode::Daily,
+            at(26, 11, 0),
+            "deep #a/b/c ![Image #1](images/b.png)",
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(path, dir.join("a").join("b").join("c.md"));
+        assert!(fs::read_to_string(&path)
+            .unwrap()
+            .ends_with("- 11:00 deep #a/b/c ![Image #1](../../images/b.png)\n"));
+
+        let path = append_note(&dir, Mode::Daily, at(26, 12, 0), "old #archive/x")
+            .unwrap()
+            .unwrap();
+        assert_eq!(path, dir.join("archive.md"));
+        let path = append_note(
+            &dir,
+            Mode::Daily,
+            at(26, 12, 0),
+            "#work/ ![Image #1](images/c.png)",
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(path, dir.join("work.md"));
+        assert!(fs::read_to_string(&path)
+            .unwrap()
+            .ends_with("](images/c.png)\n"));
         fs::remove_dir_all(&dir).unwrap();
     }
 

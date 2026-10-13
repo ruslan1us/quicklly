@@ -68,6 +68,13 @@ body.pinned #rows {
   color: var(--fg);
 }
 
+/* Sorted by name, a folder above its files (indented under it); it can't be selected. */
+.folder {
+  grid-template-columns: 2ch minmax(0, 1fr);
+  color: var(--dim);
+  cursor: default;
+}
+
 /* Every note done: the file is crossed off. */
 .file.complete .name {
   color: var(--dim);

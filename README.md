@@ -92,6 +92,12 @@ A note with a `#tag` goes to the file of that tag instead: `buy milk #todo` is a
 `todo.md`, grouped by day like the inbox. The tag stays in the note; with several tags, the
 first one decides. A tag starts with a letter, so `#1` or `C#` are not tags.
 
+Tags can be nested with `/`: `#work/quicklly` goes to `work/quicklly.md`, in a `work` folder
+of the notes folder (created when needed), at any depth. Images in such a note are linked from
+that folder (`../images/…`), so Obsidian shows them. The reader sorted by name shows the folders
+as a tree. `archive` and `images` are the app's own folders, so `#archive/x` and `#images/x` are
+just `#archive` and `#images`.
+
 The notes folder can be changed in the settings as well.
 
 ### Dates
@@ -132,7 +138,8 @@ done before this version have no done date, so they stay where they are.
 
 Press <kbd>←</kbd> in an empty input window to browse your notes. The first screen lists the
 notes files, either the one changed last first or by name (the
-inbox, tag files and any other Markdown files in the folder, then the days, newest first), each with a progress bar of done notes; a file where every note is
+inbox, tag files and any other Markdown files in the folder, then the days, newest first, then
+each folder with its files the same way), each with a progress bar of done notes; a file where every note is
 done is crossed off. Open one to go through its notes one by one (a multi-line note is one
 entry):
 
