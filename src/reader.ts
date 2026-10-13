@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { blockCaret } from "./blockCaret";
+import { datePicker } from "./calendar";
 import {
   type DateFormat,
   dateNodes,
@@ -97,10 +98,19 @@ editorCaret.className = "caret";
 const editorMirror = document.createElement("div");
 editorMirror.className = "mirror";
 editorMirror.setAttribute("aria-hidden", "true");
-editorBox.append(editor, editorCaret, editorMirror);
+/** The calendar of `/date`, under the editor. */
+const editorCalendar = document.createElement("div");
+editorCalendar.className = "calendar";
+editorCalendar.hidden = true;
+editorBox.append(editor, editorCaret, editorMirror, editorCalendar);
 const updateEditorCaret = blockCaret(editor, editorCaret, editorMirror);
 // A date in the note goes with one Backspace, as in the note input.
 deleteDatesWhole(editor);
+/** `/date` in the edited note: Enter turns it into a date, or picks one in a calendar. */
+const editorDates = datePicker(editor, editorCalendar, {
+  onChange: () => void fit(),
+  onError: showError,
+});
 
 /** Daily files are shown by their date, other files by their name. */
 const displayName = (name: string) =>
@@ -518,6 +528,7 @@ function startEdit() {
 
 function cancelEdit() {
   editing = false;
+  editorDates.close();
   render();
   void fit();
 }
@@ -554,9 +565,12 @@ function moveNote(step: number) {
 document.addEventListener("keydown", (e) => {
   if (editing) {
     if (e.isComposing) return;
+    // While the calendar is shown, the arrows, PageUp/PageDown, Enter and Esc work it instead.
+    if (editorDates.keydown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void saveEdit();
+      // A `/date` in the note becomes a date first (or opens the calendar).
+      if (!editorDates.resolve()) void saveEdit();
     } else if (
       e.key === "Escape" ||
       (e.ctrlKey && e.code === "KeyC" && editor.selectionStart === editor.selectionEnd)

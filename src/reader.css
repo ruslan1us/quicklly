@@ -1,6 +1,7 @@
 /* Reader-specific layout on top of terminal.css, which is imported here (rather than linked
    separately) so that the build always puts it first. */
 @import "./terminal.css";
+@import "./calendar.css";
 
 header {
   display: flex;
@@ -168,6 +169,11 @@ body.pinned #rows {
   left: 0;
   visibility: hidden;
   pointer-events: none;
+}
+
+/* The calendar of `/date` (see calendar.ts), under the note being edited. */
+.editor .calendar {
+  padding-top: 6px;
 }
 
 .editor .caret {

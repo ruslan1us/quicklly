@@ -1,4 +1,6 @@
 /* The Pad: a terminal-style editor for longer notes; colours come from themes.css. */
+@import "./calendar.css";
+
 :root {
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 14px;
@@ -186,53 +188,6 @@ header {
 #calendar {
   flex: none;
   padding: 6px 18px 0 5ch;
-}
-
-/* The month on the left; the picked day, how far it is and the keys on the right. */
-#calendar .layout {
-  display: flex;
-  gap: 4ch;
-}
-
-#calendar .month,
-#calendar .info > span {
-  display: block;
-}
-
-#calendar .distance {
-  margin-bottom: 1em;
-  color: var(--accent);
-}
-
-#calendar .keys {
-  color: var(--dim);
-}
-
-/* The days under their weekdays, each two characters wide. */
-#calendar .days {
-  display: grid;
-  grid-template-columns: repeat(7, 2ch);
-  column-gap: 1ch;
-  text-align: right;
-}
-
-#calendar .weekday {
-  color: var(--dim);
-}
-
-#calendar .day {
-  cursor: pointer;
-}
-
-#calendar .today {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-/* The picked day in inverse video, like the caret. */
-#calendar .selected {
-  background: var(--caret);
-  color: var(--bg);
 }
 
 footer {
