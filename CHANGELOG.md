@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-13
+
 ### Added
 
 - Type `/date` in a note to pick a day in a calendar, or `/date tomorrow` / `/date 15/10/2026`:
@@ -175,7 +177,8 @@ The first version, published as source code only.
 - A tray icon to write a new note, open the notes folder or quit.
 - Only one copy of Quicklly runs at a time.
 
-[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/ruslan1us/quicklly/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/ruslan1us/quicklly/compare/v0.7.4...v0.8.0
 [0.7.4]: https://github.com/ruslan1us/quicklly/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/ruslan1us/quicklly/compare/v0.7.2...v0.7.3
