@@ -2,18 +2,21 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 /**
- * Dates in notes. Files keep them as Obsidian Tasks due dates, `📅 2026-10-15`; text fields,
- * the reader and the search results show them in the date format of the settings,
- * `📅 15/10/2026`, and every text that leaves a field has them turned back.
+ * Dates in notes. Files keep them like Obsidian Tasks: due dates as `📅 2026-10-15`, the day a
+ * note was done as `✅ 2026-10-13`. Text fields, the reader and the search results show them in
+ * the date format of the settings, `📅 15/10/2026`, and every text that leaves a field has them
+ * turned back.
  */
 export type DateFormat = "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD" | "DD.MM.YYYY";
 
 /** The date format of the settings; kept up to date by `followDateFormat`. */
 export let dateFormat: DateFormat = "DD/MM/YYYY";
 
-const MARK = "📅 ";
-/** A date as files store it. */
-const STORED = /📅 (\d{4})-(\d{2})-(\d{2})(?!\d)/gu;
+const MARK = "📅";
+/** The mark of the day a note was done. */
+const DONE_MARK = "✅";
+/** A date as files store it: its mark, then the date. */
+const STORED = /(📅|✅) (\d{4})-(\d{2})-(\d{2})(?!\d)/gu;
 
 /** The parts of `format` in order, e.g. `["DD", "MM", "YYYY"]`. */
 const parts = (format: DateFormat) => format.match(/DD|MM|YYYY/g)!;
@@ -25,8 +28,9 @@ function pattern(format: DateFormat) {
   );
 }
 
-/** A date as fields show it, in `format`. */
-const shown = (format: DateFormat) => new RegExp(`${MARK}${pattern(format)}(?!\\d)`, "gu");
+/** A date as fields show it, in `format`: its mark, then the date. */
+const shown = (format: DateFormat) =>
+  new RegExp(`(${MARK}|${DONE_MARK}) ${pattern(format)}(?!\\d)`, "gu");
 
 /** The local date of `year`, `month` (1–12) and `day`, or null when there is no such day. */
 function makeDate(year: number, month: number, day: number) {
@@ -63,22 +67,40 @@ export function tomorrow(today = new Date()) {
   return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 }
 
-/** `date` as it is put into a text field: `📅 15/10/2026`. */
-export const dateLabel = (date: Date, format = dateFormat) => MARK + formatDate(date, format);
+/** `date` as it is put into a text field: `📅 15/10/2026` (or with another `mark`). */
+export const dateLabel = (date: Date, format = dateFormat, mark = MARK) =>
+  `${mark} ${formatDate(date, format)}`;
 
-/** `text` with each date shown in `format` stored as `📅 YYYY-MM-DD`; other text stays. */
+/** A stored done date at the end of a note's first line: ` ✅ 2026-10-13`. */
+const DONE_AT_END = /(?:^| )✅ (\d{4})-(\d{2})-(\d{2})[ \t]*$/u;
+
+/**
+ * A stored note's `text` without the day it was done, which is not shown (the reader shows how
+ * long it has left before the archive instead), and that day, if it has one. The day is kept
+ * when the note is edited.
+ */
+export function splitDoneDate(text: string): { text: string; done: Date | null } {
+  const end = text.indexOf("\n");
+  const first = end < 0 ? text : text.slice(0, end);
+  const match = DONE_AT_END.exec(first);
+  const done = match && makeDate(Number(match[1]), Number(match[2]), Number(match[3]));
+  if (!match || !done) return { text, done: null };
+  return { text: first.slice(0, match.index) + (end < 0 ? "" : text.slice(end)), done };
+}
+
+/** `text` with each date shown in `format` stored as `📅 YYYY-MM-DD`, keeping its mark. */
 export function toStored(text: string, format = dateFormat) {
-  return text.replace(shown(format), (typed, ...groups: string[]) => {
+  return text.replace(shown(format), (typed, mark: string, ...groups: string[]) => {
     const date = fromParts(format, groups.slice(0, 3));
-    return date ? dateLabel(date, "YYYY-MM-DD") : typed;
+    return date ? dateLabel(date, "YYYY-MM-DD", mark) : typed;
   });
 }
 
-/** `text` with each stored `📅 YYYY-MM-DD` shown in `format`; other text stays. */
+/** `text` with each stored `📅 YYYY-MM-DD` shown in `format`, keeping its mark. */
 export function toDisplay(text: string, format = dateFormat) {
-  return text.replace(STORED, (stored, year: string, month: string, day: string) => {
+  return text.replace(STORED, (stored, mark: string, year: string, month: string, day: string) => {
     const date = makeDate(Number(year), Number(month), Number(day));
-    return date ? dateLabel(date, format) : stored;
+    return date ? dateLabel(date, format, mark) : stored;
   });
 }
 
@@ -109,17 +131,18 @@ export function commandDate(arg: string, today = new Date(), format = dateFormat
 const plain = (text: string): Node[] => [document.createTextNode(text)];
 
 /**
- * `text` (with dates shown in the date format) as nodes: each date in an accent `.date` span
- * (its content made by `inner`), the text around them made by `other`.
+ * `text` (with dates shown in the date format) as nodes: each due date in an accent `.date`
+ * span, each done date in a dim `.done-date` one (their content made by `inner`), the text
+ * around them made by `other`.
  */
 export function dateNodes(text: string, other = plain, inner = plain): Node[] {
   const nodes: Node[] = [];
   let from = 0;
   for (const match of text.matchAll(shown(dateFormat))) {
-    if (!fromParts(dateFormat, match.slice(1, 4))) continue;
+    if (!fromParts(dateFormat, match.slice(2, 5))) continue;
     if (match.index > from) nodes.push(...other(text.slice(from, match.index)));
     const span = document.createElement("span");
-    span.className = "date";
+    span.className = match[1] === DONE_MARK ? "done-date" : "date";
     span.append(...inner(match[0]));
     nodes.push(span);
     from = match.index + match[0].length;
@@ -130,7 +153,7 @@ export function dateNodes(text: string, other = plain, inner = plain): Node[] {
 
 /**
  * Makes a date in `field` go as a whole: Backspace right after it or Delete right before it
- * removes all of `📅 15/10/2026` (Ctrl+Z brings it back).
+ * removes all of `📅 15/10/2026` or `✅ 13/10/2026` (Ctrl+Z brings it back).
  */
 export function deleteDatesWhole(field: HTMLTextAreaElement) {
   field.addEventListener("keydown", (e) => {
@@ -141,7 +164,7 @@ export function deleteDatesWhole(field: HTMLTextAreaElement) {
     for (const match of value.matchAll(shown(dateFormat))) {
       const end = match.index + match[0].length;
       if ((back ? end : match.index) !== caret) continue;
-      if (!fromParts(dateFormat, match.slice(1, 4))) continue;
+      if (!fromParts(dateFormat, match.slice(2, 5))) continue;
       e.preventDefault();
       field.setSelectionRange(match.index, end);
       document.execCommand("delete");

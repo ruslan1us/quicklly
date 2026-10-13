@@ -78,13 +78,14 @@ body.pinned #rows {
   color: var(--accent);
 }
 
-/* Notes: cursor · time · done mark · text (multi-line notes keep their lines). */
+/* Notes: cursor · time · done mark · text (multi-line notes keep their lines) · for a done
+   note, how long it has left before the archive. */
 .note {
-  grid-template-columns: 2ch 6ch 2ch minmax(0, 1fr);
+  grid-template-columns: 2ch 6ch 2ch minmax(0, 1fr) auto;
 }
 
 /* `>`: the cells only, not the links inside the text. */
-.note > span:last-child {
+.note > span:nth-child(4) {
   color: var(--fg);
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -94,9 +95,19 @@ body.pinned #rows {
   color: var(--dim);
 }
 
-.note.done > span:last-child {
+.note.done > span:nth-child(4) {
   color: var(--dim);
   text-decoration: line-through;
+}
+
+/* "archive in 3 days", on the right and not crossed out like the text. */
+.note > .archive {
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.note > .archive:not(:empty) {
+  padding-left: 2ch;
 }
 
 /* Links are shown short (see links.ts) and underlined. */
@@ -109,6 +120,11 @@ body.pinned #rows {
 .note .image,
 .note .date {
   color: var(--accent);
+}
+
+/* The day a note was done is dim (see dates.ts). */
+.note .done-date {
+  color: var(--dim);
 }
 
 /* A done note is dim all through, its images and dates too. */

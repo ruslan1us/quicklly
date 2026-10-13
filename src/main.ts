@@ -4,7 +4,14 @@ import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
 import { datePicker } from "./calendar";
-import { dateNodes, deleteDatesWhole, followDateFormat, toDisplay, toStored } from "./dates";
+import {
+  dateNodes,
+  deleteDatesWhole,
+  followDateFormat,
+  splitDoneDate,
+  toDisplay,
+  toStored,
+} from "./dates";
 import {
   type Images,
   fromMarkdown,
@@ -237,9 +244,10 @@ function renderResults() {
       li.className = "hit";
       li.classList.toggle("selected", i === selectedHit);
       li.classList.toggle("done", hit.done);
-      // One line per result: extra lines of a note follow a ⏎.
+      // One line per result: extra lines of a note follow a ⏎. The day it was done is left out.
       const text = cell("", "text");
-      text.append(...highlightNote(hit.text.split("\n").join(" ⏎ "), query));
+      const shown = splitDoneDate(hit.text).text;
+      text.append(...highlightNote(shown.split("\n").join(" ⏎ "), query));
       li.append(
         cell(i === selectedHit ? "❯" : ""),
         cell(hit.day),

@@ -24,6 +24,7 @@ const PAD_POSITION_KEY: &str = "padPosition";
 const TRANSPARENCY_KEY: &str = "transparency";
 const SCALE_KEY: &str = "scale";
 const DATE_FORMAT_KEY: &str = "dateFormat";
+const ARCHIVE_AFTER_KEY: &str = "archiveAfter";
 
 /// What the global hotkey opens.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +76,33 @@ pub enum DateFormat {
     DayMonthYearDots,
 }
 
+/// How long after a note is done it is moved to the archive.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ArchiveAfter {
+    Never,
+    OneDay,
+    ThreeDays,
+    #[default]
+    SevenDays,
+    FourteenDays,
+    ThirtyDays,
+}
+
+impl ArchiveAfter {
+    /// The number of days, or `None` when done notes are never archived.
+    pub fn days(self) -> Option<i64> {
+        match self {
+            ArchiveAfter::Never => None,
+            ArchiveAfter::OneDay => Some(1),
+            ArchiveAfter::ThreeDays => Some(3),
+            ArchiveAfter::SevenDays => Some(7),
+            ArchiveAfter::FourteenDays => Some(14),
+            ArchiveAfter::ThirtyDays => Some(30),
+        }
+    }
+}
+
 /// Settings as shown in the settings window.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -92,6 +120,7 @@ pub struct SettingsView {
     transparency: u32,
     scale: u32,
     date_format: DateFormat,
+    archive_after: ArchiveAfter,
 }
 
 /// How every window looks: its colours, how much of the blurred desktop shows through its
@@ -237,6 +266,18 @@ fn date_format(app: &AppHandle) -> DateFormat {
     stored(app, DATE_FORMAT_KEY)
 }
 
+/// How long after a note is done it is archived; a week unless changed in settings.
+pub fn archive_after(app: &AppHandle) -> ArchiveAfter {
+    stored(app, ARCHIVE_AFTER_KEY)
+}
+
+/// How many days after a note is done it is archived, or null when it never is; the reader
+/// shows how long a done note has left.
+#[tauri::command]
+pub fn get_archive_days(app: AppHandle) -> Option<i64> {
+    archive_after(&app).days()
+}
+
 /// Whether new releases are looked for, downloaded and installed by themselves; on unless
 /// turned off in settings. `/update` works either way.
 pub fn auto_update(app: &AppHandle) -> bool {
@@ -262,6 +303,7 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
         transparency: transparency(app),
         scale: scale_percent(app),
         date_format: date_format(app),
+        archive_after: archive_after(app),
         autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
         auto_update: auto_update(app),
     })
@@ -361,6 +403,14 @@ pub fn set_date_format(app: AppHandle, format: DateFormat) -> Result<SettingsVie
     view(&app)
 }
 
+/// Saves when done notes are archived, and archives the ones that are due by it now.
+#[tauri::command]
+pub fn set_archive_after(app: AppHandle, after: ArchiveAfter) -> Result<SettingsView, String> {
+    store_setting(&app, ARCHIVE_AFTER_KEY, after)?;
+    crate::archive::archive_done(&app);
+    view(&app)
+}
+
 #[tauri::command]
 pub fn set_auto_update(app: AppHandle, enabled: bool) -> Result<SettingsView, String> {
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
@@ -418,5 +468,26 @@ mod tests {
             );
         }
         assert!(serde_json::from_value::<DateFormat>("D/M/Y".into()).is_err());
+    }
+
+    #[test]
+    fn archive_after_is_stored_as_the_frontend_writes_it() {
+        for (after, name, days) in [
+            (ArchiveAfter::Never, "never", None),
+            (ArchiveAfter::OneDay, "oneDay", Some(1)),
+            (ArchiveAfter::ThreeDays, "threeDays", Some(3)),
+            (ArchiveAfter::SevenDays, "sevenDays", Some(7)),
+            (ArchiveAfter::FourteenDays, "fourteenDays", Some(14)),
+            (ArchiveAfter::ThirtyDays, "thirtyDays", Some(30)),
+        ] {
+            assert_eq!(serde_json::to_value(after).unwrap(), name);
+            assert_eq!(
+                serde_json::from_value::<ArchiveAfter>(name.into()).unwrap(),
+                after
+            );
+            assert_eq!(after.days(), days);
+        }
+        assert!(serde_json::from_value::<ArchiveAfter>("7".into()).is_err());
+        assert_eq!(ArchiveAfter::default(), ArchiveAfter::SevenDays);
     }
 }

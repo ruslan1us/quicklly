@@ -7,6 +7,7 @@ import {
   dateNodes,
   deleteDatesWhole,
   followDateFormat,
+  splitDoneDate,
   toDisplay,
   toStored,
 } from "./dates";
@@ -264,6 +265,23 @@ function noteText(text: string) {
   return cell;
 }
 
+/** How many days after it is done a note moves to the archive; null when it never does. */
+let archiveDays: number | null = null;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * For a note done on `done`, how long it has left before it moves to the archive: "archive in
+ * 3 days", "archive tomorrow", or "archive today" (it goes at the next start or day change).
+ */
+function archiveIn(done: Date | null) {
+  if (!done || archiveDays === null) return "";
+  // Midnights in UTC, so a change to or from summer time doesn't shift the count.
+  const utc = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const left = archiveDays - Math.round((utc(new Date()) - utc(done)) / DAY_MS);
+  if (left <= 0) return "archive today";
+  return left === 1 ? "archive tomorrow" : `archive in ${left} days`;
+}
+
 function renderNotes() {
   const count = noteIndexes().length;
   const done = items.filter((item) => item.kind === "note" && item.done).length;
@@ -274,10 +292,14 @@ function renderNotes() {
   rowsList.replaceChildren(
     ...items.map((item, i) => {
       if (item.kind === "day") return row("row day", ["", `── ${item.date}`], false);
-      const text = editing && i === selectedItem ? editorBox : noteText(item.text);
+      const edited = editing && i === selectedItem;
+      // The day a note was done is not shown; how long it has left before the archive is.
+      const { text: shown, done } = splitDoneDate(item.text);
+      const text = edited ? editorBox : noteText(shown);
+      const archive = span(item.done && !edited ? archiveIn(done) : "", "archive");
       const li = row(
         "row note",
-        [i === selectedItem ? "❯" : "", item.time, item.done ? "✓" : "", text],
+        [i === selectedItem ? "❯" : "", item.time, item.done ? "✓" : "", text, archive],
         i === selectedItem,
         () => {
           if (editing) return;
@@ -365,6 +387,7 @@ async function loadFiles() {
 async function loadNotes() {
   try {
     items = await invoke<Item[]>("read_note_file", { name: openFile });
+    archiveDays = await invoke<number | null>("get_archive_days");
   } catch (err) {
     items = [];
     showError(err);
@@ -519,7 +542,9 @@ function startEdit() {
   const note = items[selectedItem];
   if (note?.kind !== "note") return;
   editing = true;
-  ({ text: editor.value, images: editorImages } = fromMarkdown(toDisplay(note.text)));
+  // The day it was done stays out of sight, and in the note (see `set_text`).
+  const shown = toDisplay(splitDoneDate(note.text).text);
+  ({ text: editor.value, images: editorImages } = fromMarkdown(shown));
   render();
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
@@ -537,7 +562,7 @@ function cancelEdit() {
 async function saveEdit() {
   const note = items[selectedItem];
   const text = toStored(toMarkdown(editor.value, editorImages));
-  if (note?.kind !== "note" || text.trim() === "" || text === note.text) {
+  if (note?.kind !== "note" || text.trim() === "" || text === splitDoneDate(note.text).text) {
     cancelEdit();
     return;
   }

@@ -116,6 +116,18 @@ a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>Enter</
 the [reader](#reader) and <kbd>Esc</kbd> closes the window; it closes by itself once everything
 is done. `/reminders` in the input window opens it at any time.
 
+### Archive
+
+Marking a note done adds the day it was done to the file, `✅ 2026-10-13`, the done date of
+[Obsidian Tasks](https://publish.obsidian.md/tasks/); marking it not done again takes it off.
+The reader doesn't show that date, but how long the note has left, like `archive in 3 days`.
+After a while (7 days, see **Archive done notes** in the
+settings) done notes move out of their file into the same file in an `archive` folder in the
+notes folder: `todo.md` → `archive/todo.md`, `2026-10-08.md` → `archive/2026-10-08.md`, grouped
+by day like the original. This happens when Quicklly starts, when a new day begins and when the
+setting is changed. The reader, the search and the reminders don't show the archive. Notes marked
+done before this version have no done date, so they stay where they are.
+
 ## Reader
 
 Press <kbd>←</kbd> in an empty input window to browse your notes. The first screen lists the
@@ -139,10 +151,11 @@ entry):
 | <kbd>→</kbd>                         | Back to the input      |                                    |
 | <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close          | Close                              |
 
-A done note is stored as a Markdown task, which Obsidian shows as a checked box:
+A done note is stored as a Markdown task, which Obsidian shows as a checked box, with the day it
+was done (see [Archive](#archive)):
 
 ```markdown
-- [x] 15:10 buy a birthday present
+- [x] 15:10 buy a birthday present ✅ 2026-09-27
 ```
 
 Changes only touch that note; the rest of the file stays as it is. If the file was changed
@@ -203,6 +216,7 @@ keyboard-driven:
 | Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
 | Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
 | Date format        | DD/MM/YYYY                                  | DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD.MM.YYYY: how `/date` dates are typed and shown |
+| Archive done notes | After 7 days                                | Never, after 1, 3, 7, 14 or 30 days: when done notes move to `archive/` (see [Archive](#archive)) |
 | Theme              | Default                                     | Default (dark), Default+ (dark purple), Light |
 | Transparency       | 30%                                         | Off to 80%: how much of the blurred desktop shows through the windows |
 | Scale              | 100%                                        | 80% to 150%                                  |

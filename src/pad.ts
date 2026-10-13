@@ -3,7 +3,14 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
 import { datePicker } from "./calendar";
-import { dateNodes, deleteDatesWhole, followDateFormat, toDisplay, toStored } from "./dates";
+import {
+  dateNodes,
+  deleteDatesWhole,
+  followDateFormat,
+  splitDoneDate,
+  toDisplay,
+  toStored,
+} from "./dates";
 import { type Images, fromMarkdown, labelNodes, pasteImages, toMarkdown } from "./images";
 import { linkNodes } from "./links";
 import { tagSuggest } from "./tagSuggest";
@@ -316,7 +323,8 @@ async function startEditing() {
   if (!edit) return;
   if (!editing) await saveDraft();
   editing = edit;
-  setText(edit.note.text);
+  // The day it was done stays out of sight, and in the note (see `set_text`).
+  setText(splitDoneDate(edit.note.text).text);
   refresh();
 }
 

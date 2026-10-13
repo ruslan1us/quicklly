@@ -1,3 +1,4 @@
+mod archive;
 mod hotkey;
 mod images;
 mod monitor;
@@ -75,7 +76,7 @@ fn open_images(app: AppHandle, paths: Vec<String>) -> Result<(), String> {
 
 /// Tells the reader and the reminders that a notes file changed, so a pinned reader shows it
 /// right away and the reminders stay up to date.
-fn notes_changed(app: &AppHandle) {
+pub(crate) fn notes_changed(app: &AppHandle) {
     let _ = app.emit_to(READER_WINDOW, "notes-changed", ());
     let _ = app.emit_to(reminders::REMINDERS_WINDOW, "notes-changed", ());
 }
@@ -236,7 +237,7 @@ fn set_note_done(
     done: bool,
 ) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::set_done(&dir, &name, &note, done)
+    reader::set_done(&dir, &name, &note, done, chrono::Local::now().date_naive())
         .map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
     Ok(())
@@ -508,6 +509,8 @@ pub fn run() {
             settings::set_theme,
             settings::get_date_format,
             settings::set_date_format,
+            settings::set_archive_after,
+            settings::get_archive_days,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

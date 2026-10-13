@@ -7,7 +7,7 @@ use tauri::{
     WebviewWindowBuilder,
 };
 
-use crate::{monitor, pad, reader, settings};
+use crate::{archive, monitor, pad, reader, settings};
 
 /// The reminders: the notes with a date of today or earlier that are not done yet.
 pub const REMINDERS_WINDOW: &str = "reminders";
@@ -27,8 +27,9 @@ fn due_now(app: &AppHandle) -> Result<Vec<reader::Due>, String> {
         .map_err(|e| format!("Failed to read {}: {e}", dir.display()))
 }
 
-/// Shows the reminders at startup and then whenever a new day starts (at midnight, or when the
-/// computer wakes up on a later day), if anything is due.
+/// The daily round, at startup and then whenever a new day starts (at midnight, or when the
+/// computer wakes up on a later day): first moves the notes done long enough ago to the archive,
+/// then shows the reminders if anything is due.
 pub fn start(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
@@ -37,6 +38,7 @@ pub fn start(app: &AppHandle) {
             let today = Local::now().date_naive();
             if last != Some(today) {
                 last = Some(today);
+                archive::archive_done(&app);
                 match due_now(&app) {
                     Ok(due) if !due.is_empty() => show(&app, false),
                     Ok(_) => {}

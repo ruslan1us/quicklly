@@ -4,6 +4,8 @@ use std::path::{Component, Path, PathBuf};
 
 use chrono::NaiveDateTime;
 
+use crate::archive::ARCHIVE_DIR;
+
 /// Folder in the notes folder that pasted images are saved to.
 pub const IMAGES_DIR: &str = "images";
 
@@ -83,17 +85,29 @@ pub fn paths_in(text: &str) -> Vec<String> {
     paths
 }
 
-/// The image files at `paths` that no notes file in `dir` links to any more; missing ones are
-/// left out.
+/// The image files at `paths` that no notes file in `dir` or its archive links to any more;
+/// missing ones are left out.
 fn unused(dir: &Path, paths: &[String]) -> io::Result<Vec<PathBuf>> {
     if paths.is_empty() {
         return Ok(Vec::new());
     }
     let mut used = Vec::new();
-    for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
-        if path.extension().is_some_and(|ext| ext == "md") && path.is_file() {
-            used.extend(paths_in(&fs::read_to_string(path)?));
+    // Archived notes link to the images from one folder down.
+    for (folder, up) in [(dir.to_path_buf(), ""), (dir.join(ARCHIVE_DIR), "../")] {
+        let entries = match fs::read_dir(&folder) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(e),
+        };
+        for entry in entries {
+            let path = entry?.path();
+            if path.extension().is_some_and(|ext| ext == "md") && path.is_file() {
+                used.extend(
+                    paths_in(&fs::read_to_string(path)?)
+                        .into_iter()
+                        .map(|p| p.strip_prefix(up).map(String::from).unwrap_or(p)),
+                );
+            }
         }
     }
     Ok(paths
@@ -106,7 +120,7 @@ fn unused(dir: &Path, paths: &[String]) -> io::Result<Vec<PathBuf>> {
 
 /// Moves the images at `paths` (from a deleted or edited note, or a deleted file) to the Recycle
 /// Bin, unless a notes file in `dir` still links to them, like a note saved twice from the
-/// input window's history.
+/// input window's history, or an archived note.
 pub fn trash_unused(dir: &Path, paths: &[String]) -> io::Result<()> {
     for file in unused(dir, paths)? {
         trash::delete(&file).map_err(io::Error::other)?;
@@ -197,6 +211,24 @@ mod tests {
         .unwrap();
         assert_eq!(
             unused(&dir, &[kept, free.clone(), "images/gone.png".into()]).unwrap(),
+            [resolve(&dir, &free).unwrap()]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn keeps_images_an_archived_note_links_to() {
+        let dir = temp_dir("archived-images");
+        let archived = save(&dir, now(), "image/png", b"archived").unwrap();
+        let free = save(&dir, now(), "image/png", b"free").unwrap();
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::write(
+            dir.join("archive").join("todo.md"),
+            format!("- [x] 10:00 old ![Image #1](../{archived}) ✅ 2026-10-01\n"),
+        )
+        .unwrap();
+        assert_eq!(
+            unused(&dir, &[archived, free.clone()]).unwrap(),
             [resolve(&dir, &free).unwrap()]
         );
         fs::remove_dir_all(&dir).unwrap();

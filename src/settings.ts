@@ -17,6 +17,7 @@ interface Settings {
   hotkeyTarget: "input" | "pad";
   padPosition: PadPosition;
   dateFormat: DateFormat;
+  archiveAfter: ArchiveAfter;
 }
 
 /** One line of the settings list. */
@@ -84,6 +85,24 @@ const themeIndex = (s: Settings) => THEMES.findIndex((t) => t.theme === s.theme)
 
 const DATE_FORMATS: DateFormat[] = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "DD.MM.YYYY"];
 
+type ArchiveAfter =
+  | "never"
+  | "oneDay"
+  | "threeDays"
+  | "sevenDays"
+  | "fourteenDays"
+  | "thirtyDays";
+const ARCHIVE_AFTER: { after: ArchiveAfter; name: string }[] = [
+  { after: "never", name: "Never" },
+  { after: "oneDay", name: "After 1 day" },
+  { after: "threeDays", name: "After 3 days" },
+  { after: "sevenDays", name: "After 7 days" },
+  { after: "fourteenDays", name: "After 14 days" },
+  { after: "thirtyDays", name: "After 30 days" },
+];
+const archiveAfterIndex = (s: Settings) =>
+  ARCHIVE_AFTER.findIndex((a) => a.after === s.archiveAfter);
+
 const rows: Row[] = [
   {
     label: "Hotkey",
@@ -132,6 +151,16 @@ const rows: Row[] = [
       void run("set_date_format", { format: next });
     },
     reset: () => void run("set_date_format", { format: "DD/MM/YYYY" }),
+  },
+  {
+    label: "Archive done notes",
+    value: (s) => choice(ARCHIVE_AFTER[archiveAfterIndex(s)]?.name ?? s.archiveAfter),
+    cycle: (s, step) => {
+      const count = ARCHIVE_AFTER.length;
+      const next = ARCHIVE_AFTER[(archiveAfterIndex(s) + step + count) % count];
+      void run("set_archive_after", { after: next.after });
+    },
+    reset: () => void run("set_archive_after", { after: "sevenDays" }),
   },
   {
     label: "Theme",

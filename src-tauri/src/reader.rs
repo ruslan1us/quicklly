@@ -199,20 +199,49 @@ pub fn due(dir: &Path, today: NaiveDate) -> io::Result<Vec<Due>> {
 fn first_date(text: &str) -> Option<NaiveDate> {
     text.match_indices("📅 ").find_map(|(at, mark)| {
         let rest = &text[at + mark.len()..];
-        let date = rest.get(..10)?;
-        let digits = date.bytes().enumerate().all(|(i, b)| {
+        // Like the frontend, a longer number is no date.
+        if rest.get(10..)?.starts_with(|c: char| c.is_ascii_digit()) {
+            return None;
+        }
+        iso_date(&rest[..10])
+    })
+}
+
+/// A real date written exactly as `YYYY-MM-DD`.
+fn iso_date(date: &str) -> Option<NaiveDate> {
+    let digits = date.len() == 10
+        && date.bytes().enumerate().all(|(i, b)| {
             if i == 4 || i == 7 {
                 b == b'-'
             } else {
                 b.is_ascii_digit()
             }
         });
-        // Like the frontend, a longer number is no date.
-        if !digits || rest[10..].starts_with(|c: char| c.is_ascii_digit()) {
-            return None;
-        }
-        NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
-    })
+    digits
+        .then(|| NaiveDate::parse_from_str(date, "%Y-%m-%d").ok())
+        .flatten()
+}
+
+/// Marks the day a note was done, at the end of its first line, like Obsidian Tasks.
+const DONE_MARK: &str = "✅ ";
+
+/// Splits a note's first line into its text and the date it was done, from a trailing
+/// `✅ YYYY-MM-DD`; the line as it is and `None` when it has none.
+pub(crate) fn split_done_date(line: &str) -> (&str, Option<NaiveDate>) {
+    let line = line.trim_end();
+    let Some((before, date)) = line.rsplit_once(DONE_MARK) else {
+        return (line, None);
+    };
+    // The mark follows the text after a space, or is all there is.
+    let before = match before.strip_suffix(' ') {
+        Some(before) => before,
+        None if before.is_empty() => before,
+        None => return (line, None),
+    };
+    match iso_date(date) {
+        Some(date) => (before, Some(date)),
+        None => (line, None),
+    }
 }
 
 /// Reads and parses one notes file from `dir`; only notes files can be read.
@@ -340,11 +369,23 @@ pub struct NoteRef {
     pub text: String,
 }
 
-/// Marks a note as done (`- [x] HH:MM text`) or not done (`- HH:MM text`).
-pub fn set_done(dir: &Path, name: &str, note: &NoteRef, done: bool) -> io::Result<()> {
+/// Marks a note as done on `today` (`- [x] HH:MM text ✅ YYYY-MM-DD`) or not done
+/// (`- HH:MM text`, without the done date).
+pub fn set_done(
+    dir: &Path,
+    name: &str,
+    note: &NoteRef,
+    done: bool,
+    today: NaiveDate,
+) -> io::Result<()> {
     edit_note(dir, name, note, |lines, span| {
-        let first = note.text.lines().next().unwrap_or("");
-        lines[span.start] = note_line(done, &note.time, first);
+        let (first, _) = split_done_date(note.text.lines().next().unwrap_or(""));
+        let first = match (done, first.is_empty()) {
+            (false, _) => first.to_string(),
+            (true, true) => format!("{DONE_MARK}{}", today.format("%Y-%m-%d")),
+            (true, false) => format!("{first} {DONE_MARK}{}", today.format("%Y-%m-%d")),
+        };
+        lines[span.start] = note_line(done, &note.time, &first);
     })
 }
 
@@ -358,7 +399,7 @@ pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<()> {
 
 /// Drops the `## YYYY-MM-DD` headings that have nothing but blank lines under them any more,
 /// and blank lines left at the end. Text written under a heading by hand keeps it.
-fn remove_empty_days(lines: &mut Vec<String>) {
+pub(crate) fn remove_empty_days(lines: &mut Vec<String>) {
     let mut i = 0;
     while i < lines.len() {
         if !lines[i].starts_with("## ") {
@@ -390,8 +431,22 @@ pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Resul
             "a note can't be empty",
         ));
     };
+    // The text is edited without the day it was done (the reader doesn't show it), so that
+    // stays as it was.
+    let old_first = note.text.lines().next().unwrap_or("");
+    let first = match (split_done_date(old_first).1, split_done_date(first).1) {
+        (Some(done_on), None) if note.done => {
+            let date = format!("{DONE_MARK}{}", done_on.format("%Y-%m-%d"));
+            if first.is_empty() {
+                date
+            } else {
+                format!("{first} {date}")
+            }
+        }
+        _ => first.to_string(),
+    };
     edit_note(dir, name, note, |lines, span| {
-        let first = note_line(note.done, &note.time, first);
+        let first = note_line(note.done, &note.time, &first);
         let rest = format_note(&[&[""], rest].concat());
         // `rest` starts with the empty first line, so skip it.
         let rest = rest.lines().skip(1).map(String::from);
@@ -434,14 +489,29 @@ fn edit_note(
         ));
     }
 
-    let newline = if content.contains("\r\n") {
+    let mut lines: Vec<String> = content.lines().map(String::from).collect();
+    change(&mut lines, note_span(note.line, &note.text));
+    write_lines(&path, &content, &lines)
+}
+
+/// The lines of the file a note takes up: its first line and its extra lines.
+pub(crate) fn note_span(line: usize, text: &str) -> Range<usize> {
+    line..line + text.lines().count().max(1)
+}
+
+/// The line ending a file uses: Windows' if it has any, otherwise `\n`.
+pub(crate) fn newline_of(content: &str) -> &'static str {
+    if content.contains("\r\n") {
         "\r\n"
     } else {
         "\n"
-    };
-    let mut lines: Vec<String> = content.lines().map(String::from).collect();
-    let span = note.line..note.line + note.text.lines().count().max(1);
-    change(&mut lines, span);
+    }
+}
+
+/// Writes `lines` as the new content of the notes file at `path`, which had `content`, with
+/// its line endings and its final new line.
+pub(crate) fn write_lines(path: &Path, content: &str, lines: &[String]) -> io::Result<()> {
+    let newline = newline_of(content);
     let mut updated = lines.join(newline);
     if content.ends_with('\n') && !lines.is_empty() {
         updated.push_str(newline);
@@ -449,7 +519,7 @@ fn edit_note(
     // Write a copy and swap it in, so a failed write can't leave a half-written file.
     let tmp = path.with_extension("md.tmp");
     fs::write(&tmp, updated)?;
-    fs::rename(&tmp, &path)
+    fs::rename(&tmp, path)
 }
 
 #[cfg(test)]
@@ -461,6 +531,10 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn today() -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, 10, 13).unwrap()
     }
 
     fn note_ref(line: usize, time: &str, done: bool, text: &str) -> NoteRef {
@@ -487,18 +561,20 @@ mod tests {
             "2026-09-26.md",
             &note_ref(2, "14:32", false, "one\ntwo"),
             true,
+            today(),
         )
         .unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            "# 2026-09-26\r\n\r\n- [x] 14:32 one\r\n  two\r\n- 15:00 three\r\n"
+            "# 2026-09-26\r\n\r\n- [x] 14:32 one ✅ 2026-10-13\r\n  two\r\n- 15:00 three\r\n"
         );
 
         set_done(
             &dir,
             "2026-09-26.md",
-            &note_ref(2, "14:32", true, "one\ntwo"),
+            &note_ref(2, "14:32", true, "one ✅ 2026-10-13\ntwo"),
             false,
+            today(),
         )
         .unwrap();
         assert_eq!(
@@ -506,6 +582,91 @@ mod tests {
             "# 2026-09-26\r\n\r\n- 14:32 one\r\n  two\r\n- 15:00 three\r\n"
         );
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn done_date_goes_after_the_text_and_only_a_trailing_one_comes_off() {
+        let dir = temp_dir("done-date");
+        let path = dir.join("todo.md");
+        fs::write(
+            &path,
+            "# todo\n\n- 09:00\n- [x] 10:00 ✅ 2026-10-01\n- [x] 11:00 a ✅ 2026-10-01 b\n",
+        )
+        .unwrap();
+
+        set_done(
+            &dir,
+            "todo.md",
+            &note_ref(2, "09:00", false, ""),
+            true,
+            today(),
+        )
+        .unwrap();
+        set_done(
+            &dir,
+            "todo.md",
+            &note_ref(3, "10:00", true, "✅ 2026-10-01"),
+            false,
+            today(),
+        )
+        .unwrap();
+        set_done(
+            &dir,
+            "todo.md",
+            &note_ref(4, "11:00", true, "a ✅ 2026-10-01 b"),
+            false,
+            today(),
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n- [x] 09:00 ✅ 2026-10-13\n- 10:00\n- 11:00 a ✅ 2026-10-01 b\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_edit_keeps_the_done_date() {
+        let dir = temp_dir("edit-done-date");
+        let path = dir.join("todo.md");
+        fs::write(&path, "# todo\n\n- [x] 09:00 a ✅ 2026-10-01\n  more\n").unwrap();
+
+        // The text comes without the date, as the reader shows it.
+        let note = note_ref(2, "09:00", true, "a ✅ 2026-10-01\nmore");
+        set_text(&dir, "todo.md", &note, "b\nmore").unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n- [x] 09:00 b ✅ 2026-10-01\n  more\n"
+        );
+        // A date typed in is kept as it is.
+        let note = note_ref(2, "09:00", true, "b ✅ 2026-10-01\nmore");
+        set_text(&dir, "todo.md", &note, "c ✅ 2026-10-05").unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n- [x] 09:00 c ✅ 2026-10-05\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn splits_off_the_done_date() {
+        let date = |d| NaiveDate::from_ymd_opt(2026, 10, d);
+        assert_eq!(
+            split_done_date("buy milk ✅ 2026-10-13 "),
+            ("buy milk", date(13))
+        );
+        assert_eq!(split_done_date("✅ 2026-10-01"), ("", date(1)));
+        assert_eq!(split_done_date("buy milk"), ("buy milk", None));
+        assert_eq!(split_done_date("a✅ 2026-10-13"), ("a✅ 2026-10-13", None));
+        assert_eq!(split_done_date("a ✅ 2026-10-1"), ("a ✅ 2026-10-1", None));
+        assert_eq!(
+            split_done_date("a ✅ 2026-02-30"),
+            ("a ✅ 2026-02-30", None)
+        );
+        assert_eq!(
+            split_done_date("a 📅 2026-10-13"),
+            ("a 📅 2026-10-13", None)
+        );
     }
 
     #[test]
@@ -579,7 +740,8 @@ mod tests {
             &dir,
             "2026-09-26.md",
             &note_ref(2, "14:32", false, "one"),
-            true
+            true,
+            today()
         )
         .is_err());
         assert_eq!(fs::read_to_string(&path).unwrap(), content);
@@ -839,6 +1001,29 @@ mod tests {
         assert!(read_file(&dir, "../2026-09-26.md").is_err());
         assert!(read_file(&dir, "..\\2026-09-26.md").is_err());
         assert_eq!(search(&dir, "#todo", 10).unwrap()[0].day, "2026-09-26");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn leaves_the_archive_out() {
+        let dir = temp_dir("list-archive");
+        fs::write(dir.join("todo.md"), "# todo\n\n- 09:00 milk\n").unwrap();
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::write(
+            dir.join("archive").join("todo.md"),
+            "# todo\n\n- [x] 08:00 old milk ✅ 2026-09-01\n",
+        )
+        .unwrap();
+
+        let names: Vec<_> = list_files(&dir)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.name)
+            .collect();
+        assert_eq!(names, ["todo.md"]);
+        assert_eq!(search(&dir, "milk", 10).unwrap().len(), 1);
+        assert_eq!(list_tags(&dir).unwrap(), ["todo"]);
+        assert!(read_file(&dir, "archive/todo.md").is_err());
         fs::remove_dir_all(&dir).unwrap();
     }
 

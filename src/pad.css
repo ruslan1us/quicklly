@@ -134,7 +134,8 @@ header {
   text-decoration: underline;
 }
 
-#backdrop .bullet {
+#backdrop .bullet,
+#backdrop .done-date {
   color: var(--dim);
 }
 

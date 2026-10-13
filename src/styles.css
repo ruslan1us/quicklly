@@ -97,6 +97,12 @@ body {
   color: var(--accent);
 }
 
+/* The day a note was done is dim (see dates.ts). */
+#backdrop .done-date,
+#results .done-date {
+  color: var(--dim);
+}
+
 /* A done note is dim all through, its images and dates too. */
 #results .hit.done .image,
 #results .hit.done .date {
