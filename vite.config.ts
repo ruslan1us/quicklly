@@ -37,6 +37,7 @@ export default defineConfig(() => ({
         pad: "pad.html",
         help: "help.html",
         changelog: "changelog.html",
+        reminders: "reminders.html",
       },
     },
   },

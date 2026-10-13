@@ -19,7 +19,7 @@ use crate::window_bounds;
 pub const PAD_WINDOW: &str = "pad";
 
 /// Distance from the screen edges, in logical pixels.
-const MARGIN: f64 = 16.0;
+pub(crate) const MARGIN: f64 = 16.0;
 
 /// The unsaved Pad text, kept on disk so it survives closing the Pad or the app.
 fn draft_path(app: &AppHandle) -> Option<PathBuf> {

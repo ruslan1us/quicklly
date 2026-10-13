@@ -1,0 +1,40 @@
+/* Reminders layout on top of terminal.css, which is imported here (rather than linked
+   separately) so that the build always puts it first. */
+@import "./terminal.css";
+
+/* A due note: cursor · first line of the text (with its date) · today / N days overdue. */
+.due {
+  grid-template-columns: 2ch minmax(0, 1fr) 19ch;
+}
+
+/* Some room between the text and how far its date is. */
+.due > span:nth-child(3) {
+  padding-left: 2ch;
+}
+
+.due > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.due .overdue {
+  color: var(--error);
+}
+
+/* `>`: the cell only, not the links inside the text. */
+.due > span:nth-child(2) {
+  color: var(--fg);
+}
+
+/* Links are shown short (see links.ts) and underlined. */
+.due .link {
+  text-decoration: underline;
+}
+
+/* Images are shown as their `[Image #N]` label (see images.ts), dates in the date format (see
+   dates.ts). */
+.due .image,
+.due .date {
+  color: var(--accent);
+}

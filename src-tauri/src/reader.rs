@@ -147,6 +147,74 @@ pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
     Ok(hits)
 }
 
+/// A note that is due, found by [`due`].
+#[derive(Debug, Serialize)]
+pub struct Due {
+    pub file: String,
+    pub note: NoteRef,
+    /// The note's date, `YYYY-MM-DD`.
+    pub date: String,
+    /// How many days ago the date was; 0 when it is today.
+    pub overdue: i64,
+}
+
+/// Finds the notes in all notes files that are not done and have a date (`📅 YYYY-MM-DD`, the
+/// first one if there are several) of `today` or earlier: the oldest date first, notes of the
+/// same date in the order of the files and of the notes in them.
+pub fn due(dir: &Path, today: NaiveDate) -> io::Result<Vec<Due>> {
+    let mut found = Vec::new();
+    for file in list_files(dir)? {
+        for item in parse(&fs::read_to_string(dir.join(&file.name))?) {
+            let Item::Note {
+                line,
+                time,
+                done: false,
+                text,
+            } = item
+            else {
+                continue;
+            };
+            let Some(date) = first_date(&text).filter(|date| *date <= today) else {
+                continue;
+            };
+            found.push(Due {
+                file: file.name.clone(),
+                note: NoteRef {
+                    line,
+                    time,
+                    done: false,
+                    text,
+                },
+                date: date.format("%Y-%m-%d").to_string(),
+                overdue: (today - date).num_days(),
+            });
+        }
+    }
+    // A stable sort, so notes of the same date keep their order.
+    found.sort_by(|a, b| a.date.cmp(&b.date));
+    Ok(found)
+}
+
+/// The first real date stored in a note's text as `📅 YYYY-MM-DD`.
+fn first_date(text: &str) -> Option<NaiveDate> {
+    text.match_indices("📅 ").find_map(|(at, mark)| {
+        let rest = &text[at + mark.len()..];
+        let date = rest.get(..10)?;
+        let digits = date.bytes().enumerate().all(|(i, b)| {
+            if i == 4 || i == 7 {
+                b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        });
+        // Like the frontend, a longer number is no date.
+        if !digits || rest[10..].starts_with(|c: char| c.is_ascii_digit()) {
+            return None;
+        }
+        NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
+    })
+}
+
 /// Reads and parses one notes file from `dir`; only notes files can be read.
 pub fn read_file(dir: &Path, name: &str) -> io::Result<Vec<Item>> {
     if !is_notes_file(name) {
@@ -632,6 +700,82 @@ mod tests {
         );
         assert_eq!(search(&dir, "milk", 1).unwrap().len(), 1);
         assert!(search(&dir, "  ", 10).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn finds_due_notes_overdue_first() {
+        let dir = temp_dir("due");
+        fs::write(
+            dir.join("2026-10-10.md"),
+            [
+                "# 2026-10-10",
+                "",
+                "- 09:00 today 📅 2026-10-13",
+                "- 09:30 future 📅 2026-10-14",
+                "- [x] 10:00 done 📅 2026-10-01",
+                "- 10:30 no date",
+                "- 11:00 overdue 📅 2026-10-11 then 📅 2026-10-20",
+                "- 11:30 not a date 📅 2026-02-30 or 📅 2026-10-123",
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("inbox.md"),
+            [
+                "# Inbox",
+                "",
+                "## 2026-10-01",
+                "",
+                "- 08:00 call back",
+                "  about 📅 2026-10-12",
+                "",
+                "## 2026-10-02",
+                "",
+                "- 08:30 also today 📅 2026-10-13",
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+
+        let today = NaiveDate::from_ymd_opt(2026, 10, 13).unwrap();
+        let found: Vec<_> = due(&dir, today)
+            .unwrap()
+            .into_iter()
+            .map(|d| (d.file, d.note.line, d.note.text, d.date, d.overdue))
+            .collect();
+        let entry = |file: &str, line: usize, text: &str, date: &str, overdue: i64| {
+            (
+                String::from(file),
+                line,
+                String::from(text),
+                String::from(date),
+                overdue,
+            )
+        };
+        assert_eq!(
+            found,
+            [
+                entry(
+                    "2026-10-10.md",
+                    6,
+                    "overdue 📅 2026-10-11 then 📅 2026-10-20",
+                    "2026-10-11",
+                    2
+                ),
+                entry(
+                    "inbox.md",
+                    4,
+                    "call back\nabout 📅 2026-10-12",
+                    "2026-10-12",
+                    1
+                ),
+                entry("inbox.md", 9, "also today 📅 2026-10-13", "2026-10-13", 0),
+                entry("2026-10-10.md", 2, "today 📅 2026-10-13", "2026-10-13", 0),
+            ]
+        );
+        assert!(due(&dir.join("missing"), today).unwrap().is_empty());
         fs::remove_dir_all(&dir).unwrap();
     }
 

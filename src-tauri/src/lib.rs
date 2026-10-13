@@ -5,6 +5,7 @@ mod notes;
 mod pad;
 mod reader;
 mod reader_window;
+mod reminders;
 mod settings;
 mod updater;
 mod window_bounds;
@@ -72,9 +73,11 @@ fn open_images(app: AppHandle, paths: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
-/// Tells the reader that a notes file changed, so a pinned reader shows it right away.
+/// Tells the reader and the reminders that a notes file changed, so a pinned reader shows it
+/// right away and the reminders stay up to date.
 fn notes_changed(app: &AppHandle) {
     let _ = app.emit_to(READER_WINDOW, "notes-changed", ());
+    let _ = app.emit_to(reminders::REMINDERS_WINDOW, "notes-changed", ());
 }
 
 fn show_input(app: &AppHandle) {
@@ -395,6 +398,7 @@ pub fn run() {
         .manage(pad::Pinned::default())
         .manage(reader_window::Pinned::default())
         .manage(pad::PendingEdit::default())
+        .manage(reminders::FocusOnShow::default())
         .setup(|app| {
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
@@ -405,6 +409,7 @@ pub fn run() {
                 let _ = input.set_effects(blur_behind());
             }
             apply_scale(app.handle());
+            reminders::start(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -457,6 +462,10 @@ pub fn run() {
             open_reader,
             open_help,
             open_changelog,
+            reminders::open_reminders,
+            reminders::list_due,
+            reminders::reveal_reminders,
+            reminders::place_reminders,
             reader_window::get_reader_pin,
             reader_window::get_reader_sort,
             reader_window::set_reader_sort,

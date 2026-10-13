@@ -39,6 +39,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
 | Help and version               | Type `/help` and press <kbd>Enter</kbd>    |
 | What's new                     | Type `/changelog` and press <kbd>Enter</kbd> (see [CHANGELOG.md](CHANGELOG.md)) |
+| Notes due                      | Type `/reminders` and press <kbd>Enter</kbd>; see [Reminders](#reminders) |
 | Update                         | When a new version is out, the hint says so for two seconds; type `/update` and press <kbd>Enter</kbd> to install it now. Otherwise it is downloaded in the background and installed on the next start (unless **Auto update** is off in the settings) |
 | Exit                           | Type `/exit` and press <kbd>Enter</kbd>, or tray menu → **Quit** |
 
@@ -104,6 +105,16 @@ you go on typing; the next <kbd>Enter</kbd> saves the note. One <kbd>Backspace</
 a date removes all of it. Files keep the date as
 `📅 2026-10-15`, the due date of [Obsidian Tasks](https://publish.obsidian.md/tasks/); the input
 window, the Pad and the reader show it in the **Date format** of the settings.
+
+### Reminders
+
+Notes that are not done and have a date of today or earlier pop up in a small window in the
+bottom right corner when Quicklly starts (also with Windows) and when a new day begins while it
+runs: overdue ones first, then today's. The window stays on top without taking the focus, so it
+doesn't get in the way of your typing; click it to use the keys. <kbd>↑</kbd> <kbd>↓</kbd> select
+a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>Enter</kbd> opens it in
+the [reader](#reader) and <kbd>Esc</kbd> closes the window; it closes by itself once everything
+is done. `/reminders` in the input window opens it at any time.
 
 ## Reader
 

@@ -374,6 +374,20 @@ async function save() {
     await switchTo("open_changelog");
     return;
   }
+  if (text === "/reminders") {
+    try {
+      if (await invoke<boolean>("open_reminders")) {
+        await hide();
+        return;
+      }
+      input.value = "";
+      updateCaret();
+      showMessage("Nothing due", "info");
+    } catch (err) {
+      showError(err);
+    }
+    return;
+  }
   if (text === "/update") {
     input.value = "";
     updateCaret();

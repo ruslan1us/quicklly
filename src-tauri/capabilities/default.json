@@ -8,7 +8,8 @@
     "reader",
     "pad",
     "help",
-    "changelog"
+    "changelog",
+    "reminders"
   ],
   "permissions": [
     "core:default",
