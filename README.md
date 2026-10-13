@@ -39,6 +39,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
 | Help and version               | Type `/help` and press <kbd>Enter</kbd>    |
 | What's new                     | Type `/changelog` and press <kbd>Enter</kbd> (see [CHANGELOG.md](CHANGELOG.md)) |
+| Save a note from a script or a link | `quicklly.exe add "buy milk #todo"` or `quicklly://add?text=buy%20milk%20%23todo`; see [From scripts and links](#from-scripts-and-links) |
 | Notes due                      | Type `/reminders` and press <kbd>Enter</kbd>; see [Reminders](#reminders) |
 | Update                         | When a new version is out, the hint says so for two seconds; type `/update` and press <kbd>Enter</kbd> to install it now. Otherwise it is downloaded in the background and installed on the next start (unless **Auto update** is off in the settings) |
 | Exit                           | Type `/exit` and press <kbd>Enter</kbd>, or tray menu → **Quit** |
@@ -201,6 +202,42 @@ or opens straight away with the hotkey if **Hotkey opens** is set to **Pad**.
 A note saved from the Pad keeps its blank lines and indentation. `#tags` and checkboxes are
 highlighted as you type. In the [reader](#reader), <kbd>Shift</kbd>+<kbd>Enter</kbd> opens a note in
 the Pad to edit it there.
+
+## From scripts and links
+
+Scripts, AutoHotkey, a Stream Deck or a browser bookmark can save a note too, exactly as if it was
+typed in the input window and saved with <kbd>Enter</kbd>: `#tags` send it to their file as usual.
+No window opens, whether Quicklly is running or not.
+
+From the command line, with `quicklly.exe` from the install folder: `%LOCALAPPDATA%\Quicklly\`
+for the usual installer, `C:\Program Files\Quicklly\` for the `.msi` (or right-click Quicklly in
+the Start menu → **Open file location**, then the shortcut's **Open file location**):
+
+```powershell
+& "$env:LOCALAPPDATA\Quicklly\quicklly.exe" add "buy milk #todo" | Out-Host
+```
+
+```bat
+start "" /wait "%LOCALAPPDATA%\Quicklly\quicklly.exe" add "buy milk #todo"
+```
+
+It prints `Saved to todo.md` (or `Error: …`) and exits with code 0 (or 1). The text may also come
+as several arguments, which are joined with spaces. Quicklly is a windowed app, so PowerShell and
+the `cmd` prompt don't wait for it on their own: `| Out-Host` and `start "" /wait` make them wait
+and show the output before the next prompt (a `.bat` file waits anyway).
+
+As a link, from a browser, the Run dialog (<kbd>Win</kbd>+<kbd>R</kbd>) or anything that opens
+URLs, with the text URL-encoded (`%23` for `#`, `%20` or `+` for a space):
+
+```
+quicklly://add?text=buy%20milk%20%23todo
+```
+
+In AutoHotkey v2, for example, a hotkey that saves a fixed note:
+
+```autohotkey
+^!m::Run '"' EnvGet("LOCALAPPDATA") '\Quicklly\quicklly.exe" add "call mom #todo"'
+```
 
 ## Settings
 

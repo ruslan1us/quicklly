@@ -19,6 +19,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the search leave the archive out.
 - Nested tags: `#work/quicklly` goes to `work/quicklly.md` in a folder, and the reader sorted by
   name shows the folders as a tree.
+- Save a note from scripts and links: `quicklly.exe add "buy milk #todo"` prints where it went,
+  and `quicklly://add?text=buy%20milk%20%23todo` does the same from a browser, the Run dialog or
+  a Stream Deck.
 
 ## [0.8.0] - 2026-10-08
 

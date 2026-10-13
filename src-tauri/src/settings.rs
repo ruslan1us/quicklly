@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -133,13 +133,37 @@ pub struct Appearance {
 }
 
 fn default_notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
-    Ok(app.path().document_dir()?.join("Quicklly"))
+    Ok(default_notes_dir_in(&app.path().document_dir()?))
+}
+
+/// The default notes folder, `Quicklly` in the Documents folder `documents`.
+pub fn default_notes_dir_in(documents: &Path) -> PathBuf {
+    documents.join("Quicklly")
 }
 
 fn custom_notes_dir(app: &AppHandle) -> Option<PathBuf> {
     let store = app.store(STORE_FILE).ok()?;
-    let dir = store.get(NOTES_DIR_KEY)?;
-    dir.as_str().filter(|s| !s.is_empty()).map(PathBuf::from)
+    chosen_dir(&store.get(NOTES_DIR_KEY)?)
+}
+
+/// The notes folder chosen in settings, from its stored value.
+fn chosen_dir(value: &serde_json::Value) -> Option<PathBuf> {
+    value.as_str().filter(|s| !s.is_empty()).map(PathBuf::from)
+}
+
+/// The notes folder chosen in settings (`None` for the default one) and the mode, read straight
+/// from the settings file `file`, to save a note without starting the app (see `cli`).
+pub fn notes_settings_in(file: &Path) -> (Option<PathBuf>, Mode) {
+    let settings: serde_json::Map<String, serde_json::Value> = std::fs::read(file)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default();
+    let dir = settings.get(NOTES_DIR_KEY).and_then(chosen_dir);
+    let mode = settings
+        .get(MODE_KEY)
+        .and_then(|value| serde_json::from_value(value.clone()).ok())
+        .unwrap_or_default();
+    (dir, mode)
 }
 
 /// Folder where notes are written: the one chosen in settings, or `Documents\Quicklly`.
@@ -489,5 +513,35 @@ mod tests {
         }
         assert!(serde_json::from_value::<ArchiveAfter>("7".into()).is_err());
         assert_eq!(ArchiveAfter::default(), ArchiveAfter::SevenDays);
+    }
+
+    #[test]
+    fn notes_settings_are_read_from_the_settings_file() {
+        let dir =
+            std::env::temp_dir().join(format!("quicklly-test-settings-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join(STORE_FILE);
+
+        std::fs::write(
+            &file,
+            r#"{ "notesDir": "D:\\Notes", "mode": "inbox", "scale": 90 }"#,
+        )
+        .unwrap();
+        assert_eq!(
+            notes_settings_in(&file),
+            (Some(PathBuf::from(r"D:\Notes")), Mode::Inbox)
+        );
+
+        // The default folder and mode when they were never changed or the file is unreadable.
+        std::fs::write(&file, r#"{ "notesDir": "", "theme": "light" }"#).unwrap();
+        assert_eq!(notes_settings_in(&file), (None, Mode::Daily));
+        std::fs::write(&file, "not json").unwrap();
+        assert_eq!(notes_settings_in(&file), (None, Mode::Daily));
+        assert_eq!(
+            notes_settings_in(&dir.join("missing.json")),
+            (None, Mode::Daily)
+        );
+
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

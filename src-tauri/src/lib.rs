@@ -1,4 +1,5 @@
 mod archive;
+mod cli;
 mod hotkey;
 mod images;
 mod monitor;
@@ -373,12 +374,20 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    // A note from a script or a `quicklly://` link is saved by the process it starts, which
+    // then quits without starting the app (or reaching the running one).
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(text) = cli::note_request(&args) {
+        std::process::exit(cli::save(&context.config().identifier, &text));
+    }
     tauri::Builder::default()
         // Must be registered first: a second launch exits here and opens the input
         // window of the already running instance instead.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             show_input(app);
         }))
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
@@ -404,6 +413,14 @@ pub fn run() {
         .manage(pad::PendingEdit::default())
         .manage(reminders::FocusOnShow::default())
         .setup(|app| {
+            // Installers register `quicklly://` links; a dev build registers itself.
+            #[cfg(debug_assertions)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                if let Err(e) = app.deep_link().register_all() {
+                    eprintln!("Failed to register quicklly:// links: {e}");
+                }
+            }
             setup_tray(app)?;
             settings::register_hotkey(app.handle());
             updater::start(app.handle());
@@ -515,6 +532,6 @@ pub fn run() {
             settings::set_archive_after,
             settings::get_archive_days,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }
