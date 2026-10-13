@@ -23,6 +23,7 @@ const HOTKEY_TARGET_KEY: &str = "hotkeyOpens";
 const PAD_POSITION_KEY: &str = "padPosition";
 const TRANSPARENCY_KEY: &str = "transparency";
 const SCALE_KEY: &str = "scale";
+const DATE_FORMAT_KEY: &str = "dateFormat";
 
 /// What the global hotkey opens.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,6 +61,20 @@ pub enum Theme {
     Light,
 }
 
+/// How dates in notes are shown and typed; files always keep them as `📅 YYYY-MM-DD`.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DateFormat {
+    #[default]
+    #[serde(rename = "DD/MM/YYYY")]
+    DayMonthYear,
+    #[serde(rename = "MM/DD/YYYY")]
+    MonthDayYear,
+    #[serde(rename = "YYYY-MM-DD")]
+    YearMonthDay,
+    #[serde(rename = "DD.MM.YYYY")]
+    DayMonthYearDots,
+}
+
 /// Settings as shown in the settings window.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,6 +91,7 @@ pub struct SettingsView {
     auto_update: bool,
     transparency: u32,
     scale: u32,
+    date_format: DateFormat,
 }
 
 /// How every window looks: its colours, how much of the blurred desktop shows through its
@@ -217,6 +233,10 @@ fn theme(app: &AppHandle) -> Theme {
     stored(app, THEME_KEY)
 }
 
+fn date_format(app: &AppHandle) -> DateFormat {
+    stored(app, DATE_FORMAT_KEY)
+}
+
 /// Whether new releases are looked for, downloaded and installed by themselves; on unless
 /// turned off in settings. `/update` works either way.
 pub fn auto_update(app: &AppHandle) -> bool {
@@ -241,6 +261,7 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
         pad_position: pad_position(app),
         transparency: transparency(app),
         scale: scale_percent(app),
+        date_format: date_format(app),
         autostart: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
         auto_update: auto_update(app),
     })
@@ -327,6 +348,20 @@ pub fn set_theme(app: AppHandle, theme: Theme) -> Result<SettingsView, String> {
 }
 
 #[tauri::command]
+pub fn get_date_format(app: AppHandle) -> DateFormat {
+    date_format(&app)
+}
+
+/// Saves the date format and tells every window to show dates in it.
+#[tauri::command]
+pub fn set_date_format(app: AppHandle, format: DateFormat) -> Result<SettingsView, String> {
+    store_setting(&app, DATE_FORMAT_KEY, format)?;
+    app.emit("date-format-changed", format)
+        .map_err(|e| e.to_string())?;
+    view(&app)
+}
+
+#[tauri::command]
 pub fn set_auto_update(app: AppHandle, enabled: bool) -> Result<SettingsView, String> {
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
     if enabled {
@@ -362,4 +397,26 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<SettingsView, Stri
     };
     result.map_err(|e| e.to_string())?;
     view(&app)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn date_formats_are_stored_as_the_frontend_writes_them() {
+        for (format, name) in [
+            (DateFormat::DayMonthYear, "DD/MM/YYYY"),
+            (DateFormat::MonthDayYear, "MM/DD/YYYY"),
+            (DateFormat::YearMonthDay, "YYYY-MM-DD"),
+            (DateFormat::DayMonthYearDots, "DD.MM.YYYY"),
+        ] {
+            assert_eq!(serde_json::to_value(format).unwrap(), name);
+            assert_eq!(
+                serde_json::from_value::<DateFormat>(name.into()).unwrap(),
+                format
+            );
+        }
+        assert!(serde_json::from_value::<DateFormat>("D/M/Y".into()).is_err());
+    }
 }

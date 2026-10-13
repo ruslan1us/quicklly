@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import { datePicker } from "./calendar";
+import { dateNodes, deleteDatesWhole, followDateFormat, toDisplay, toStored } from "./dates";
 import { type Images, fromMarkdown, labelNodes, pasteImages, toMarkdown } from "./images";
 import { linkNodes } from "./links";
 import { tagSuggest } from "./tagSuggest";
@@ -28,11 +30,11 @@ let editing: PadEdit | null = null;
 let images: Images = new Map();
 
 /**
- * Shows `markdown` (the draft, or a note to edit) in the text area, its images as labels, with
- * the caret at the end.
+ * Shows `markdown` (the draft, or a note to edit) in the text area, its images as labels and
+ * its dates in the date format, with the caret at the end.
  */
 function setText(markdown: string) {
-  ({ text: text.value, images } = fromMarkdown(markdown));
+  ({ text: text.value, images } = fromMarkdown(toDisplay(markdown)));
   text.setSelectionRange(text.value.length, text.value.length);
 }
 
@@ -63,8 +65,8 @@ const updateCaret = blockCaret(
 );
 
 /**
- * The suggested tags take their room from the text, so scroll the line being typed back into
- * view if they cover it.
+ * The suggested tags and the calendar take their room from the text, so scroll the line being
+ * typed back into view if they cover it.
  */
 function keepCaretVisible() {
   updateCaret();
@@ -77,8 +79,20 @@ const suggestions = tagSuggest(text, document.querySelector<HTMLUListElement>("#
   onChange: keepCaretVisible,
 });
 
+/** `/date` in the text: Enter turns it into a date, or picks one in a calendar above the footer. */
+const dates = datePicker(text, document.querySelector<HTMLDivElement>("#calendar")!, {
+  onChange: keepCaretVisible,
+  onError: showError,
+});
+
+/** The text as it is saved: its images in Markdown, its dates as `📅 YYYY-MM-DD`. */
+const stored = () => toStored(toMarkdown(text.value, images));
+
 // An image pasted into the text is saved right away and shows as `[Image #N]`.
 pasteImages(text, { images: () => images, onError: showError });
+
+// A date in the text goes with one Backspace (or Delete before it), not a character at a time.
+deleteDatesWhole(text);
 
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
@@ -97,9 +111,10 @@ function span(content: string, className: string) {
   return el;
 }
 
-/** Appends `content` to `parent`, with its `#tags`, links and images marked. */
+/** Appends `content` to `parent`, with its `#tags`, links, images and dates marked. */
 function appendWithTags(parent: ParentNode, content: string) {
-  const other = (part: string) => labelNodes(part, images, linkNodes);
+  const other = (part: string) =>
+    labelNodes(part, images, (rest) => dateNodes(rest, linkNodes));
   let from = 0;
   for (const match of content.matchAll(TAG)) {
     const at = match.index + match[1].length;
@@ -111,8 +126,8 @@ function appendWithTags(parent: ParentNode, content: string) {
 }
 
 /**
- * One line of text as it is shown under the (transparent) text: list markers, tags, links and
- * images marked.
+ * One line of text as it is shown under the (transparent) text: list markers, tags, links,
+ * images and dates marked.
  */
 function renderLine(line: string) {
   const div = document.createElement("div");
@@ -281,13 +296,14 @@ function saveDraftSoon() {
 async function saveDraft() {
   window.clearTimeout(draftTimer);
   try {
-    await invoke("set_pad_draft", { text: toMarkdown(text.value, images) });
+    await invoke("set_pad_draft", { text: stored() });
   } catch (err) {
     showError(err);
   }
 }
 
 async function hide() {
+  dates.close();
   // Leaving an edit cancels it; the draft is kept either way.
   if (editing) await stopEditing();
   await saveDraft();
@@ -318,7 +334,7 @@ async function saveEdit(edit: PadEdit) {
     await invoke("edit_note", {
       name: edit.name,
       note: edit.note,
-      text: toMarkdown(text.value, images),
+      text: stored(),
     });
   } catch (err) {
     showError(err);
@@ -340,7 +356,7 @@ async function saveNote() {
   }
   if (!text.value.trim()) return;
   try {
-    await invoke("save_note", { text: toMarkdown(text.value, images) });
+    await invoke("save_note", { text: stored() });
   } catch (err) {
     showError(err);
     return;
@@ -358,6 +374,8 @@ async function saveNote() {
 
 text.addEventListener("keydown", (e) => {
   if (e.isComposing) return;
+  // While the calendar is shown, the arrows, PageUp/PageDown, Enter and Esc work it instead.
+  if (dates.keydown(e)) return;
   // While tags are suggested, Enter and Tab pick one (rather than continue a list or indent),
   // ↑ ↓ choose and Esc closes the list.
   if (suggestions.keydown(e)) return;
@@ -366,7 +384,8 @@ text.addEventListener("keydown", (e) => {
     e.preventDefault();
     void saveNote();
   } else if (e.key === "Enter" && plain) {
-    if (continueList()) e.preventDefault();
+    // A `/date` in the text becomes a date first (or opens the calendar).
+    if (dates.resolve() || continueList()) e.preventDefault();
   } else if (e.key === "Tab" && !e.ctrlKey && !e.altKey) {
     e.preventDefault();
     indent(e.shiftKey);
@@ -424,9 +443,16 @@ window.addEventListener("focus", () => {
 // Shown only once themed and filled with the draft, so it never flickers.
 void Promise.all([
   followTheme(),
+  // The text shows its dates in the new format; the caret stays where it was.
+  followDateFormat((previous) => {
+    const { selectionStart, selectionEnd } = text;
+    text.value = toDisplay(toStored(text.value, previous));
+    text.setSelectionRange(selectionStart, selectionEnd);
+    refresh();
+  }),
   invoke<string>("get_pad_draft"),
   invoke<boolean>("get_pad_pinned"),
-]).then(async ([, draft, isPinned]) => {
+]).then(async ([, , draft, isPinned]) => {
   pinned = isPinned;
   renderPin();
   setText(draft);

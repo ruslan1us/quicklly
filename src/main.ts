@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import { blockCaret } from "./blockCaret";
+import { datePicker } from "./calendar";
+import { dateNodes, deleteDatesWhole, followDateFormat, toDisplay, toStored } from "./dates";
 import {
   type Images,
   fromMarkdown,
@@ -26,6 +28,7 @@ const caret = document.querySelector<HTMLDivElement>("#caret")!;
 const caretMeasure = document.querySelector<HTMLDivElement>("#caret-measure")!;
 const results = document.querySelector<HTMLUListElement>("#results")!;
 const tagList = document.querySelector<HTMLUListElement>("#tags")!;
+const calendar = document.querySelector<HTMLDivElement>("#calendar")!;
 const hint = document.querySelector<HTMLSpanElement>(".hint")!;
 const message = document.querySelector<HTMLDivElement>("#message")!;
 
@@ -40,11 +43,12 @@ const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 let images: Images = new Map();
 
 /**
- * Draws the note's text, with its links underlined and its images marked, behind the
+ * Draws the note's text, with its links underlined and its images and dates marked, behind the
  * transparent note.
  */
 function renderBackdrop() {
-  backdropText.replaceChildren(...labelNodes(input.value, images, linkNodes));
+  const other = (part: string) => dateNodes(part, linkNodes);
+  backdropText.replaceChildren(...labelNodes(input.value, images, other));
   syncBackdrop();
 }
 
@@ -53,8 +57,8 @@ function syncBackdrop() {
 }
 
 /**
- * Resizes the note and the window to fit the text, plus the search results or the tag
- * suggestions below it.
+ * Resizes the note and the window to fit the text, plus the search results, the tag
+ * suggestions or the calendar below it.
  * The height is measured on an invisible copy, so the note itself never jumps.
  */
 async function fit() {
@@ -70,7 +74,7 @@ async function fit() {
   backdropText.style.overflowY = scrollable ? "scroll" : "hidden";
   if (!scrollable) input.scrollTop = 0;
   renderBackdrop();
-  const below = [results, tagList, message].filter((el) => !el.hidden);
+  const below = [results, tagList, calendar, message].filter((el) => !el.hidden);
   const height = noteHeight + below.reduce((sum, el) => sum + el.offsetHeight, 0);
   if (height !== windowHeight) {
     windowHeight = height;
@@ -90,7 +94,7 @@ const updateCaret = blockCaret(input, caret, caretMeasure);
 
 /**
  * Notes saved while the app runs, oldest first; browsed with ↑/↓ like a shell history. They
- * are kept as saved, in Markdown.
+ * are kept as saved, in Markdown and with stored dates.
  */
 const history: string[] = [];
 const HISTORY_LIMIT = 100;
@@ -99,14 +103,12 @@ let historyIndex = 0;
 
 /** True while the field shows an unedited note from the history. */
 function browsingHistory() {
-  return (
-    historyIndex < history.length && toMarkdown(input.value, images) === history[historyIndex]
-  );
+  return historyIndex < history.length && stored() === history[historyIndex];
 }
 
 function showHistory(index: number) {
   historyIndex = index;
-  ({ text: input.value, images } = fromMarkdown(history[index] ?? ""));
+  ({ text: input.value, images } = fromMarkdown(toDisplay(history[index] ?? "")));
   input.setSelectionRange(input.value.length, input.value.length);
   // Clearing the field moves the cursor without a selection change event, so it is drawn here.
   updateCaret();
@@ -156,8 +158,17 @@ const suggestions = tagSuggest(input, tagList, {
   onChange: () => void fit(),
 });
 
+/** `/date` in the note: Enter turns it into a date, or picks one in a calendar under the note. */
+const dates = datePicker(input, calendar, {
+  onChange: () => void fit(),
+  onError: showError,
+});
+
 // An image pasted into the note is saved right away and shows as `[Image #N]`; not in search.
 pasteImages(input, { images: () => images, enabled: () => !searching(), onError: showError });
+
+// A date in the note goes with one Backspace (or Delete before it), not a character at a time.
+deleteDatesWhole(input);
 
 /** `text` as nodes, with each occurrence of `query` (ignoring case) marked. */
 function highlight(text: string, query: string) {
@@ -177,14 +188,16 @@ function highlight(text: string, query: string) {
 }
 
 /**
- * A note's `text` as nodes, with its links shown short and underlined and its images as labels
- * like in the reader, and each occurrence of `query` in what is shown marked.
+ * A note's `text` as nodes, with its links shown short and underlined, its images as labels and
+ * its dates in the date format like in the reader, and each occurrence of `query` in what is
+ * shown marked.
  */
 function highlightNote(text: string, query: string) {
+  const marked = (shown: string) => highlight(shown, query);
   return markdownNodes(
-    text,
-    (part) => highlightWithLinks(part, query),
-    (label) => highlight(label, query),
+    toDisplay(text),
+    (part) => dateNodes(part, (rest) => highlightWithLinks(rest, query), marked),
+    marked,
   );
 }
 
@@ -308,6 +321,7 @@ function clearError() {
 async function hide() {
   input.value = "";
   images = new Map();
+  dates.close();
   setSearchMode(false);
   historyIndex = history.length;
   hits = [];
@@ -327,8 +341,11 @@ async function switchTo(command: string, args?: Record<string, unknown>) {
   await invoke(command, args);
 }
 
+/** The note as it is saved: its images in Markdown, its dates as `📅 YYYY-MM-DD`. */
+const stored = () => toStored(toMarkdown(input.value, images));
+
 async function save() {
-  const text = toMarkdown(input.value, images).trim();
+  const text = stored().trim();
   if (!text) {
     await hide();
     return;
@@ -381,11 +398,15 @@ async function save() {
 
 input.addEventListener("keydown", (e) => {
   if (e.isComposing) return;
+  // While the calendar is shown, the arrows, PageUp/PageDown, Enter and Esc work it instead.
+  if (dates.keydown(e)) return;
   // While tags are suggested, ↑ ↓ Enter Tab Esc work the list instead.
   if (suggestions.keydown(e)) return;
   // Shift+Enter keeps its default: a new line in the note.
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
+    // A `/date` in the note becomes a date first (or opens the calendar); not in search.
+    if (!searching() && dates.resolve()) return;
     void save();
   } else if (
     e.key === "Escape" ||
@@ -397,7 +418,7 @@ input.addEventListener("keydown", (e) => {
   } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
     // Ctrl+E moves what was typed into the Pad, to go on writing there.
     e.preventDefault();
-    void switchTo("expand_to_pad", { text: toMarkdown(input.value, images) });
+    void switchTo("expand_to_pad", { text: stored() });
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
   } else if (searching() && e.key === "Backspace" && input.value === "") {
@@ -473,3 +494,10 @@ function refit() {
   void fit();
 }
 void followTheme(refit).then(refit);
+
+// A note kept from before shows its dates in the new format.
+void followDateFormat((previous) => {
+  input.value = toDisplay(toStored(input.value, previous));
+  renderBackdrop();
+  updateCaret();
+});

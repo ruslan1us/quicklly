@@ -103,9 +103,17 @@ body.pinned #rows {
   text-decoration: underline;
 }
 
-/* Images are shown as their `[Image #N]` label (see images.ts). */
-.note .image {
+/* Images are shown as their `[Image #N]` label (see images.ts), dates in the date format (see
+   dates.ts). */
+.note .image,
+.note .date {
   color: var(--accent);
+}
+
+/* A done note is dim all through, its images and dates too. */
+.note.done .image,
+.note.done .date {
+  color: inherit;
 }
 
 /* An answer in front of the help, like "Copied 1 link". */

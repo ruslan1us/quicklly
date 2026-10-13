@@ -27,6 +27,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
 | Paste an image                 | <kbd>Ctrl</kbd>+<kbd>V</kbd> with an image in the clipboard (also in the Pad); see [Reader](#reader) |
 | Pick an existing tag           | Type `#` and the start of a tag; pick one with <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or <kbd>Tab</kbd>, <kbd>Esc</kbd> closes the list (also in the Pad) |
+| Add a date                     | Type `/date` and press <kbd>Enter</kbd> to pick a day in the calendar, or `/date tomorrow` / `/date 15/10/2026`; see [Dates](#dates) (also in the Pad) |
 | Previous / next saved note     | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field |
 | Browse notes (see [Reader](#reader)) | <kbd>←</kbd> in an empty field        |
 | Write a longer note in the Pad | <kbd>→</kbd> in an empty field, or `/pad`; <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves it as a note |
@@ -91,6 +92,18 @@ A note with a `#tag` goes to the file of that tag instead: `buy milk #todo` is a
 first one decides. A tag starts with a letter, so `#1` or `C#` are not tags.
 
 The notes folder can be changed in the settings as well.
+
+### Dates
+
+Type `/date` anywhere in a note (in the input window or the Pad) and press <kbd>Enter</kbd>: a
+calendar opens on today. <kbd>←</kbd> <kbd>→</kbd> move by a day, <kbd>↑</kbd> <kbd>↓</kbd> by a
+week, <kbd>PgUp</kbd> <kbd>PgDn</kbd> by a month, <kbd>Enter</kbd> picks the day and
+<kbd>Esc</kbd> closes the calendar. `/date tomorrow` or `/date 15/10/2026` (in your date format)
+puts the date in straight away. Either way `/date` is replaced by the date, `📅 15/10/2026`, and
+you go on typing; the next <kbd>Enter</kbd> saves the note. One <kbd>Backspace</kbd> right after
+a date removes all of it. Files keep the date as
+`📅 2026-10-15`, the due date of [Obsidian Tasks](https://publish.obsidian.md/tasks/); the input
+window, the Pad and the reader show it in the **Date format** of the settings.
 
 ## Reader
 
@@ -178,6 +191,7 @@ keyboard-driven:
 | Pad position       | Top right                                   | Top right, Top left, Bottom right, Bottom left, Center |
 | Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
 | Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
+| Date format        | DD/MM/YYYY                                  | DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD.MM.YYYY: how `/date` dates are typed and shown |
 | Theme              | Default                                     | Default (dark), Default+ (dark purple), Light |
 | Transparency       | 30%                                         | Off to 80%: how much of the blurred desktop shows through the windows |
 | Scale              | 100%                                        | 80% to 150%                                  |

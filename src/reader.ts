@@ -1,6 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { blockCaret } from "./blockCaret";
+import {
+  type DateFormat,
+  dateNodes,
+  deleteDatesWhole,
+  followDateFormat,
+  toDisplay,
+  toStored,
+} from "./dates";
 import { type Images, fromMarkdown, imagePaths, markdownNodes, toMarkdown } from "./images";
 import { findLinks, linkNodes, shortLink } from "./links";
 import { appWindow, fitToContent, reveal } from "./popup";
@@ -91,6 +99,8 @@ editorMirror.className = "mirror";
 editorMirror.setAttribute("aria-hidden", "true");
 editorBox.append(editor, editorCaret, editorMirror);
 const updateEditorCaret = blockCaret(editor, editorCaret, editorMirror);
+// A date in the note goes with one Backspace, as in the note input.
+deleteDatesWhole(editor);
 
 /** Daily files are shown by their date, other files by their name. */
 const displayName = (name: string) =>
@@ -234,12 +244,13 @@ function showFooterMessage(message: string) {
 }
 
 /**
- * The note's text, with its links shown short and underlined (the file keeps them whole) and
- * its images as `[Image #N]` labels.
+ * The note's text, with its links shown short and underlined (the file keeps them whole), its
+ * images as `[Image #N]` labels and its dates in the date format.
  */
 function noteText(text: string) {
   const cell = span("");
-  cell.append(...markdownNodes(text, (part) => linkNodes(part, shortLink)));
+  const other = (part: string) => dateNodes(part, (rest) => linkNodes(rest, shortLink));
+  cell.append(...markdownNodes(toDisplay(text), other));
   return cell;
 }
 
@@ -498,7 +509,7 @@ function startEdit() {
   const note = items[selectedItem];
   if (note?.kind !== "note") return;
   editing = true;
-  ({ text: editor.value, images: editorImages } = fromMarkdown(note.text));
+  ({ text: editor.value, images: editorImages } = fromMarkdown(toDisplay(note.text)));
   render();
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
@@ -514,7 +525,7 @@ function cancelEdit() {
 /** Saves the edited text; a blank or unchanged text just ends the edit (Del deletes a note). */
 async function saveEdit() {
   const note = items[selectedItem];
-  const text = toMarkdown(editor.value, editorImages);
+  const text = toStored(toMarkdown(editor.value, editorImages));
   if (note?.kind !== "note" || text.trim() === "" || text === note.text) {
     cancelEdit();
     return;
@@ -646,6 +657,18 @@ async function start() {
   }
 }
 
+/** Shows the dates in the new format, in the note being edited too. */
+function dateFormatChanged(previous: DateFormat) {
+  if (!editing) {
+    render();
+    return;
+  }
+  editor.value = toDisplay(toStored(editor.value, previous));
+  fitEditor();
+}
+
 // Shown only once themed and filled in, so it never flickers.
 // The zoom has to be known before the window is fitted to its content.
-void followTheme(() => void fit()).then(start);
+void Promise.all([followTheme(() => void fit()), followDateFormat(dateFormatChanged)]).then(
+  start,
+);

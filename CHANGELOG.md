@@ -7,6 +7,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Type `/date` in a note to pick a day in a calendar, or `/date tomorrow` / `/date 15/10/2026`:
+  it is saved as `📅 2026-10-15` like Obsidian Tasks and shown in the new **Date format** setting.
+
 ## [0.8.0] - 2026-10-08
 
 ### Added

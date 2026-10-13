@@ -497,6 +497,8 @@ pub fn run() {
             settings::set_transparency,
             settings::set_scale,
             settings::set_theme,
+            settings::get_date_format,
+            settings::set_date_format,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

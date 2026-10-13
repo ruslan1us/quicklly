@@ -87,10 +87,18 @@ body {
   text-decoration: underline;
 }
 
-/* A pasted image's `[Image #N]` label (see images.ts). */
+/* A pasted image's `[Image #N]` label (see images.ts) and a date (see dates.ts). */
 #backdrop .image,
-#results .image {
+#results .image,
+#backdrop .date,
+#results .date {
   color: var(--accent);
+}
+
+/* A done note is dim all through, its images and dates too. */
+#results .hit.done .image,
+#results .hit.done .date {
+  color: inherit;
 }
 
 #note.error {
@@ -236,6 +244,62 @@ body {
   background: none;
   color: var(--accent);
   font-weight: 700;
+}
+
+/* The calendar of `/date` under the note (see calendar.ts), looking like the tag list. */
+#calendar {
+  flex: none;
+  padding: 0 16px 10px;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/* The month on the left; the picked day, how far it is and the keys on the right. */
+#calendar .layout {
+  display: flex;
+  gap: 4ch;
+}
+
+#calendar .month,
+#calendar .info > span {
+  display: block;
+}
+
+#calendar .distance {
+  margin-bottom: 1em;
+  color: var(--accent);
+}
+
+#calendar .keys {
+  color: var(--dim);
+}
+
+/* The days under their weekdays, each two characters wide. */
+#calendar .days {
+  display: grid;
+  grid-template-columns: repeat(7, 2ch);
+  column-gap: 1ch;
+  text-align: right;
+}
+
+#calendar .weekday {
+  color: var(--dim);
+}
+
+#calendar .day {
+  cursor: pointer;
+}
+
+#calendar .today {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* The picked day in inverse video, like the caret. */
+#calendar .selected {
+  background: var(--caret);
+  color: var(--bg);
 }
 
 /* A line under the note for errors and the answers to commands. */

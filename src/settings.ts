@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { DateFormat } from "./dates";
 import { appWindow, fitToContent, reveal } from "./popup";
 import { type Theme, applyTheme, followTheme } from "./theme";
 
@@ -15,6 +16,7 @@ interface Settings {
   scale: number;
   hotkeyTarget: "input" | "pad";
   padPosition: PadPosition;
+  dateFormat: DateFormat;
 }
 
 /** One line of the settings list. */
@@ -80,6 +82,8 @@ const THEMES: { theme: Theme; name: string }[] = [
 ];
 const themeIndex = (s: Settings) => THEMES.findIndex((t) => t.theme === s.theme);
 
+const DATE_FORMATS: DateFormat[] = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "DD.MM.YYYY"];
+
 const rows: Row[] = [
   {
     label: "Hotkey",
@@ -118,6 +122,16 @@ const rows: Row[] = [
     value: (s) => choice(s.mode === "daily" ? "One file per day" : "Single inbox"),
     cycle: (s) => void run("set_mode", { mode: s.mode === "daily" ? "inbox" : "daily" }),
     reset: () => void run("set_mode", { mode: "daily" }),
+  },
+  {
+    label: "Date format",
+    value: (s) => choice(s.dateFormat),
+    cycle: (s, step) => {
+      const count = DATE_FORMATS.length;
+      const next = DATE_FORMATS[(DATE_FORMATS.indexOf(s.dateFormat) + step + count) % count];
+      void run("set_date_format", { format: next });
+    },
+    reset: () => void run("set_date_format", { format: "DD/MM/YYYY" }),
   },
   {
     label: "Theme",
