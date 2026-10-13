@@ -239,7 +239,10 @@ See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for detail
 npm install
 npm run tauri dev     # run in development mode
 npm run tauri build   # build the installer into src-tauri/target/release/bundle/
+npm test              # run the frontend tests
 ```
+
+The Rust tests run with `cargo test` in `src-tauri/`.
 
 ## License
 
