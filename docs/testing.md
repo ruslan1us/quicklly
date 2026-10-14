@@ -74,6 +74,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | `settings` | Serialised strings of date formats and archive periods; reading the notes folder and mode from a settings file |
 | `hotkey` | Parsing, labels, round trip of the stored form |
 | `cli` | Request parsing for `add` and links, decoding, rejection of other input, relative file names |
+| `watcher` | Which paths count as a notes change; a real watcher on a temporary folder reports a `.md.tmp` renamed into place and ignores images and temporary files |
 
 ### Rules
 
@@ -102,4 +103,6 @@ These are checked by hand in `npm run tauri dev` or an installed build before a 
 - Placement on the monitor in use with several monitors and different scalings.
 - Deleting to and restoring from the Recycle Bin, opening images in the default viewer.
 - `quicklly add` from PowerShell and `cmd`, and `quicklly://` links after installation.
+- Open reader, reminders and done windows following a note saved through the CLI and a file
+  edited in another editor; the watcher following a new notes folder chosen in settings.
 - Updates: a release found, downloaded, announced, installed at start and by `/update`.

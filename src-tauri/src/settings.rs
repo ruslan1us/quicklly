@@ -174,6 +174,7 @@ pub fn notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
     }
 }
 
+/// Changes the notes folder (`None` for the default one), and watches the new one instead.
 fn set_custom_notes_dir(app: &AppHandle, dir: Option<PathBuf>) -> Result<(), String> {
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
     match dir {
@@ -182,7 +183,9 @@ fn set_custom_notes_dir(app: &AppHandle, dir: Option<PathBuf>) -> Result<(), Str
             store.delete(NOTES_DIR_KEY);
         }
     }
-    store.save().map_err(|e| e.to_string())
+    store.save().map_err(|e| e.to_string())?;
+    crate::watcher::start(app);
+    Ok(())
 }
 
 /// Whether notes go to a file per day or a single inbox; daily unless changed in settings.

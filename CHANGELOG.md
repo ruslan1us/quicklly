@@ -18,6 +18,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Ctrl+Z in the reader undoes the deletes, done marks and edits made there, latest first; a
   deleted note comes back with its images.
 
+### Changed
+
+- Open windows (the reader, the reminders and `/done`) update by themselves when a note is saved
+  with `quicklly add` or a `quicklly://` link, or when notes files change in another editor such
+  as Obsidian or VS Code.
+
 ### Fixed
 
 - The help gives the archive delay set in **Archive done notes**, or says the archive is off,

@@ -27,6 +27,9 @@ changes as they happen and reopens on the same file. User-facing keys are in the
 - An unpinned reader closes when it loses focus (only once visible). <kbd>Esc</kbd> or
   <kbd>Ctrl</kbd>+<kbd>C</kbd> closes it. Closing destroys the window and with it the undo history.
 - The view reloads on `focus` and on `notes-changed`, unless a note is being edited.
+  `notes-changed` also comes from the notes folder watcher, so a pinned reader follows notes saved
+  through the CLI or changed in another editor; after the reader's own changes it arrives a second
+  time, about 300 ms later, and the view simply reloads again.
 
 ## Views and keys
 

@@ -10,6 +10,7 @@ mod reader_window;
 mod reminders;
 mod settings;
 mod updater;
+mod watcher;
 mod window_bounds;
 
 use std::sync::Mutex;
@@ -471,6 +472,7 @@ pub fn run() {
         .manage(reader_window::Pinned::default())
         .manage(pad::PendingEdit::default())
         .manage(reminders::FocusOnShow::default())
+        .manage(watcher::Watcher::default())
         .setup(|app| {
             // Installers register `quicklly://` links; a dev build registers itself.
             #[cfg(debug_assertions)]
@@ -490,6 +492,7 @@ pub fn run() {
             }
             apply_scale(app.handle());
             reminders::start(app.handle());
+            watcher::start(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {

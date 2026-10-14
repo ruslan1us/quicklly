@@ -25,6 +25,7 @@ old record's status becomes "Superseded by NNNN".
 | [0014](0014-frontend-tests-in-happy-dom-with-mocked-ipc.md) | Frontend tests in happy-dom with mocked IPC | 2026-10-13 | Accepted |
 | [0015](0015-deletions-go-to-the-recycle-bin.md) | Deletions go to the Recycle Bin | 2026-10-07 | Accepted |
 | [0016](0016-changelog-as-the-source-of-release-notes.md) | CHANGELOG.md as the single source of release notes | 2026-10-07 | Accepted |
+| [0017](0017-watch-the-notes-folder-for-changes.md) | Watch the notes folder for changes | 2026-10-14 | Accepted |
 
 ## Adding a record
 

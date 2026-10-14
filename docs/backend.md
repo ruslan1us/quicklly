@@ -26,6 +26,7 @@ for errors, file writes and undo.
 | [`reminders.rs`](../src-tauri/src/reminders.rs) | The daily-round thread (archive, then reminders), the reminders window and its commands. |
 | [`updater.rs`](../src-tauri/src/updater.rs) | Background update checks, download to the cache, install at the next start or on `/update`. |
 | [`cli.rs`](../src-tauri/src/cli.rs) | `quicklly add …` and `quicklly://add?text=…`: request parsing, saving without Tauri, console output. |
+| [`watcher.rs`](../src-tauri/src/watcher.rs) | Watching the notes folder recursively (`notify-debouncer-mini`, 300 ms) and emitting `notes-changed` when a notes file changes on disk; which paths count (`is_notes_change`). |
 
 ## Module notes
 
@@ -123,6 +124,19 @@ updates off clears the announced version; turning them on checks immediately.
 
 Described in [CLI and links](cli-and-links.md).
 
+### `watcher`
+
+`start(app)` is called in set-up and by `set_custom_notes_dir` whenever the notes folder changes in
+settings. It drops the current watcher (which stops it), creates the notes folder if it is missing
+and watches it recursively with `notify-debouncer-mini`, keeping the new watcher in managed state.
+When the debouncer reports a batch of paths (each quiet for 300 ms) and any of them is a notes
+file (`is_notes_change`: a `.md` file under the folder, the archive and tag folders included, not
+in the top-level `images/` or a dot-folder; `*.md.tmp` never counts), it calls `notes_changed`. A
+folder that cannot be watched, or a watch error later, is logged with `eprintln!`. The app's own
+writes are seen as well and give a second `notes-changed`; the windows reload twice, which is
+harmless, and no attempt is made to tell those writes apart. See
+[ADR 0017](decisions/0017-watch-the-notes-folder-for-changes.md).
+
 ## Conventions
 
 ### Errors
@@ -131,9 +145,9 @@ Described in [CLI and links](cli-and-links.md).
   a user can act on, for example `Failed to save note in <folder>: <io error>` or
   `Couldn't update <file>: <reason>`. Pages show the string as is.
 - Inner functions return `io::Result` (or `tauri::Result`) and use `?`.
-- Background work (update checks, the daily round, hotkey registration at start, opening the notes
-  folder from the tray) reports failures with `eprintln!` and carries on; it never panics or stops
-  the application.
+- Background work (update checks, the daily round, the notes folder watcher, hotkey registration
+  at start, opening the notes folder from the tray) reports failures with `eprintln!` and carries
+  on; it never panics or stops the application.
 - Window operations whose failure has no useful remedy (`show`, `set_focus`, `set_position`, …)
   are deliberately ignored with `let _ =`.
 - Settings getters never fail: a missing or unreadable value means the default.
@@ -172,7 +186,10 @@ headings and hand-written text, with no per-operation logic. See
 ### Notifying windows
 
 A command that changes a notes file calls `notes_changed(&app)` after the write, which emits
-`notes-changed` to the reader and the reminders. New commands that write notes must do the same.
+`notes-changed` to the reader, the reminders and the done journal. New commands that write notes
+must do the same: the notes folder watcher would also report the write, but only after its
+300 ms debounce. Changes made outside the application reach the windows through the watcher
+alone.
 
 ### Code style
 

@@ -25,9 +25,9 @@ read-only view. User-facing description: root README, [Done](../../README.md#don
 - Each row shows the first line of the note, with links shortened, images as labels and dates in
   the date format. Each day starts with a `── <date>` row in the date format.
 - The window fits its content up to 400 CSS pixels and then scrolls; it is shown with `reveal()`.
-- It reloads on `notes-changed` (a note done or undone in the reader or the reminders, or the
-  archive), refits itself and keeps its scroll position as far as the new list reaches. A message
-  in the footer stays.
+- It reloads on `notes-changed` (a note done or undone in the reader or the reminders, the
+  archive, or any change the notes folder watcher sees), refits itself and keeps its scroll
+  position as far as the new list reaches. A message in the footer stays.
 
 ## Keys
 

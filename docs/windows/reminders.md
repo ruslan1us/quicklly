@@ -60,6 +60,9 @@ Snoozing is not offered ahead, where it would move a note's date earlier.
 - **Snooze** rewrites only that first date (`reader::snooze`) through the same guarded edit as the
   reader; the note's other dates and text stay as they are.
 - **Opening a note** hides this window, calls `open_note`, then closes this window.
+- **Following changes.** The window reloads on `notes-changed`: changes made in the reader, the
+  archive, and anything the notes folder watcher sees (the CLI, another editor, and a second time
+  the app's own writes). It closes when the reload empties a list that had notes.
 - **Corner placement after resizing.** Every refit calls `place_reminders` so the window keeps its
   bottom-right position as its height changes.
 

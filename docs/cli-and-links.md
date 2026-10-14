@@ -84,7 +84,9 @@ before the single-instance plugin is registered. Consequences:
 
 - Saving works the same whether the application is running, not running, or not yet started after
   sign-in.
-- A running instance is not notified: an open reader or reminders window shows the note after its
-  next reload, and the note is not added to the input window's history.
+- A running instance is not told directly, but it watches the notes folder (see
+  [ADR 0017](decisions/0017-watch-the-notes-folder-for-changes.md)): an open reader, reminders or
+  done window reloads about 300 ms after the note is written. The note is not added to the input
+  window's history.
 - Two processes can append to the same file at the same moment. Appends are small single writes,
   but there is no file lock.

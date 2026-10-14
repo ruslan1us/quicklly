@@ -21,7 +21,7 @@ flowchart TB
         CLI["cli.rs: save and exit before Tauri starts"]
         LIB["lib.rs: builder, plugins, commands, window events"]
         MODS["notes / reader / archive / images / settings / pad / reminders / updater ..."]
-        THR["Threads: updater (6 h), daily round (60 s)"]
+        THR["Threads: updater (6 h), daily round (60 s), notes folder watcher"]
     end
     subgraph WEB["WebView2 pages (src/windows)"]
         IN["input (main)"]
@@ -38,6 +38,7 @@ flowchart TB
     LIB --> MODS --> FS
     MODS --> APPDATA
     THR --> MODS
+    FS -.->|changes| THR
     IN & PAD & RD & POP -->|invoke| LIB
     LIB -->|emit| IN & PAD & RD & POP
 ```
@@ -56,8 +57,8 @@ flowchart TB
 - **Set-up** (`.setup`): in debug builds the `quicklly://` scheme is registered for the dev binary
   (installers register it for release builds); then the tray is built, the saved hotkey is
   registered, the updater thread starts, the Pad and reader pin states are loaded, the acrylic
-  effect is applied to the input window, the scale setting is applied, and the daily-round thread
-  starts.
+  effect is applied to the input window, the scale setting is applied, the daily-round thread
+  starts, and the notes folder starts being watched.
 - **The app lives in the tray.** No window is visible at start. Closing a window never quits the
   application; only the tray's **Quit** or `/exit` does (`app.exit(0)`).
 
@@ -158,7 +159,7 @@ create or may create a window.
 
 | Event | Payload | Target | Emitted when | Listener |
 | --- | --- | --- | --- | --- |
-| `notes-changed` | none | `reader`, `reminders` | A command changed a notes file; the archive moved notes; a new day while the reminders are open | Reader reloads unless editing; reminders reload |
+| `notes-changed` | none | `reader`, `reminders`, `done` | A command changed a notes file; the archive moved notes; a new day while the reminders are open; the folder watcher saw a notes file change (the CLI, another editor, and a second time for the app's own writes) | Reader reloads unless editing; reminders and done reload |
 | `appearance-changed` | `{ theme, transparency, scale }` | all | Theme, transparency or scale changed | `followTheme` in [`theme.ts`](../src/shared/theme.ts) |
 | `date-format-changed` | format string | all | Date format changed | `followDateFormat` in [`dates.ts`](../src/shared/dates.ts) |
 | `update-available` | version or `null` | all | A release was downloaded; `null` when automatic updates are turned off | Input window hint |
@@ -180,6 +181,7 @@ window existed.
 | `pad::Pinned`, `reader_window::Pinned` | pad, reader_window | Pin state, loaded from the store at start and read by window-event handlers without touching the store |
 | `updater::AvailableUpdate` | updater | Version of a downloaded release |
 | `reminders::FocusOnShow` | reminders | Whether the reminders window takes focus when revealed |
+| `watcher::Watcher` | watcher | The watcher of the notes folder; replaced when the folder changes |
 
 Persistent settings live in `settings.json` through `tauri-plugin-store`; see
 [Data format](data-format.md#application-files) and
@@ -191,6 +193,7 @@ Persistent settings live in `settings.json` through `tauri-plugin-store`; see
 | --- | --- | --- | --- |
 | Updater | [`updater.rs`](../src-tauri/src/updater.rs) | At start, then every 6 hours | When automatic updates are on: look for a release, download and verify it, announce it; at start, install a release downloaded earlier |
 | Daily round | [`reminders.rs`](../src-tauri/src/reminders.rs) | Checks the date every 60 seconds | At start and whenever the local date changes (midnight, or waking on a later day): archive done notes, then show the reminders unfocused if anything is due |
+| Notes folder watcher | [`watcher.rs`](../src-tauri/src/watcher.rs) | On file system events, debounced by 300 ms | Started at start and again when the notes folder changes in settings: watches the folder recursively and emits `notes-changed` when a `.md` file changes (not `*.md.tmp`, `images/` or dot-folders). See [ADR 0017](decisions/0017-watch-the-notes-folder-for-changes.md) |
 
 ## Single instance
 
@@ -224,7 +227,9 @@ and restarts the app). `/update` installs immediately. See [Release](release.md)
 - Files are not locked. A note saved by the CLI process, or a hand edit, can race with a change
   made in the application; edits are protected by the "unchanged since shown" checks described in
   [Backend](backend.md#changes-to-existing-notes), appends are not.
-- A note saved through the CLI runs in another process and does not emit `notes-changed`; an open
-  reader or reminders window shows it after its next reload (for the reader, on focus).
+- Changes made outside the application (the CLI process, another editor) reach open windows
+  through the notes folder watcher, about 300 ms after the last write. The app's own writes are
+  seen by it too, so the windows reload a second time after them. Renaming or moving a whole
+  folder is reported for the folder only and does not count as a change to its notes files.
 - The daily round checks the date once a minute, so the reminders can appear up to a minute after
   midnight or after waking.
