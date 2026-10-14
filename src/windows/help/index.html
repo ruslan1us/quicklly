@@ -96,10 +96,15 @@
 
       <h2>Archive</h2>
       <p>
-        A note marked done gets the day, <span class="key">✅ 2026-10-13</span>; after 7 days
-        (<span class="key">Archive done notes</span> in <span class="key">/config</span>) it
-        moves to the same file in the <span class="key">archive</span> folder, which the reader
-        and the search leave out.
+        A note marked done gets the day, <span class="key">✅ 2026-10-13</span>.
+        <span id="archive-on">After <span id="archive-days">7 days</span> it moves to the same
+        file in the <span class="key">archive</span> folder, which the reader and the search
+        leave out.</span>
+        <span id="archive-off" hidden>It stays where it is: the archive is off, and notes
+        archived before stay in the <span class="key">archive</span> folder, which the reader
+        and the search leave out.</span>
+        <span class="key">Archive done notes</span> in <span class="key">/config</span> sets
+        when, or turns the archive off.
       </p>
 
       <h2>Reader</h2>

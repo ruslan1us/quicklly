@@ -1,9 +1,13 @@
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 import { appWindow, fitToContent, reveal } from "../../shared/popup";
 import { followTheme } from "../../shared/theme";
 
 const header = document.querySelector<HTMLElement>("header")!;
 const footer = document.querySelector<HTMLElement>("#footer")!;
+const archiveOn = document.querySelector<HTMLElement>("#archive-on")!;
+const archiveOff = document.querySelector<HTMLElement>("#archive-off")!;
+const archiveDays = document.querySelector<HTMLElement>("#archive-days")!;
 
 /** Beyond this the help scrolls instead of the window growing. */
 const MAX_HEIGHT = 560;
@@ -21,10 +25,21 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+/** Tells when done notes are archived, by the setting: after `days`, or never (null). */
+function showArchive(days: number | null) {
+  archiveOn.hidden = days === null;
+  archiveOff.hidden = days !== null;
+  archiveDays.textContent = days === 1 ? "1 day" : `${days} days`;
+}
+
 async function load() {
-  const version = await getVersion();
+  const [version, days] = await Promise.all([
+    getVersion(),
+    invoke<number | null>("get_archive_days"),
+  ]);
   header.textContent = `Quicklly · Help · v${version}`;
   footer.textContent = "↑↓ scroll · Esc close · github.com/ruslan1us/quicklly";
+  showArchive(days);
   await fitToContent(MAX_HEIGHT);
 }
 

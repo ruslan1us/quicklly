@@ -151,7 +151,7 @@ create or may create a window.
 | `get_update`, `install_update` *async* | updater | input | The waiting release; `/update` |
 | `get_appearance` | settings | every page | Theme, transparency, scale |
 | `get_date_format` | settings | pages that show dates | Date format |
-| `get_archive_days` | settings | reader | Days until a done note is archived |
+| `get_archive_days` | settings | reader, help | Days until a done note is archived |
 | `get_settings`, `pick_notes_dir` *async*, `reset_notes_dir`, `set_mode`, `set_hotkey`, `reset_hotkey`, `set_hotkey_target`, `set_pad_position`, `set_date_format`, `set_archive_after`, `set_theme`, `set_transparency`, `set_scale`, `set_autostart`, `set_auto_update` | settings | settings | Read and change settings; each returns the full settings view |
 
 ## Events

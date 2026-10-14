@@ -18,6 +18,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Ctrl+Z in the reader undoes the deletes, done marks and edits made there, latest first; a
   deleted note comes back with its images.
 
+### Fixed
+
+- The help gives the archive delay set in **Archive done notes**, or says the archive is off,
+  instead of always "after 7 days".
+
 ## [0.8.1] - 2026-10-13
 
 ### Added

@@ -55,9 +55,10 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, Ctrl+Z in its cases |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
 | `done.test.ts` | Grouping by day, empty state, copying Markdown, Esc |
+| `help.test.ts` | Version in the header, the Archive text following the setting |
 
-Not covered by automated tests: the Pad, settings, help and changelog pages, and search in the
-input window.
+Not covered by automated tests: the Pad, settings and changelog pages, the rest of the help,
+and search in the input window.
 
 ## Rust tests
 
