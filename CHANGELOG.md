@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-14
+
 ### Added
 
 - Snooze in the reminders: S moves a note's date to tomorrow and W to a week from today, so it
@@ -212,7 +214,8 @@ The first version, published as source code only.
 - A tray icon to write a new note, open the notes folder or quit.
 - Only one copy of Quicklly runs at a time.
 
-[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/ruslan1us/quicklly/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/ruslan1us/quicklly/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/ruslan1us/quicklly/compare/v0.7.4...v0.8.0
 [0.7.4]: https://github.com/ruslan1us/quicklly/compare/v0.7.3...v0.7.4
