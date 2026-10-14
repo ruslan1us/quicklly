@@ -486,6 +486,16 @@ pub struct NoteRef {
     pub text: String,
 }
 
+/// A notes file before and after a change made in the reader, so the reader can undo it.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Change {
+    pub before: String,
+    pub after: String,
+    /// The images the change moved to the Recycle Bin, to bring back with it (see
+    /// [`images::trash_unused`]).
+    pub images: Vec<PathBuf>,
+}
+
 /// Marks a note as done on `today` (`- [x] HH:MM text ✅ YYYY-MM-DD`) or not done
 /// (`- HH:MM text`, without the done date).
 pub fn set_done(
@@ -494,7 +504,7 @@ pub fn set_done(
     note: &NoteRef,
     done: bool,
     today: NaiveDate,
-) -> io::Result<()> {
+) -> io::Result<Change> {
     edit_note(dir, name, note, |lines, span| {
         let (first, _) = split_done_date(note.text.lines().next().unwrap_or(""));
         let first = match (done, first.is_empty()) {
@@ -507,7 +517,7 @@ pub fn set_done(
 }
 
 /// Moves a note's date (the one [`due`] goes by) to `date`, e.g. to be reminded again tomorrow.
-pub fn snooze(dir: &Path, name: &str, note: &NoteRef, date: NaiveDate) -> io::Result<()> {
+pub fn snooze(dir: &Path, name: &str, note: &NoteRef, date: NaiveDate) -> io::Result<Change> {
     edit_note(dir, name, note, |lines, span| {
         move_date(&mut lines[span], date)
     })
@@ -524,7 +534,7 @@ fn move_date(lines: &mut [String], date: NaiveDate) {
 }
 
 /// Removes a note, including its extra lines, from a notes file.
-pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<()> {
+pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<Change> {
     edit_note(dir, name, note, |lines, span| {
         lines.drain(span);
         remove_empty_days(lines);
@@ -557,7 +567,7 @@ pub(crate) fn remove_empty_days(lines: &mut Vec<String>) {
 
 /// Replaces the text of a note, keeping its time and done mark. Extra lines are indented
 /// under the first one, like new notes; a blank text is refused (Del deletes a note).
-pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Result<()> {
+pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Result<Change> {
     let new_lines = note_lines(text);
     let Some((first, rest)) = new_lines.split_first() else {
         return Err(io::Error::new(
@@ -604,14 +614,15 @@ fn note_line(done: bool, time: &str, text: &str) -> String {
     }
 }
 
-/// Applies `change` to the lines of `note` in a notes file, leaving everything else as is.
-/// Fails without writing if the file no longer has that note where the reader saw it.
+/// Applies `change` to the lines of `note` in a notes file, leaving everything else as is, and
+/// returns the file before and after it. Fails without writing if the file no longer has that
+/// note where the reader saw it.
 fn edit_note(
     dir: &Path,
     name: &str,
     note: &NoteRef,
     change: impl FnOnce(&mut Vec<String>, Range<usize>),
-) -> io::Result<()> {
+) -> io::Result<Change> {
     let path = notes_file(dir, name)?;
     let content = fs::read_to_string(&path)?;
     let unchanged = parse(&content).iter().any(|item| {
@@ -626,7 +637,29 @@ fn edit_note(
 
     let mut lines: Vec<String> = content.lines().map(String::from).collect();
     change(&mut lines, note_span(note.line, &note.text));
-    write_lines(&path, &content, &lines)
+    let after = write_lines(&path, &content, &lines)?;
+    Ok(Change {
+        before: content,
+        after,
+        images: Vec::new(),
+    })
+}
+
+/// What to write back to undo `change` to a file that now has `current`: what it had before,
+/// if nothing else has changed it since the change; `None` otherwise.
+fn undone<'a>(change: &'a Change, current: &str) -> Option<&'a str> {
+    (current == change.after).then_some(change.before.as_str())
+}
+
+/// Undoes a change made in the reader to the notes file `name`, putting back exactly what the
+/// file had before it. Fails without writing if the file has changed since, e.g. a note added
+/// from the input window or moved to the archive.
+pub fn undo(dir: &Path, name: &str, change: &Change) -> io::Result<()> {
+    let path = notes_file(dir, name)?;
+    let current = fs::read_to_string(&path)?;
+    let before = undone(change, &current)
+        .ok_or_else(|| io::Error::other(format!("{name} has changed since")))?;
+    write_file(&path, before)
 }
 
 /// The lines of the file a note takes up: its first line and its extra lines.
@@ -644,16 +677,22 @@ pub(crate) fn newline_of(content: &str) -> &'static str {
 }
 
 /// Writes `lines` as the new content of the notes file at `path`, which had `content`, with
-/// its line endings and its final new line.
-pub(crate) fn write_lines(path: &Path, content: &str, lines: &[String]) -> io::Result<()> {
+/// its line endings and its final new line. Returns the new content.
+pub(crate) fn write_lines(path: &Path, content: &str, lines: &[String]) -> io::Result<String> {
     let newline = newline_of(content);
     let mut updated = lines.join(newline);
     if content.ends_with('\n') && !lines.is_empty() {
         updated.push_str(newline);
     }
+    write_file(path, &updated)?;
+    Ok(updated)
+}
+
+/// Writes `content` to the notes file at `path`.
+fn write_file(path: &Path, content: &str) -> io::Result<()> {
     // Write a copy and swap it in, so a failed write can't leave a half-written file.
     let tmp = path.with_extension("md.tmp");
-    fs::write(&tmp, updated)?;
+    fs::write(&tmp, content)?;
     fs::rename(&tmp, path)
 }
 
@@ -843,6 +882,49 @@ mod tests {
             fs::read_to_string(&path).unwrap(),
             "# idea\n\n## 2026-09-27\n\nby hand\n"
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn undoes_a_change_only_while_the_file_is_as_it_left_it() {
+        let change = Change {
+            before: "a\r\n".into(),
+            after: "b\r\n".into(),
+            images: Vec::new(),
+        };
+        assert_eq!(undone(&change, "b\r\n"), Some("a\r\n"));
+        assert_eq!(undone(&change, "b\n"), None);
+        assert_eq!(undone(&change, "b\r\n- 11:00 new\r\n"), None);
+    }
+
+    #[test]
+    fn undo_puts_back_the_file_exactly_as_it_was() {
+        let dir = temp_dir("undo");
+        let path = dir.join("idea.md");
+        let content = "# idea\r\n\r\n## 2026-09-26\r\n\r\n- [x] 09:00 one ✅ 2026-10-01\r\n\r\n\
+                       ## 2026-09-28\r\n\r\n- 10:00 two\r\n";
+        fs::write(&path, content).unwrap();
+        let note = note_ref(4, "09:00", true, "one ✅ 2026-10-01");
+
+        // The note comes back with its day heading.
+        let change = delete(&dir, "idea.md", &note).unwrap();
+        assert_eq!(change.before, content);
+        assert_eq!(change.after, fs::read_to_string(&path).unwrap());
+        undo(&dir, "idea.md", &change).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), content);
+
+        // A note done again keeps the day it was first done.
+        let change = set_done(&dir, "idea.md", &note, false, today()).unwrap();
+        undo(&dir, "idea.md", &change).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), content);
+
+        // Once something else has written to the file, nothing is undone.
+        let change = set_text(&dir, "idea.md", &note, "edited").unwrap();
+        let added = format!("{}- 11:00 new\r\n", change.after);
+        fs::write(&path, &added).unwrap();
+        let err = undo(&dir, "idea.md", &change).unwrap_err();
+        assert_eq!(err.to_string(), "idea.md has changed since");
+        assert_eq!(fs::read_to_string(&path).unwrap(), added);
         fs::remove_dir_all(&dir).unwrap();
     }
 

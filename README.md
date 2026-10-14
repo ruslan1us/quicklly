@@ -168,6 +168,7 @@ entry):
 | <kbd>C</kbd>                         |                        | Copy the note's links              |
 | <kbd>O</kbd>                         |                        | Open the note's images             |
 | <kbd>Del</kbd>                       | Move to the Recycle Bin (press <kbd>Del</kbd> twice) | Delete (press <kbd>Del</kbd> twice) |
+| <kbd>Ctrl</kbd>+<kbd>Z</kbd>         | Undo                   | Undo                               |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd>         |                        | Pin: keep the reader open over other windows, resizable and up to date |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
 | <kbd>→</kbd>                         | Back to the input      |                                    |
@@ -182,6 +183,11 @@ was done (see [Archive](#archive)):
 
 Changes only touch that note; the rest of the file stays as it is. If the file was changed
 elsewhere in the meantime, nothing is written and the reader reloads it.
+
+<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the deletes, done marks and edits made in the reader while it
+is open, one per press, latest first: the note comes back exactly as it was, with its day heading
+and its images (taken back out of the Recycle Bin), and the reader opens its file. A change to a
+file that has changed again since, say by a new note from the input window, is not undone.
 
 Links (`https://…`, or just a domain like `google.com` or `github.com/ruslan1us`) are
 underlined as you type, in the input window and in the Pad. The reader and the search results show them short, without the protocol

@@ -3,6 +3,7 @@ use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
 use chrono::NaiveDateTime;
+use trash::TrashItem;
 
 use crate::archive::ARCHIVE_DIR;
 use crate::reader;
@@ -156,12 +157,56 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
 
 /// Moves the images at `paths` (from a deleted or edited note, or a deleted file, in the notes
 /// file `file`) to the Recycle Bin, unless a notes file in `dir` still links to them, like a
-/// note saved twice from the input window's history, or an archived note.
-pub fn trash_unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<()> {
+/// note saved twice from the input window's history, or an archived note. Returns where the
+/// images were, as the Recycle Bin remembers it, to bring them back with [`restore`].
+pub fn trash_unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> {
+    let mut trashed = Vec::new();
     for image in unused(dir, file, paths)? {
+        let full = full_path(&image)?;
         trash::delete(&image).map_err(io::Error::other)?;
+        trashed.push(full);
     }
-    Ok(())
+    Ok(trashed)
+}
+
+/// The whole path of an existing file, as `trash` gives it to the Recycle Bin: canonical, but
+/// without the `\\?\` in front that Windows adds to it.
+fn full_path(path: &Path) -> io::Result<PathBuf> {
+    let full = fs::canonicalize(path)?;
+    let full = full.to_string_lossy();
+    Ok(PathBuf::from(full.strip_prefix(r"\\?\").unwrap_or(&full)))
+}
+
+/// Of the items in the Recycle Bin, the ones that bring back the images that were at `paths`:
+/// for each, the one moved there from that path last. Images no longer in it are left out.
+fn to_restore(bin: &[TrashItem], paths: &[PathBuf]) -> Vec<TrashItem> {
+    paths
+        .iter()
+        .filter_map(|path| {
+            bin.iter()
+                .filter(|item| item.original_path() == *path)
+                .max_by_key(|item| item.time_deleted)
+                .cloned()
+        })
+        .collect()
+}
+
+/// Brings the images that were at `paths` back from the Recycle Bin, where [`trash_unused`]
+/// moved them, to undo a change in the reader. Returns how many of them couldn't be brought
+/// back: no longer in the Recycle Bin, or another file in their place.
+pub fn restore(paths: &[PathBuf]) -> usize {
+    if paths.is_empty() {
+        return 0;
+    }
+    let Ok(bin) = trash::os_limited::list() else {
+        return paths.len();
+    };
+    let restored = to_restore(&bin, paths)
+        .into_iter()
+        .map(|item| trash::os_limited::restore_all([item]))
+        .filter(Result::is_ok)
+        .count();
+    paths.len() - restored
 }
 
 #[cfg(test)]
@@ -311,6 +356,48 @@ mod tests {
             [dir.join("images").join(&free["images/".len()..])]
         );
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn gives_the_whole_path_of_an_image() {
+        let dir = temp_dir("full-path");
+        let image = save(&dir, now(), "image/png", b"").unwrap();
+        let full = full_path(&resolve(&dir, "todo.md", &image).unwrap()).unwrap();
+        assert!(full.is_absolute());
+        assert!(!full.to_string_lossy().starts_with(r"\\?\"));
+        assert!(full.ends_with(&image));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn in_bin(id: &str, path: &str, time_deleted: i64) -> TrashItem {
+        let path = Path::new(path);
+        TrashItem {
+            id: id.into(),
+            name: path.file_name().unwrap().into(),
+            original_parent: path.parent().unwrap().into(),
+            time_deleted,
+        }
+    }
+
+    #[test]
+    fn finds_the_images_to_bring_back_in_the_recycle_bin() {
+        let bin = [
+            in_bin("old", "notes/images/a.png", 1),
+            in_bin("new", "notes/images/a.png", 2),
+            in_bin("elsewhere", "other/images/a.png", 3),
+            in_bin("b", "notes/images/b.png", 1),
+        ];
+        let paths = [
+            "notes/images/a.png",
+            "notes/images/gone.png",
+            "notes/images/b.png",
+        ]
+        .map(PathBuf::from);
+        let found: Vec<_> = to_restore(&bin, &paths)
+            .into_iter()
+            .map(|item| item.id)
+            .collect();
+        assert_eq!(found, ["new", "b"]);
     }
 
     #[test]

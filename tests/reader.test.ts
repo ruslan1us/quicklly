@@ -1,6 +1,6 @@
 import { type MockInstance, afterEach, beforeEach, expect, test, vi } from "vitest";
 import html from "../src/windows/reader/index.html?raw";
-import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle } from "./helpers";
+import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle, type } from "./helpers";
 
 // The reader, with its real page and code; only the Rust side is pretended.
 const FILES = [
@@ -19,6 +19,12 @@ const NOTES = [
   },
   { kind: "note", line: 2, time: "14:32", done: false, text: `read ${LINK} 📅 2026-10-15` },
 ];
+// What a change gives back for Ctrl+Z: the file before and after it, and the images it deleted.
+const CHANGE = {
+  before: `- [x] 09:15 milk ![Image #1](${IMAGE}) ✅ 2026-10-13\n`,
+  after: "",
+  images: ["C:\\notes\\images\\2026-10-13_09-15-00.png"],
+};
 
 let calls: Call[];
 let writeText: MockInstance<Clipboard["writeText"]>;
@@ -36,6 +42,10 @@ async function open(replies: Record<string, unknown> = {}) {
     list_note_files: FILES,
     read_note_file: NOTES,
     get_archive_days: 7,
+    set_note_done: CHANGE,
+    delete_note: CHANGE,
+    edit_note: CHANGE,
+    undo_change: 0,
     ...replies,
   });
   await loadPage(html, () => import("../src/windows/reader/reader.ts"));
@@ -180,4 +190,114 @@ test("Tab keeps a file in a folder selected in its new place", async () => {
   press(document, "Tab");
   await settle();
   expect(rows()[4]).toBe("❯quicklly.mdempty");
+});
+
+/** Presses Ctrl+Z on `target` and lets the undo finish; returns the event. */
+async function undo(target: EventTarget = document) {
+  const event = press(target, "z", { code: "KeyZ", ctrlKey: true });
+  await settle();
+  return event;
+}
+
+/** Deletes the first note of today's file, Del twice. */
+async function deleteFirst() {
+  await openToday();
+  press(document, "ArrowUp");
+  press(document, "Delete");
+  press(document, "Delete");
+  await settle();
+}
+
+test("Ctrl+Z brings back a deleted note, selected, and says so", async () => {
+  await deleteFirst();
+  expect(argsOf(calls, "delete_note")).toEqual([{ name: "2026-10-13.md", note: NOTES[0] }]);
+  press(document, "ArrowDown");
+  await undo();
+  expect(argsOf(calls, "undo_change")).toEqual([{ name: "2026-10-13.md", change: CHANGE }]);
+  expect(rows()[0]).toMatch(/^❯09:15/);
+  expect(text("#help")).toMatch(/^Undone: delete · ↑↓ select/);
+  // Each change is undone once.
+  await undo();
+  expect(argsOf(calls, "undo_change")).toHaveLength(1);
+  expect(text("#help")).toMatch(/^Nothing to undo · /);
+});
+
+test("Ctrl+Z says when an image of the note couldn't be brought back", async () => {
+  closePage();
+  await open({ undo_change: 1 });
+  await deleteFirst();
+  await undo();
+  expect(text("#help")).toMatch(/^Undone: delete · couldn't bring back 1 image · /);
+});
+
+test("Ctrl+Z shows why a change couldn't be undone", async () => {
+  closePage();
+  await open({
+    undo_change: () => {
+      throw "Couldn't undo: 2026-10-13.md has changed since";
+    },
+  });
+  await deleteFirst();
+  await undo();
+  expect(text("#error")).toBe("Couldn't undo: 2026-10-13.md has changed since");
+  expect(text("#help")).toMatch(/^↑↓ select/);
+});
+
+test("Ctrl+Z in the file list undoes in the file the change was in", async () => {
+  await deleteFirst();
+  press(document, "ArrowLeft");
+  await settle();
+  expect(text("#title")).toBe("Quicklly · Notes · recent first");
+  await undo();
+  expect(argsOf(calls, "undo_change")).toHaveLength(1);
+  expect(text("#title")).toBe("Quicklly · 2026-10-13 · 2 notes · 1 done");
+  expect(rows()[0]).toMatch(/^❯09:15/);
+});
+
+test("Ctrl+Z undoes Space", async () => {
+  await openToday();
+  press(document, " ");
+  await settle();
+  expect(argsOf(calls, "set_note_done")).toEqual([
+    { name: "2026-10-13.md", note: NOTES[1], done: true },
+  ]);
+  await undo();
+  expect(argsOf(calls, "undo_change")).toEqual([{ name: "2026-10-13.md", change: CHANGE }]);
+  expect(text("#help")).toMatch(/^Undone: done · /);
+});
+
+/** Opens the selected note in the editor and types at its end. */
+function editSelected() {
+  press(document, "Enter");
+  const editor = document.querySelector<HTMLTextAreaElement>(".editor textarea")!;
+  type(editor, " soon");
+  return editor;
+}
+
+test("Ctrl+Z undoes an edit", async () => {
+  await openToday();
+  const editor = editSelected();
+  press(editor, "Enter");
+  await settle();
+  expect(argsOf(calls, "edit_note")).toEqual([
+    { name: "2026-10-13.md", note: NOTES[1], text: `read ${LINK} 📅 2026-10-15 soon` },
+  ]);
+  await undo();
+  expect(argsOf(calls, "undo_change")).toEqual([{ name: "2026-10-13.md", change: CHANGE }]);
+  expect(text("#help")).toMatch(/^Undone: edit · /);
+});
+
+test("Ctrl+Z in the editor is left to the editor", async () => {
+  await deleteFirst();
+  const editor = editSelected();
+  const event = await undo(editor);
+  expect(event.defaultPrevented).toBe(false);
+  expect(argsOf(calls, "undo_change")).toEqual([]);
+  expect(text("#help")).toBe("Enter save · Shift+Enter new line · Esc cancel");
+});
+
+test("Ctrl+Z with nothing to undo says so", async () => {
+  await undo();
+  expect(argsOf(calls, "undo_change")).toEqual([]);
+  expect(text("#help")).toMatch(/^Nothing to undo · ↑↓ select · Enter open/);
 });

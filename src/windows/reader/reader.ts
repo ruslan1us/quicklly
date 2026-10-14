@@ -189,9 +189,7 @@ function nameCell(name: string, className: string, depth: number) {
 function renderFiles() {
   const today = todayFile();
   title.textContent = `Quicklly · Notes · ${sort === "recent" ? "recent first" : "by name"}`;
-  help.textContent = confirmingDelete
-    ? "Del again to move it to the Recycle Bin · any other key cancels"
-    : `↑↓ select · Enter open · Tab sort · Del delete · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
+  renderHelp();
   empty.textContent = "No notes yet.";
   empty.hidden = files.length > 0;
   const rows: HTMLLIElement[] = [];
@@ -242,16 +240,22 @@ function renderFiles() {
   revealSelected(selectedRow, selectedFile === 0, selectedFile === files.length - 1);
 }
 
-/** A short answer shown in front of the notes view's help, like "Copied 1 link". */
+/** A short answer shown in front of the help, like "Copied 1 link". */
 let footerMessage = "";
 let footerTimer: number | undefined;
 
-function renderNotesHelp() {
-  help.textContent = editing
-    ? "Enter save · Shift+Enter new line · Esc cancel"
-    : confirmingDelete
-      ? "Del again to delete · any other key cancels"
-      : "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · Del delete · Ctrl+P pin · ← back · Esc close";
+function renderHelp() {
+  if (view === "files") {
+    help.textContent = confirmingDelete
+      ? "Del again to move it to the Recycle Bin · any other key cancels"
+      : `↑↓ select · Enter open · Tab sort · Del delete · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
+  } else {
+    help.textContent = editing
+      ? "Enter save · Shift+Enter new line · Esc cancel"
+      : confirmingDelete
+        ? "Del again to delete · any other key cancels"
+        : "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · Del delete · Ctrl+P pin · ← back · Esc close";
+  }
   if (footerMessage && !editing && !confirmingDelete) {
     help.prepend(span(footerMessage, "message"), " · ");
   }
@@ -264,15 +268,13 @@ function renderNotesHelp() {
 function showFooterMessage(message: string) {
   window.clearTimeout(footerTimer);
   footerMessage = message;
-  renderNotesHelp();
+  renderHelp();
   void fit();
   footerTimer = window.setTimeout(() => {
     footerMessage = "";
     // Only the footer is redrawn: redrawing the rows would take the focus from an editor.
-    if (view === "notes") {
-      renderNotesHelp();
-      void fit();
-    }
+    renderHelp();
+    void fit();
   }, 2000);
 }
 
@@ -308,7 +310,7 @@ function renderNotes() {
   const count = noteIndexes().length;
   const done = items.filter((item) => item.kind === "note" && item.done).length;
   title.textContent = `Quicklly · ${displayName(openFile)} · ${counts(count, done)}`;
-  renderNotesHelp();
+  renderHelp();
   empty.textContent = "No notes in this file.";
   empty.hidden = count > 0;
   rowsList.replaceChildren(
@@ -469,16 +471,34 @@ async function openTarget() {
 // A search result opened while the reader is already open.
 void listen("reader-target", () => void openTarget());
 
+/** A change made in this reader, for Ctrl+Z to undo. */
+interface Undo {
+  /** What was done, as Ctrl+Z says it undid it: "delete", "done" or "edit". */
+  what: string;
+  /** The notes file it was made to. */
+  name: string;
+  /** The first line of the note it was made to, to select the note once it is back. */
+  line: number;
+  /** The file before and after it, and the images it deleted, as the Rust side gave them. */
+  change: unknown;
+}
+
+/** The changes made in this reader while it is open, the latest last. */
+const changes: Undo[] = [];
+
 /**
- * Runs a change to the selected note, then reloads the file. If the change fails (for example
- * because the file changed outside the reader), the error stays visible over the reloaded notes.
+ * Runs a change to the selected note, then reloads the file; Ctrl+Z undoes it as `what`. If the
+ * change fails (for example because the file changed outside the reader), the error stays
+ * visible over the reloaded notes.
  */
-async function changeNote(command: string, args: Record<string, unknown> = {}) {
+async function changeNote(what: string, command: string, args: Record<string, unknown> = {}) {
   const note = items[selectedItem];
   if (note?.kind !== "note") return;
+  const name = openFile;
   let failed = false;
   try {
-    await invoke(command, { name: openFile, note, ...args });
+    const change = await invoke(command, { name, note, ...args });
+    changes.push({ what, name, line: note.line, change });
   } catch (err) {
     showError(err);
     failed = true;
@@ -489,12 +509,47 @@ async function changeNote(command: string, args: Record<string, unknown> = {}) {
 /** Deletes the selected note and selects the one that took its place (or the new last one). */
 async function deleteNote() {
   const position = noteIndexes().indexOf(selectedItem);
-  await changeNote("delete_note");
+  await changeNote("delete", "delete_note");
   const notes = noteIndexes();
   if (notes.length > 0) {
     selectedItem = notes[Math.min(position, notes.length - 1)];
     render();
   }
+}
+
+/**
+ * Undoes the latest change made in this reader, in its file, opened if it isn't, and selects
+ * the note it was made to. The Rust side refuses if the file has changed since; the change is
+ * dropped either way, so the next Ctrl+Z goes on to the one before.
+ */
+async function undo() {
+  const last = changes.pop();
+  if (!last) {
+    showFooterMessage("Nothing to undo");
+    return;
+  }
+  let lost = 0;
+  let failed = false;
+  try {
+    lost = await invoke<number>("undo_change", { name: last.name, change: last.change });
+  } catch (err) {
+    showError(err);
+    failed = true;
+  }
+  if (view !== "notes" || openFile !== last.name) {
+    showFile(last.name);
+    selectedItem = -1;
+    if (pinned) void savePin();
+  }
+  await refresh(failed);
+  if (failed) return;
+  const i = items.findIndex((item) => item.kind === "note" && item.line === last.line);
+  if (i >= 0) {
+    selectedItem = i;
+    render();
+  }
+  const images = lost > 0 ? ` · couldn't bring back ${plural(lost, "image")}` : "";
+  showFooterMessage(`Undone: ${last.what}${images}`);
 }
 
 /**
@@ -589,7 +644,7 @@ async function saveEdit() {
     return;
   }
   editing = false;
-  await changeNote("edit_note", { text });
+  await changeNote("edit", "edit_note", { text });
 }
 
 editor.addEventListener("input", fitEditor);
@@ -633,6 +688,11 @@ document.addEventListener("keydown", (e) => {
     void togglePin();
     return;
   }
+  // By physical key, so any keyboard layout works; in the editor it undoes typing instead.
+  if (e.ctrlKey && e.code === "KeyZ") {
+    void undo();
+    return;
+  }
   // Esc or Ctrl+C (by physical key, so any keyboard layout works) closes like in a terminal.
   if (e.key === "Escape" || (e.ctrlKey && e.code === "KeyC")) {
     void appWindow.close();
@@ -670,7 +730,7 @@ document.addEventListener("keydown", (e) => {
     moveNote(e.key === "ArrowUp" ? -1 : 1);
   } else if (e.key === " ") {
     const note = items[selectedItem];
-    if (note?.kind === "note") void changeNote("set_note_done", { done: !note.done });
+    if (note?.kind === "note") void changeNote("done", "set_note_done", { done: !note.done });
   } else if (e.key === "Enter" && e.shiftKey) {
     // Shift+Enter edits the note in the Pad, with room for a longer text.
     const note = items[selectedItem];

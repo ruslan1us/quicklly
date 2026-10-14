@@ -243,28 +243,33 @@ fn delete_note_file(app: AppHandle, name: String) -> Result<(), String> {
         .unwrap_or_default();
     reader::trash_file(&dir, &name).map_err(|e| format!("Couldn't delete {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, &name, images::paths_in(&content))
+    trash_images(&dir, &name, images::paths_in(&content))?;
+    Ok(())
 }
 
 /// Moves images that notes no longer link to to the Recycle Bin; `paths` as the notes file
-/// `name` links to them.
-fn trash_images(dir: &std::path::Path, name: &str, paths: Vec<String>) -> Result<(), String> {
+/// `name` links to them. Returns where the images were, to bring them back on undo.
+fn trash_images(
+    dir: &std::path::Path,
+    name: &str,
+    paths: Vec<String>,
+) -> Result<Vec<std::path::PathBuf>, String> {
     images::trash_unused(dir, name, &paths).map_err(|e| format!("Couldn't delete the images: {e}"))
 }
 
-/// Marks a note in a notes file as done or not done.
+/// Marks a note in a notes file as done or not done; returns the change, for the reader to undo.
 #[tauri::command]
 fn set_note_done(
     app: AppHandle,
     name: String,
     note: reader::NoteRef,
     done: bool,
-) -> Result<(), String> {
+) -> Result<reader::Change, String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::set_done(&dir, &name, &note, done, chrono::Local::now().date_naive())
+    let change = reader::set_done(&dir, &name, &note, done, chrono::Local::now().date_naive())
         .map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    Ok(())
+    Ok(change)
 }
 
 /// Moves a note's date to `days` from today, from the reminders.
@@ -282,28 +287,46 @@ fn snooze_note(
     Ok(())
 }
 
-/// Deletes a note from a notes file, with its images.
+/// Deletes a note from a notes file, with its images; returns the change, for the reader to undo.
 #[tauri::command]
-fn delete_note(app: AppHandle, name: String, note: reader::NoteRef) -> Result<(), String> {
+fn delete_note(
+    app: AppHandle,
+    name: String,
+    note: reader::NoteRef,
+) -> Result<reader::Change, String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))?;
+    let mut change =
+        reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, &name, images::paths_in(&note.text))
+    change.images = trash_images(&dir, &name, images::paths_in(&note.text))?;
+    Ok(change)
 }
 
-/// Replaces the text of a note in a notes file; images taken out of it are deleted.
+/// Replaces the text of a note in a notes file; images taken out of it are deleted. Returns the
+/// change, for the reader to undo.
 #[tauri::command]
 fn edit_note(
     app: AppHandle,
     name: String,
     note: reader::NoteRef,
     text: String,
-) -> Result<(), String> {
+) -> Result<reader::Change, String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::set_text(&dir, &name, &note, &text)
+    let mut change = reader::set_text(&dir, &name, &note, &text)
         .map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, &name, images::paths_in(&note.text))
+    change.images = trash_images(&dir, &name, images::paths_in(&note.text))?;
+    Ok(change)
+}
+
+/// Undoes a change made in the reader (Ctrl+Z) and brings back the images it deleted; returns
+/// how many of them couldn't be brought back.
+#[tauri::command]
+fn undo_change(app: AppHandle, name: String, change: reader::Change) -> Result<usize, String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    reader::undo(&dir, &name, &change).map_err(|e| format!("Couldn't undo: {e}"))?;
+    notes_changed(&app);
+    Ok(images::restore(&change.images))
 }
 
 /// Finds notes containing `query` in all notes files, for search in the input window.
@@ -538,6 +561,7 @@ pub fn run() {
             snooze_note,
             delete_note,
             edit_note,
+            undo_change,
             search_notes,
             open_note,
             take_reader_target,

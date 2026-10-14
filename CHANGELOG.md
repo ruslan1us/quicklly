@@ -15,6 +15,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   them when nothing is due.
 - `/done` lists the notes done in the last 7 days, archived ones too, by day; C copies them as
   Markdown for a report.
+- Ctrl+Z in the reader undoes the deletes, done marks and edits made there, latest first; a
+  deleted note comes back with its images.
 
 ## [0.8.1] - 2026-10-13
 
