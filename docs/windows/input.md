@@ -77,8 +77,14 @@ show together.
   `Unknown date: … — use <format> or tomorrow`. One <kbd>Backspace</kbd> after a date removes it as
   a whole. When the date format changes, the text in the field is converted to the new format.
 - **Images.** <kbd>Ctrl</kbd>+<kbd>V</kbd> with an image (and no text) in the clipboard saves it at
-  once through `save_image` and types `[Image #N]`. An image saved this way stays in `images/` even
-  if the note is then cancelled.
+  once through `save_image` and types `[Image #N]`. The window holds the images pasted into the
+  note (not those recalled from the history: a saved note links to them). When the note is
+  cleared (`hide`: saved, <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>, a switch to another
+  window), it lets go of them with its history as `kept` (`releaseImages`,
+  `trash_unsaved_images`): those that no notes file, the Pad draft or the history mentions go to
+  the Recycle Bin. Images moved to the Pad with <kbd>Ctrl</kbd>+<kbd>E</kbd> are handed over to
+  it instead. Hiding on focus loss keeps the note, so nothing is let go of then. See
+  [ADR 0018](../decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md).
 - **Messages.** Errors and command answers appear on a line under the note for four seconds; an
   error also outlines the field. Typing clears them.
 

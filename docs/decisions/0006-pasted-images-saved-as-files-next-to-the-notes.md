@@ -1,6 +1,6 @@
 # 0006. Pasted images saved as files next to the notes, shown as labels
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [0018](0018-pasted-images-let-go-of-when-the-text-starts-over.md)
 - **Date:** 2026-10-08
 
 ## Context

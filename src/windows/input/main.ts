@@ -15,9 +15,11 @@ import {
 import {
   type Images,
   fromMarkdown,
+  imagePaths,
   labelNodes,
   markdownNodes,
   pasteImages,
+  releaseImages,
   toMarkdown,
 } from "../../shared/images";
 import { linkNodes, shortLink, splitLinks } from "../../shared/links";
@@ -171,8 +173,19 @@ const dates = datePicker(input, calendar, {
   onError: showError,
 });
 
+/**
+ * The images pasted into the note since it was last cleared, let go of when it is (see `hide`).
+ * Images recalled from the history are not held: a saved note links to them.
+ */
+const pasted = new Set<string>();
+
 // An image pasted into the note is saved right away and shows as `[Image #N]`; not in search.
-pasteImages(input, { images: () => images, enabled: () => !searching(), onError: showError });
+pasteImages(input, {
+  images: () => images,
+  held: pasted,
+  enabled: () => !searching(),
+  onError: showError,
+});
 
 // A date in the note goes with one Backspace (or Delete before it), not a character at a time.
 deleteDatesWhole(input);
@@ -329,6 +342,9 @@ function clearError() {
 async function hide() {
   input.value = "";
   images = new Map();
+  // The note is gone, with its undo: images pasted into it that were not saved go to the
+  // Recycle Bin, unless the history still has them.
+  releaseImages(pasted, history);
   dates.close();
   setSearchMode(false);
   historyIndex = history.length;
@@ -442,9 +458,12 @@ input.addEventListener("keydown", (e) => {
     e.preventDefault();
     void hide();
   } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
-    // Ctrl+E moves what was typed into the Pad, to go on writing there.
+    // Ctrl+E moves what was typed into the Pad, to go on writing there; the Pad holds its
+    // images from now on.
     e.preventDefault();
-    void switchTo("expand_to_pad", { text: stored() });
+    const text = stored();
+    for (const path of imagePaths(text)) pasted.delete(path);
+    void switchTo("expand_to_pad", { text });
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
   } else if (searching() && e.key === "Backspace" && input.value === "") {

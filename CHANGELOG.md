@@ -32,6 +32,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The help gives the archive delay set in **Archive done notes**, or says the archive is off,
   instead of always "after 7 days".
 - `/done` updates while it is open when notes are done, undone, edited or archived elsewhere.
+- An image pasted into a note that is then cancelled, or whose label is deleted before saving,
+  no longer stays in `images/`: it goes to the Recycle Bin once the input window is cleared or
+  the Pad starts over, unless a note, the Pad draft or the input history still has it.
 - A task written as `- [ ] HH:MM` keeps its open checkbox when edited in the reader, and a done
   note marked not done again becomes an open task `- [ ]` instead of a plain list item.
 - Deleting a note with a hand-written link to something other than a pasted image no longer

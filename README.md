@@ -201,7 +201,9 @@ away in an `images` folder next to the notes. The note gets a Markdown image ins
 label, `![Image #1](images/2026-10-07_14-32-05.png)`, so Obsidian shows the picture; the reader
 shows the label again, and <kbd>O</kbd> opens the selected note's images in the default viewer.
 Deleting a note or a notes file in the reader, or taking an image out of a note, moves its images
-to the Recycle Bin too, unless another note still links to them.
+to the Recycle Bin too, unless another note still links to them. So does an image pasted but
+never saved: once the note is cleared or cancelled in the input window, or the Pad saves a note
+without it, unless a note or the Pad draft still has it.
 
 ## Pad
 

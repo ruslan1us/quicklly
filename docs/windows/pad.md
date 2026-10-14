@@ -47,6 +47,14 @@ List items are lines starting with optional indentation and `- [ ] `, `- [x] `, 
   `pad-draft.md` in the app data folder (`set_pad_draft`); an empty draft deletes the file. Saving a
   note empties the Pad; an unpinned Pad then hides, a pinned one shows `saved ✓` in the status bar
   for 1.5 seconds.
+- **Images.** <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes an image as in the input window. The Pad holds
+  the images pasted into it and those of the draft each time it loads the draft (at start, on
+  `pad-draft-changed`, when an edit ends), not those of a note being edited. When its text starts
+  over (a note saved, once the draft is saved empty; the draft or a note to edit loaded in
+  `setText`), it lets go of them (`releaseImages`): those that no notes file and not the draft on
+  disk mentions go to the Recycle Bin. Hiding keeps the text and its undo, so nothing is let go
+  of then. See
+  [ADR 0018](../decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md).
 - **Moving text from the input window.** `expand_to_pad` appends the input text to the draft on a
   new line (or replaces a blank draft) on the Rust side, then shows the Pad; an open Pad reloads the
   draft on `pad-draft-changed`.
@@ -69,6 +77,8 @@ List items are lines starting with optional indentation and `- [ ] `, `- [x] `, 
 ## Edge cases
 
 - A blank text is not saved, and a blank edit is not sent (deleting is done in the reader).
+- An image whose label is deleted from the draft stays in `images/` until the Pad next starts
+  over: in a pinned Pad that is never saved from, that can be a long time.
 - An edit made in the Pad is not recorded in the reader's undo history.
 - The draft is also the hand-over buffer for <kbd>Ctrl</kbd>+<kbd>E</kbd>; text moved there while
   a reader note is being edited appears once the edit ends.

@@ -6,6 +6,7 @@ import {
   imagePaths,
   nextImage,
   pasteImages,
+  releaseImages,
   toMarkdown,
 } from "../src/shared/images";
 import { type Call, argsOf, mockTauri, settle, textField } from "./helpers";
@@ -73,15 +74,17 @@ describe("pasteImages", () => {
   const path = "images/2026-10-13_15-40-00.png";
   let calls: Call[];
   let pasted: Images;
+  let held: Set<string>;
   const onError = vi.fn();
 
   /** A field with "see " in it that images paste into, saved as `saveImage` answers. */
   function setUp(saveImage: unknown = path) {
     calls = mockTauri({ save_image: saveImage });
     pasted = new Map();
+    held = new Set();
     onError.mockClear();
     const field = textField("see ");
-    pasteImages(field, { images: () => pasted, onError });
+    pasteImages(field, { images: () => pasted, held, onError });
     return field;
   }
 
@@ -107,6 +110,7 @@ describe("pasteImages", () => {
     await vi.waitFor(() => expect(field.value).toBe("see [Image #1]"));
     expect(argsOf(calls, "save_image")).toEqual([new Uint8Array([1, 2, 3])]);
     expect(pasted).toEqual(new Map([[1, path]]));
+    expect(held).toEqual(new Set([path]));
   });
 
   test("numbers a next image after the ones already pasted", async () => {
@@ -131,5 +135,26 @@ describe("pasteImages", () => {
     paste(field);
     await vi.waitFor(() => expect(onError).toHaveBeenCalledWith("The notes folder is gone"));
     expect(field.value).toBe("see ");
+    expect(held.size).toBe(0);
+  });
+});
+
+describe("releaseImages", () => {
+  afterEach(() => clearMocks());
+
+  test("sends the held images with the texts to keep, and holds none after", () => {
+    const calls = mockTauri();
+    const held = new Set(["images/a.png", "images/b.png"]);
+    releaseImages(held, ["![Image #1](images/a.png)"]);
+    expect(argsOf(calls, "trash_unsaved_images")).toEqual([
+      { paths: ["images/a.png", "images/b.png"], kept: ["![Image #1](images/a.png)"] },
+    ]);
+    expect(held.size).toBe(0);
+  });
+
+  test("sends nothing when no image is held", () => {
+    const calls = mockTauri();
+    releaseImages(new Set());
+    expect(calls).toEqual([]);
   });
 });

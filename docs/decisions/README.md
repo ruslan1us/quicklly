@@ -14,7 +14,7 @@ old record's status becomes "Superseded by NNNN".
 | [0003](0003-a-tag-is-a-file-nested-tags-are-folders.md) | A tag is a file; nested tags are folders | 2026-09-27 | Accepted |
 | [0004](0004-obsidian-tasks-formats-for-due-and-done-dates.md) | Obsidian Tasks formats for due and done dates | 2026-10-13 | Accepted |
 | [0005](0005-archive-done-notes-per-file-after-n-days.md) | Archive done notes per file after N days | 2026-10-13 | Accepted |
-| [0006](0006-pasted-images-saved-as-files-next-to-the-notes.md) | Pasted images saved as files next to the notes, shown as labels | 2026-10-08 | Accepted |
+| [0006](0006-pasted-images-saved-as-files-next-to-the-notes.md) | Pasted images saved as files next to the notes, shown as labels | 2026-10-08 | Accepted; amended by 0018 |
 | [0007](0007-cli-handled-in-a-fresh-process-before-tauri-starts.md) | CLI and links handled in a fresh process before Tauri starts | 2026-10-13 | Accepted |
 | [0008](0008-windows-created-lazily-from-async-commands.md) | Windows created lazily from async commands; input and Pad hidden, not destroyed | 2026-09-26 | Accepted |
 | [0009](0009-one-folder-per-window.md) | One folder per window in the frontend | 2026-10-14 | Accepted |
@@ -26,6 +26,7 @@ old record's status becomes "Superseded by NNNN".
 | [0015](0015-deletions-go-to-the-recycle-bin.md) | Deletions go to the Recycle Bin | 2026-10-07 | Accepted |
 | [0016](0016-changelog-as-the-source-of-release-notes.md) | CHANGELOG.md as the single source of release notes | 2026-10-07 | Accepted |
 | [0017](0017-watch-the-notes-folder-for-changes.md) | Watch the notes folder for changes | 2026-10-14 | Accepted |
+| [0018](0018-pasted-images-let-go-of-when-the-text-starts-over.md) | Pasted images that are never saved are let go of when the text starts over | 2026-10-14 | Accepted; amends 0006 |
 
 ## Adding a record
 

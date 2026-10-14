@@ -65,6 +65,22 @@ fn save_image(app: AppHandle, request: tauri::ipc::Request<'_>) -> Result<String
         .map_err(|e| format!("Failed to save the image in {}: {e}", dir.display()))
 }
 
+/// Moves images pasted into the input window or the Pad (`images/…`) that the window let go of
+/// without saving them, when its text started over, to the Recycle Bin, unless a notes file, the
+/// Pad draft or `kept` (texts the window still holds) mentions them. A tidy-up nobody waits
+/// for: a failure is only logged, and leaves the images where they are.
+#[tauri::command]
+fn trash_unsaved_images(app: AppHandle, paths: Vec<String>, mut kept: Vec<String>) {
+    let result = pad::draft(&app).and_then(|draft| {
+        kept.push(draft);
+        let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+        images::trash_unsaved(&dir, &paths, &kept).map_err(|e| e.to_string())
+    });
+    if let Err(e) = result {
+        eprintln!("Failed to tidy up pasted images: {e}");
+    }
+}
+
 /// Opens a note's images (paths relative to the folder of its notes file `name`) in the default
 /// viewer, from the reader.
 #[tauri::command]
@@ -541,6 +557,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_note,
             save_image,
+            trash_unsaved_images,
             open_images,
             open_settings,
             exit_app,

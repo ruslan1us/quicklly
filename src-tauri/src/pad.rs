@@ -28,9 +28,16 @@ fn draft_path(app: &AppHandle) -> Option<PathBuf> {
 
 #[tauri::command]
 pub fn get_pad_draft(app: AppHandle) -> String {
-    draft_path(&app)
-        .and_then(|path| fs::read_to_string(path).ok())
-        .unwrap_or_default()
+    draft(&app).unwrap_or_default()
+}
+
+/// The Pad draft, empty when there is none; an error when it is there but can't be read.
+pub fn draft(app: &AppHandle) -> Result<String, String> {
+    let path = draft_path(app).ok_or("No app data folder")?;
+    match fs::read_to_string(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        result => result.map_err(|e| e.to_string()),
+    }
 }
 
 #[tauri::command]

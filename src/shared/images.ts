@@ -110,9 +110,16 @@ export function pasteImages(
   field: HTMLTextAreaElement,
   {
     images,
+    held,
     enabled = () => true,
     onError,
-  }: { images: () => Images; enabled?: () => boolean; onError: (err: unknown) => void },
+  }: {
+    images: () => Images;
+    /** The images the window holds (see `releaseImages`); each pasted one is added. */
+    held?: Set<string>;
+    enabled?: () => boolean;
+    onError: (err: unknown) => void;
+  },
 ) {
   field.addEventListener("paste", async (e) => {
     const data = e.clipboardData;
@@ -128,9 +135,23 @@ export function pasteImages(
       const map = images();
       const n = nextImage(map);
       map.set(n, path);
+      held?.add(path);
       document.execCommand("insertText", false, label(n));
     } catch (err) {
       onError(err);
     }
   });
+}
+
+/**
+ * Lets go of the images a window `held` when its text starts over: those that nothing mentions
+ * any more (no notes file, not the Pad draft, none of the `kept` texts in stored form) go to the
+ * Recycle Bin, so an image pasted into a note that is never saved does not stay behind. The
+ * window holds only images that went into its text as `images/…`: pasted there, or in the Pad
+ * also loaded with the draft.
+ */
+export function releaseImages(held: Set<string>, kept: string[] = []) {
+  if (held.size === 0) return;
+  void invoke("trash_unsaved_images", { paths: [...held], kept });
+  held.clear();
 }

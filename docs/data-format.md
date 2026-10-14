@@ -173,6 +173,17 @@ the folder of the notes file, as Obsidian resolves it:
 In text fields the image appears only as its label, `[Image #1]`; the page keeps a map from label
 number to path. See [ADR 0006](decisions/0006-pasted-images-saved-as-files-next-to-the-notes.md).
 
+Images leave `images/` only to the Recycle Bin, in two cases:
+
+| When | Which images | Kept while |
+| --- | --- | --- |
+| A note is deleted or edited in the reader, or a notes file is deleted | The images the note or file linked to | Any notes file, archive included, links to the same file (links resolved from each file's folder) |
+| The input window's note is cleared, or the Pad saves a note or loads the draft or a note to edit in its place | The images that window held: pasted into it, and in the Pad also those of the draft when it was loaded | Any notes file, archive included, the Pad draft or the input window's history has the image's file name in it, ignoring case |
+
+The second case only ever considers files right in the top-level `images/` folder. See
+[ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md) and
+[ADR 0018](decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md).
+
 ## Display and stored forms
 
 Text has two forms. The **stored** form is what files contain: images as Markdown links, dates as

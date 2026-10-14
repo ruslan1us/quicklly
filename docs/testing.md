@@ -48,17 +48,18 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | --- | --- |
 | `links.test.ts` | Link recognition, trailing punctuation and brackets, `shortLink`, `splitLinks` |
 | `dates.test.ts` | Formatting and parsing in every format, leap years, `toStored`/`toDisplay` round trips, `/date` detection, `commandDate`, `splitDoneDate`, whole-date deletion |
-| `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, text wins, errors) |
+| `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, held, text wins, errors), `releaseImages` |
 | `calendar.test.ts` | `/date` resolution and the calendar keys |
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
-| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format |
+| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E |
+| `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window |
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, Ctrl+Z in its cases |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
 | `done.test.ts` | Grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
 | `help.test.ts` | Version in the header, the Archive text following the setting |
 
-Not covered by automated tests: the Pad, settings and changelog pages, the rest of the help,
-and search in the input window.
+Not covered by automated tests: the Pad beyond its pasted images, settings and changelog pages,
+the rest of the help, and search in the input window.
 
 ## Rust tests
 
@@ -70,7 +71,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | `notes` | File choice by mode and tag, headings, nested tags and image links, missing trailing newline, normalisation of lines |
 | `reader` | Parsing, listing order and tree, tags, path validation, search, due and ahead, done journal, done marks and dates, edit, delete, snooze, removal of empty days, undo, refusing stale changes, line endings |
 | `archive` | Selection by done date, daily, grouped, tag, hand-written and nested files, appending to an existing archive |
-| `images` | Naming and numbering, extensions, path extraction, relinking, safe resolution, unused-image detection (archive and nested files included), Recycle Bin item matching |
+| `images` | Naming and numbering, extensions, path extraction, relinking, safe resolution, unused-image detection (archive and nested files included), pasted images nothing mentions (notes, archive, tag folders, kept texts, any link form, case) and only files right in `images/`, Recycle Bin item matching |
 | `settings` | Serialised strings of date formats and archive periods; reading the notes folder and mode from a settings file |
 | `hotkey` | Parsing, labels, round trip of the stored form |
 | `cli` | Request parsing for `add` and links, decoding, rejection of other input, relative file names |
@@ -87,8 +88,9 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
   the current date or time zone.
 - **No real Recycle Bin.** Moving files to the Recycle Bin and restoring them is not exercised.
   Tests cover what decides it: path validation (`trash_file` refuses anything but a notes file,
-  before any file is touched), the selection of unused images (`unused`), and the choice of Recycle
-  Bin entries to restore (`to_restore`) on hand-built `TrashItem` values.
+  before any file is touched), the selection of unused images (`unused`) and of unsaved pasted
+  ones (`unsaved`), and the choice of Recycle Bin entries to restore (`to_restore`) on hand-built
+  `TrashItem` values.
 - **Exact file content.** File tests assert the whole resulting text, including blank lines and
   line endings.
 

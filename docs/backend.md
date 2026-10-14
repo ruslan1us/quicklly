@@ -16,7 +16,7 @@ for errors, file writes and undo.
 | [`notes.rs`](../src-tauri/src/notes.rs) | Writing new notes: normalisation (`note_lines`, `format_note`), tag detection (`first_tag`), target file choice, headings, append (`append_note`). The `Mode` enum (daily or inbox). |
 | [`reader.rs`](../src-tauri/src/reader.rs) | Reading and changing existing notes: listing files as a tree, parsing, search, due and done queries, done marks, snooze, edit, delete, undo, file deletion, path validation, line-ending-preserving atomic rewrites. |
 | [`archive.rs`](../src-tauri/src/archive.rs) | Moving done notes to `archive/<same path>` after the configured number of days. |
-| [`images.rs`](../src-tauri/src/images.rs) | Saving pasted images, relinking image paths for nested files, resolving paths safely, finding images no note links to, moving them to the Recycle Bin and restoring them. |
+| [`images.rs`](../src-tauri/src/images.rs) | Saving pasted images, relinking image paths for nested files, resolving paths safely, finding images no note links to, moving them to the Recycle Bin and restoring them, and moving pasted images a window let go of unsaved to the Recycle Bin. |
 | [`settings.rs`](../src-tauri/src/settings.rs) | `settings.json` keys, typed getters with defaults, the settings view and all setting commands, hotkey registration and change, appearance and date-format events. |
 | [`hotkey.rs`](../src-tauri/src/hotkey.rs) | Default hotkey, parsing from the `KeyboardEvent.code` form, human-readable labels. |
 | [`pad.rs`](../src-tauri/src/pad.rs) | The Pad window: creation, placement, pin state, bounds, draft file, moving input text into the draft, editing a reader note. |
@@ -89,6 +89,14 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   resolved from each file's folder) still links to them; it returns their original full paths.
   `restore(paths)` brings each back by finding the latest Recycle Bin entry with that original
   path, and returns how many could not be restored.
+- `trash_unsaved(dir, paths, kept)` moves to the Recycle Bin the images a window let go of
+  without saving them (see [ADR 0018](decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md)).
+  Only paths of the form `images/<name>` count (`pasted_name`: no further folder, no `\`, `:` or
+  leading `.`); an image stays when any notes file (archive and tag folders included) or any of
+  the `kept` texts contains its file name, ignoring case. Nothing is restored: these images were
+  never in a saved note. The command `trash_unsaved_images(paths, kept)` in `lib.rs` adds the Pad
+  draft (`pad::draft`, which fails rather than reads as empty when the file can't be read) to
+  `kept` and only logs failures.
 
 ### `settings`
 
@@ -106,7 +114,7 @@ Both keep a pin flag in managed state (an `AtomicBool`, loaded at start) so that
 handler can decide quickly whether to hide, close or remember bounds. Pinned windows are resizable
 with a minimum size (Pad 360×200, reader 440×200 logical pixels at 100 % scale) and save their
 bounds in physical pixels on every move or resize. The Pad's draft is a plain file,
-`pad-draft.md`, removed when empty.
+`pad-draft.md`, removed when empty; `pad::draft` reads it for other modules.
 
 ### `reminders`
 

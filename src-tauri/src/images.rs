@@ -202,6 +202,58 @@ pub fn trash_unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<
     Ok(trashed)
 }
 
+/// The file name of an image pasted into a window, from its path `images/<name>` as the window
+/// holds it; `None` for any other path, so nothing but a file right in `images/` is ever taken
+/// for a pasted image.
+fn pasted_name(path: &str) -> Option<&str> {
+    let name = path.strip_prefix(IMAGES_DIR)?.strip_prefix('/')?;
+    let plain = !name.is_empty() && !name.starts_with('.') && !name.contains(['/', '\\', ':']);
+    plain.then_some(name)
+}
+
+/// Of the images pasted into a window at `paths` (`images/<name>`, from the notes folder), the
+/// files that nothing mentions: no notes file in `dir` or its archive, in any folder, and none
+/// of the texts in `kept` has the image's file name in it, ignoring case and however it links
+/// to it. Missing images are left out.
+fn unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Result<Vec<PathBuf>> {
+    fn drop_mentioned(left: &mut Vec<&str>, text: &str) {
+        let text = text.to_lowercase();
+        left.retain(|name| !text.contains(&name.to_lowercase()));
+    }
+    let mut left: Vec<&str> = paths.iter().filter_map(|path| pasted_name(path)).collect();
+    for text in kept {
+        drop_mentioned(&mut left, text);
+    }
+    let archive = dir.join(ARCHIVE_DIR);
+    for folder in [dir, archive.as_path()] {
+        for note_file in reader::list_files(folder)? {
+            if left.is_empty() {
+                return Ok(Vec::new());
+            }
+            let content = fs::read_to_string(reader::path_of(folder, &note_file.name))?;
+            drop_mentioned(&mut left, &content);
+        }
+    }
+    Ok(left
+        .into_iter()
+        .map(|name| dir.join(IMAGES_DIR).join(name))
+        .filter(|image| image.is_file())
+        .collect())
+}
+
+/// Moves the images pasted into a window at `paths` (`images/<name>`), which the window let go
+/// of without saving them, to the Recycle Bin, unless a notes file in `dir` or one of the texts
+/// in `kept` (the Pad draft, the input window's history) still mentions them.
+pub fn trash_unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Result<()> {
+    if paths.is_empty() {
+        return Ok(());
+    }
+    for image in unsaved(dir, paths, kept)? {
+        trash::delete(&image).map_err(io::Error::other)?;
+    }
+    Ok(())
+}
+
 /// The whole path of an existing file, as `trash` gives it to the Recycle Bin: canonical, but
 /// without the `\\?\` in front that Windows adds to it.
 fn full_path(path: &Path) -> io::Result<PathBuf> {
@@ -405,6 +457,83 @@ mod tests {
         fs::write(dir.join("pics").join("a.png"), "").unwrap();
         let other = ["inbox.md".to_string(), "pics/a.png".to_string()];
         assert!(unused(&dir, "todo.md", &other).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn finds_pasted_images_nothing_mentions() {
+        let dir = temp_dir("unsaved-images");
+        let saved = save(&dir, now(), "image/png", b"saved").unwrap();
+        let tagged = save(&dir, now(), "image/png", b"tagged").unwrap();
+        let archived = save(&dir, now(), "image/png", b"archived").unwrap();
+        let embedded = save(&dir, now(), "image/png", b"embedded").unwrap();
+        let drafted = save(&dir, now(), "image/png", b"drafted").unwrap();
+        let free = save(&dir, now(), "image/png", b"free").unwrap();
+        let name = |path: &str| path["images/".len()..].to_string();
+        fs::create_dir_all(dir.join("work")).unwrap();
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::write(
+            dir.join("2026-10-07.md"),
+            format!("- 14:33 ![Image #1]({saved})\n"),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("work").join("q.md"),
+            format!("- 14:33 ![Image #1](../{tagged})\n"),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("archive").join("todo.md"),
+            format!("- [x] 14:33 ![Image #1](../{archived}) ✅ 2026-10-07\n"),
+        )
+        .unwrap();
+        // Linked by hand, in another way, with the name in other case: still mentioned.
+        let shouted = name(&embedded).to_uppercase();
+        fs::write(dir.join("My Notes.md"), format!("![[{shouted}]]\n")).unwrap();
+        let draft = format!("more ![Image #1]({drafted})");
+        let paths = [
+            saved,
+            tagged,
+            archived,
+            embedded,
+            drafted,
+            free.clone(),
+            "images/gone.png".into(),
+        ];
+        assert_eq!(
+            unsaved(&dir, &paths, &[draft]).unwrap(),
+            [dir.join("images").join(name(&free))]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn takes_only_files_right_in_images_for_pasted_images() {
+        let dir = temp_dir("pasted-only");
+        fs::create_dir_all(dir.join("images").join("sub")).unwrap();
+        for file in ["todo.md", "x.png", "images/sub/x.png", "images/.hidden.png"] {
+            fs::write(dir.join(file), "").unwrap();
+        }
+        let paths = [
+            "todo.md",
+            "images/../todo.md",
+            "images/../x.png",
+            "../x.png",
+            "images/sub/x.png",
+            "images/sub",
+            "images/.hidden.png",
+            "images/",
+            "images",
+            "C:/x.png",
+            "images\\..\\x.png",
+            "imagesx.png",
+        ]
+        .map(String::from);
+        assert!(unsaved(&dir, &paths, &[]).unwrap().is_empty());
+        assert_eq!(
+            pasted_name("images/2026-10-07_14-32-05_2.png"),
+            Some("2026-10-07_14-32-05_2.png")
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 

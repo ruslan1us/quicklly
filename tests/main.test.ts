@@ -125,3 +125,56 @@ test("search results mark the query in the text as shown, dates and image labels
   await settle();
   expect(marked()).toEqual(["Image #1"]);
 });
+
+/** Pastes a clipboard with a small PNG in it into the note. */
+async function pasteImage() {
+  const clipboardData = new DataTransfer();
+  clipboardData.items.add(new File([new Uint8Array([1])], "image.png", { type: "image/png" }));
+  const before = note.value;
+  note.focus();
+  note.dispatchEvent(new ClipboardEvent("paste", { clipboardData, cancelable: true }));
+  await vi.waitFor(() => expect(note.value).not.toBe(before));
+}
+
+/** Answers `save_image` as the Rust side would: `images/1.png`, then `images/2.png`, … */
+function savedImages() {
+  let n = 0;
+  return () => `images/${++n}.png`;
+}
+
+test("images pasted into a note are let go of when it is cleared, unless saved", async () => {
+  closePage();
+  await open("DD/MM/YYYY", { save_image: savedImages() });
+  const released = () => argsOf(calls, "trash_unsaved_images");
+
+  await pasteImage();
+  press(note, "Escape");
+  await settle();
+  expect(released()).toEqual([{ paths: ["images/1.png"], kept: [] }]);
+
+  // Saved: the note (and the history) keeps one image, the other was taken out.
+  type(note, "see ");
+  await pasteImage();
+  await pasteImage();
+  expect(note.value).toBe("see [Image #1][Image #2]");
+  note.setSelectionRange("see [Image #1]".length, note.value.length);
+  document.execCommand("delete");
+  press(note, "Enter");
+  await settle();
+  const saved = "see ![Image #1](images/2.png)";
+  expect(argsOf(calls, "save_note")).toEqual([{ text: saved }]);
+  expect(released()[1]).toEqual({ paths: ["images/2.png", "images/3.png"], kept: [saved] });
+});
+
+test("Ctrl+E hands the images of the note over to the Pad", async () => {
+  closePage();
+  await open("DD/MM/YYYY", { save_image: savedImages() });
+  await pasteImage();
+  await pasteImage();
+  note.setSelectionRange(0, "[Image #1]".length);
+  document.execCommand("delete");
+  press(note, "e", { ctrlKey: true, code: "KeyE" });
+  await settle();
+  expect(argsOf(calls, "expand_to_pad")).toEqual([{ text: "![Image #2](images/2.png)" }]);
+  expect(argsOf(calls, "trash_unsaved_images")).toEqual([{ paths: ["images/1.png"], kept: [] }]);
+});

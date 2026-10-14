@@ -11,7 +11,14 @@ import {
   toDisplay,
   toStored,
 } from "../../shared/dates";
-import { type Images, fromMarkdown, labelNodes, pasteImages, toMarkdown } from "../../shared/images";
+import {
+  type Images,
+  fromMarkdown,
+  labelNodes,
+  pasteImages,
+  releaseImages,
+  toMarkdown,
+} from "../../shared/images";
 import { linkNodes } from "../../shared/links";
 import { tagSuggest } from "../../shared/tagSuggest";
 import { followTheme } from "../../shared/theme";
@@ -37,11 +44,22 @@ let editing: PadEdit | null = null;
 let images: Images = new Map();
 
 /**
- * Shows `markdown` (the draft, or a note to edit) in the text area, its images as labels and
- * its dates in the date format, with the caret at the end.
+ * The images the Pad holds since its text last started over: those pasted into it, and those of
+ * the draft as it was loaded (moved here from the input window, or kept from an earlier run).
+ * Images of a note being edited are not held: its notes file links to them.
  */
-function setText(markdown: string) {
+const held = new Set<string>();
+
+/**
+ * Shows `markdown` (the `draft`, or a note to edit) in the text area, its images as labels and
+ * its dates in the date format, with the caret at the end. The text before, and its undo, are
+ * gone: the images held until now that were not saved and are not in the draft go to the
+ * Recycle Bin.
+ */
+function setText(markdown: string, draft: boolean) {
+  releaseImages(held);
   ({ text: text.value, images } = fromMarkdown(toDisplay(markdown)));
+  if (draft) for (const path of images.values()) held.add(path);
   text.setSelectionRange(text.value.length, text.value.length);
 }
 
@@ -96,7 +114,7 @@ const dates = datePicker(text, document.querySelector<HTMLDivElement>("#calendar
 const stored = () => toStored(toMarkdown(text.value, images));
 
 // An image pasted into the text is saved right away and shows as `[Image #N]`.
-pasteImages(text, { images: () => images, onError: showError });
+pasteImages(text, { images: () => images, held, onError: showError });
 
 // A date in the text goes with one Backspace (or Delete before it), not a character at a time.
 deleteDatesWhole(text);
@@ -327,14 +345,14 @@ async function startEditing() {
   if (!editing) await saveDraft();
   editing = edit;
   // The day it was done stays out of sight, and in the note (see `set_text`).
-  setText(splitDoneDate(edit.note.text).text);
+  setText(splitDoneDate(edit.note.text).text, false);
   refresh();
 }
 
 /** Ends an edit and brings the draft back. */
 async function stopEditing() {
   editing = null;
-  setText(await invoke<string>("get_pad_draft"));
+  setText(await invoke<string>("get_pad_draft"), true);
   refresh();
 }
 
@@ -381,6 +399,8 @@ async function saveNote() {
   } else {
     await hide();
   }
+  // Once the draft is empty: images pasted but left out of the note go to the Recycle Bin.
+  releaseImages(held);
 }
 
 text.addEventListener("keydown", (e) => {
@@ -437,7 +457,7 @@ void listen("pad-edit", () => void startEditing());
 // Text moved here from the input window with Ctrl+E (it shows once an edit is over).
 void listen("pad-draft-changed", async () => {
   if (editing) return;
-  setText(await invoke<string>("get_pad_draft"));
+  setText(await invoke<string>("get_pad_draft"), true);
   refresh();
 });
 
@@ -466,7 +486,7 @@ void Promise.all([
 ]).then(async ([, , draft, isPinned]) => {
   pinned = isPinned;
   renderPin();
-  setText(draft);
+  setText(draft, true);
   await startEditing();
   await appWindow.show();
   await appWindow.setFocus();

@@ -124,6 +124,7 @@ create or may create a window.
 | --- | --- | --- | --- |
 | `save_note(text)` | lib | input, Pad | Append a note; emits `notes-changed` |
 | `save_image(raw body)` | lib | input, Pad | Save a pasted image (MIME type in the `Image-Type` header); returns `images/…` |
+| `trash_unsaved_images(paths, kept)` | lib | input, Pad | Move the pasted images a window let go of to the Recycle Bin unless a notes file, the Pad draft or `kept` mentions them; failures only logged |
 | `open_images(name, paths)` | lib | reader | Open a note's images in the default viewer |
 | `search_notes(query)` | lib | input | Up to 50 matching notes, newest first |
 | `list_note_files` | lib | reader | Notes files with counts and modification times |
