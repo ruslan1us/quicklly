@@ -186,21 +186,21 @@ pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
     Ok(hits)
 }
 
-/// A note that is due, found by [`due`].
+/// A note that is due, or due ahead, found by [`due`].
 #[derive(Debug, Serialize)]
 pub struct Due {
     pub file: String,
     pub note: NoteRef,
     /// The note's date, `YYYY-MM-DD`.
     pub date: String,
-    /// How many days ago the date was; 0 when it is today.
+    /// How many days ago the date was; 0 when it is today, less than 0 when it is ahead.
     pub overdue: i64,
 }
 
 /// Finds the notes in all notes files that are not done and have a date (`📅 YYYY-MM-DD`, the
-/// first one if there are several) of `today` or earlier: the oldest date first, notes of the
-/// same date in the order of the files and of the notes in them.
-pub fn due(dir: &Path, today: NaiveDate) -> io::Result<Vec<Due>> {
+/// first one if there are several) of `today` or earlier, or with `ahead` after `today`: the
+/// oldest date first, notes of the same date in the order of the files and of the notes in them.
+pub fn due(dir: &Path, today: NaiveDate, ahead: bool) -> io::Result<Vec<Due>> {
     let mut found = Vec::new();
     for file in list_files(dir)? {
         for item in parse(&fs::read_to_string(path_of(dir, &file.name))?) {
@@ -213,7 +213,7 @@ pub fn due(dir: &Path, today: NaiveDate) -> io::Result<Vec<Due>> {
             else {
                 continue;
             };
-            let Some(date) = first_date(&text).filter(|date| *date <= today) else {
+            let Some(date) = first_date(&text).filter(|date| (*date > today) == ahead) else {
                 continue;
             };
             found.push(Due {
@@ -992,7 +992,7 @@ mod tests {
         .unwrap();
 
         let today = NaiveDate::from_ymd_opt(2026, 10, 13).unwrap();
-        let found: Vec<_> = due(&dir, today)
+        let found: Vec<_> = due(&dir, today, false)
             .unwrap()
             .into_iter()
             .map(|d| (d.file, d.note.line, d.note.text, d.date, d.overdue))
@@ -1027,7 +1027,47 @@ mod tests {
                 entry("2026-10-10.md", 2, "today 📅 2026-10-13", "2026-10-13", 0),
             ]
         );
-        assert!(due(&dir.join("missing"), today).unwrap().is_empty());
+        assert!(due(&dir.join("missing"), today, false).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn finds_notes_ahead_soonest_first() {
+        let dir = temp_dir("ahead");
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::write(
+            dir.join("todo.md"),
+            [
+                "# todo",
+                "",
+                "- 09:00 next week 📅 2026-10-20",
+                "- 09:30 today 📅 2026-10-13",
+                "- [x] 10:00 done 📅 2026-10-15",
+                "- 10:30 overdue 📅 2026-10-12",
+                "- 11:00 tomorrow 📅 2026-10-14",
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("archive").join("todo.md"),
+            "# todo\n\n- 09:00 archived 📅 2026-10-14\n",
+        )
+        .unwrap();
+
+        let today = NaiveDate::from_ymd_opt(2026, 10, 13).unwrap();
+        let found: Vec<_> = due(&dir, today, true)
+            .unwrap()
+            .into_iter()
+            .map(|d| (d.note.line, d.date, d.overdue))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                (6, String::from("2026-10-14"), -1),
+                (2, String::from("2026-10-20"), -7),
+            ]
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 

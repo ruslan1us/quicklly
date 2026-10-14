@@ -2,7 +2,8 @@
    separately) so that the build always puts it first. */
 @import "./terminal.css";
 
-/* A due note: cursor · first line of the text (with its date) · today / N days overdue. */
+/* A due note: cursor · first line of the text (with its date) · today / N days overdue (or
+   tomorrow / in N days, ahead). */
 .due {
   grid-template-columns: 2ch minmax(0, 1fr) 19ch;
 }
@@ -30,6 +31,22 @@
 /* Links are shown short (see links.ts) and underlined. */
 .due .link {
   text-decoration: underline;
+}
+
+/* The date above the notes ahead of that day, as in the reader. */
+.day {
+  margin-top: 6px;
+  color: var(--dim);
+  cursor: default;
+}
+
+.day:first-child {
+  margin-top: 0;
+}
+
+.dim {
+  margin: 0;
+  color: var(--dim);
 }
 
 /* Images are shown as their `[Image #N]` label (see images.ts), dates in the date format (see

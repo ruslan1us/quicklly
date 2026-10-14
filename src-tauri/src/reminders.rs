@@ -9,7 +9,8 @@ use tauri::{
 
 use crate::{archive, monitor, pad, reader, settings};
 
-/// The reminders: the notes with a date of today or earlier that are not done yet.
+/// The reminders: the notes with a date of today or earlier that are not done yet, and with Tab
+/// those with a date ahead.
 pub const REMINDERS_WINDOW: &str = "reminders";
 
 /// How often the date is looked at, to remind of the new day's notes.
@@ -20,10 +21,10 @@ const CHECK_EVERY: Duration = Duration::from_secs(60);
 #[derive(Default)]
 pub struct FocusOnShow(AtomicBool);
 
-/// The notes due today or earlier.
-fn due_now(app: &AppHandle) -> Result<Vec<reader::Due>, String> {
+/// The notes due today or earlier, or with `ahead` those due after today.
+fn due_notes(app: &AppHandle, ahead: bool) -> Result<Vec<reader::Due>, String> {
     let dir = settings::notes_dir(app).map_err(|e| e.to_string())?;
-    reader::due(&dir, Local::now().date_naive())
+    reader::due(&dir, Local::now().date_naive(), ahead)
         .map_err(|e| format!("Failed to read {}: {e}", dir.display()))
 }
 
@@ -39,7 +40,7 @@ pub fn start(app: &AppHandle) {
             if last != Some(today) {
                 last = Some(today);
                 archive::archive_done(&app);
-                match due_now(&app) {
+                match due_notes(&app, false) {
                     Ok(due) if !due.is_empty() => show(&app, false),
                     Ok(_) => {}
                     Err(e) => eprintln!("Failed to look for reminders: {e}"),
@@ -105,23 +106,25 @@ fn place(window: &WebviewWindow, monitor: &Monitor) {
     }
 }
 
-/// Opens the reminders from the input window (the `/reminders` command), with the focus.
-/// Returns false, and opens nothing, when nothing is due.
+/// Opens the reminders from the input window (the `/reminders` command), with the focus; the
+/// page shows the notes ahead when nothing is due. Returns false, and opens nothing, when
+/// nothing is due, now or ahead.
 ///
 /// Async on purpose: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 pub async fn open_reminders(app: AppHandle) -> Result<bool, String> {
-    if due_now(&app)?.is_empty() {
+    if due_notes(&app, false)?.is_empty() && due_notes(&app, true)?.is_empty() {
         return Ok(false);
     }
     show(&app, true);
     Ok(true)
 }
 
-/// Lists the notes due today or earlier, for the reminders window.
+/// Lists the notes due today or earlier, or with `ahead` those due after today, for the
+/// reminders window.
 #[tauri::command]
-pub fn list_due(app: AppHandle) -> Result<Vec<reader::Due>, String> {
-    due_now(&app)
+pub fn list_due(app: AppHandle, ahead: bool) -> Result<Vec<reader::Due>, String> {
+    due_notes(&app, ahead)
 }
 
 /// Shows the reminders window, once the page is ready, in the corner of the screen in use. It

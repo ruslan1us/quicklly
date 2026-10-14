@@ -11,6 +11,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Snooze in the reminders: S moves a note's date to tomorrow and W to a week from today, so it
   comes back then.
+- Tab in the reminders shows the notes ahead, with a later date, by day; `/reminders` opens on
+  them when nothing is due.
 
 ## [0.8.1] - 2026-10-13
 

@@ -122,7 +122,10 @@ doesn't get in the way of your typing; click it to use the keys. <kbd>↑</kbd> 
 a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>S</kbd> moves its date
 to tomorrow and <kbd>W</kbd> a week from today (which takes it off the list too),
 <kbd>Enter</kbd> opens it in the [reader](#reader) and <kbd>Esc</kbd> closes the window; it
-closes by itself once everything is done. `/reminders` in the input window opens it at any time.
+closes by itself once everything is done. <kbd>Tab</kbd> switches to the notes ahead: those with
+a later date, soonest first, under a line with each day's date; the same keys work there except
+<kbd>S</kbd> and <kbd>W</kbd>, and <kbd>Tab</kbd> again goes back. `/reminders` in the input
+window opens it at any time, on the notes ahead when nothing is due.
 
 ### Archive
 
