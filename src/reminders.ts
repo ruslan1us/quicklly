@@ -115,13 +115,16 @@ async function refresh(keepError = false) {
   else await appWindow.close();
 }
 
-/** Marks the selected note done, which takes it off the list. */
-async function markDone() {
+/**
+ * Sends `command` for the selected note: marks it done or moves its date on, which takes it off
+ * the list.
+ */
+async function changeNote(command: string, args: Record<string, unknown>) {
   const item = due[selected];
   if (!item) return;
   let failed = false;
   try {
-    await invoke("set_note_done", { name: item.file, note: item.note, done: true });
+    await invoke(command, { name: item.file, note: item.note, ...args });
   } catch (err) {
     showError(err);
     failed = true;
@@ -150,10 +153,14 @@ document.addEventListener("keydown", (e) => {
     render();
   } else if (e.key === " ") {
     e.preventDefault();
-    void markDone();
+    void changeNote("set_note_done", { done: true });
   } else if (e.key === "Enter") {
     e.preventDefault();
     void openNote();
+  } else if ((e.code === "KeyS" || e.code === "KeyW") && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    // By physical key, so any keyboard layout works: S to tomorrow, W a week on.
+    e.preventDefault();
+    void changeNote("snooze_note", { days: e.code === "KeyS" ? 1 : 7 });
   }
 });
 

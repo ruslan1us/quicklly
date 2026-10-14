@@ -236,13 +236,19 @@ pub fn due(dir: &Path, today: NaiveDate) -> io::Result<Vec<Due>> {
 
 /// The first real date stored in a note's text as `📅 YYYY-MM-DD`.
 fn first_date(text: &str) -> Option<NaiveDate> {
+    first_date_at(text).map(|(_, date)| date)
+}
+
+/// [`first_date`] with where its `YYYY-MM-DD` starts in `text`.
+fn first_date_at(text: &str) -> Option<(usize, NaiveDate)> {
     text.match_indices("📅 ").find_map(|(at, mark)| {
-        let rest = &text[at + mark.len()..];
+        let start = at + mark.len();
+        let rest = &text[start..];
         // Like the frontend, a longer number is no date.
         if rest.get(10..)?.starts_with(|c: char| c.is_ascii_digit()) {
             return None;
         }
-        iso_date(&rest[..10])
+        iso_date(&rest[..10]).map(|date| (start, date))
     })
 }
 
@@ -453,6 +459,23 @@ pub fn set_done(
         };
         lines[span.start] = note_line(done, &note.time, &first);
     })
+}
+
+/// Moves a note's date (the one [`due`] goes by) to `date`, e.g. to be reminded again tomorrow.
+pub fn snooze(dir: &Path, name: &str, note: &NoteRef, date: NaiveDate) -> io::Result<()> {
+    edit_note(dir, name, note, |lines, span| {
+        move_date(&mut lines[span], date)
+    })
+}
+
+/// Replaces the first date in a note's lines with `date`, leaving the rest as it is.
+fn move_date(lines: &mut [String], date: NaiveDate) {
+    for line in lines {
+        if let Some((at, _)) = first_date_at(line) {
+            line.replace_range(at..at + 10, &date.format("%Y-%m-%d").to_string());
+            return;
+        }
+    }
 }
 
 /// Removes a note, including its extra lines, from a notes file.
@@ -1005,6 +1028,66 @@ mod tests {
             ]
         );
         assert!(due(&dir.join("missing"), today).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn moves_the_date_due_goes_by() {
+        let moved = |lines: &[&str], date| {
+            let mut lines: Vec<String> = lines.iter().map(|line| line.to_string()).collect();
+            move_date(&mut lines, date);
+            lines
+        };
+        let tomorrow = NaiveDate::from_ymd_opt(2026, 10, 14).unwrap();
+        let next_week = NaiveDate::from_ymd_opt(2026, 10, 20).unwrap();
+        // Overdue, to tomorrow; today, to a week on.
+        assert_eq!(
+            moved(&["- 09:00 a 📅 2026-10-01 b"], tomorrow),
+            ["- 09:00 a 📅 2026-10-14 b"]
+        );
+        assert_eq!(
+            moved(&["- 09:00 a 📅 2026-10-13"], next_week),
+            ["- 09:00 a 📅 2026-10-20"]
+        );
+        // Only the first real date, wherever it is in the note; the done date stays.
+        assert_eq!(
+            moved(
+                &[
+                    "- [x] 09:00 a 📅 2026-02-30 📅 2026-10-123 ✅ 2026-10-02",
+                    "  ![x](images/a.png)",
+                    "",
+                    "  b 📅 2026-10-11 then 📅 2026-10-12",
+                ],
+                tomorrow
+            ),
+            [
+                "- [x] 09:00 a 📅 2026-02-30 📅 2026-10-123 ✅ 2026-10-02",
+                "  ![x](images/a.png)",
+                "",
+                "  b 📅 2026-10-14 then 📅 2026-10-12",
+            ]
+        );
+        assert_eq!(moved(&["- 09:00 no date"], tomorrow), ["- 09:00 no date"]);
+    }
+
+    #[test]
+    fn snoozes_a_note_and_keeps_the_rest_of_the_file() {
+        let dir = temp_dir("snooze");
+        let path = dir.join("inbox.md");
+        fs::write(
+            &path,
+            "# Inbox\r\n\r\n- 08:00 call back\r\n  about 📅 2026-10-12\r\n- 09:00 b 📅 2026-10-12\r\n",
+        )
+        .unwrap();
+
+        let note = note_ref(2, "08:00", false, "call back\nabout 📅 2026-10-12");
+        snooze(&dir, "inbox.md", &note, today().succ_opt().unwrap()).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# Inbox\r\n\r\n- 08:00 call back\r\n  about 📅 2026-10-14\r\n- 09:00 b 📅 2026-10-12\r\n"
+        );
+        // A note that moved since is not touched.
+        assert!(snooze(&dir, "inbox.md", &note, today()).is_err());
         fs::remove_dir_all(&dir).unwrap();
     }
 

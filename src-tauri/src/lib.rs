@@ -247,6 +247,21 @@ fn set_note_done(
     Ok(())
 }
 
+/// Moves a note's date to `days` from today, from the reminders.
+#[tauri::command]
+fn snooze_note(
+    app: AppHandle,
+    name: String,
+    note: reader::NoteRef,
+    days: u64,
+) -> Result<(), String> {
+    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+    let date = chrono::Local::now().date_naive() + chrono::Days::new(days);
+    reader::snooze(&dir, &name, &note, date).map_err(|e| format!("Couldn't update {name}: {e}"))?;
+    notes_changed(&app);
+    Ok(())
+}
+
 /// Deletes a note from a notes file, with its images.
 #[tauri::command]
 fn delete_note(app: AppHandle, name: String, note: reader::NoteRef) -> Result<(), String> {
@@ -498,6 +513,7 @@ pub fn run() {
             read_note_file,
             delete_note_file,
             set_note_done,
+            snooze_note,
             delete_note,
             edit_note,
             search_notes,

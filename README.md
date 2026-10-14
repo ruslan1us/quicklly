@@ -119,9 +119,10 @@ Notes that are not done and have a date of today or earlier pop up in a small wi
 bottom right corner when Quicklly starts (also with Windows) and when a new day begins while it
 runs: overdue ones first, then today's. The window stays on top without taking the focus, so it
 doesn't get in the way of your typing; click it to use the keys. <kbd>↑</kbd> <kbd>↓</kbd> select
-a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>Enter</kbd> opens it in
-the [reader](#reader) and <kbd>Esc</kbd> closes the window; it closes by itself once everything
-is done. `/reminders` in the input window opens it at any time.
+a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>S</kbd> moves its date
+to tomorrow and <kbd>W</kbd> a week from today (which takes it off the list too),
+<kbd>Enter</kbd> opens it in the [reader](#reader) and <kbd>Esc</kbd> closes the window; it
+closes by itself once everything is done. `/reminders` in the input window opens it at any time.
 
 ### Archive
 

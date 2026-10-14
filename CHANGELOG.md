@@ -7,6 +7,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Snooze in the reminders: S moves a note's date to tomorrow and W to a week from today, so it
+  comes back then.
+
 ## [0.8.1] - 2026-10-13
 
 ### Added
