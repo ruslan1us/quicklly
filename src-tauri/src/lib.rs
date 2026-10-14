@@ -331,11 +331,13 @@ fn undo_change(app: AppHandle, name: String, change: reader::Change) -> Result<u
     Ok(images::restore(&change.images))
 }
 
-/// Finds notes containing `query` in all notes files, for search in the input window.
+/// Finds notes containing `query`, as they are shown, in all notes files, for search in the
+/// input window.
 #[tauri::command]
 fn search_notes(app: AppHandle, query: String) -> Result<Vec<reader::Hit>, String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::search(&dir, &query, 50).map_err(|e| format!("Search failed: {e}"))
+    let format = settings::date_format(&app);
+    reader::search(&dir, &query, format, 50).map_err(|e| format!("Search failed: {e}"))
 }
 
 /// A note for the reader to open, e.g. a search result.

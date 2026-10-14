@@ -23,6 +23,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Open windows (the reader, the reminders and `/done`) update by themselves when a note is saved
   with `quicklly add` or a `quicklly://` link, or when notes files change in another editor such
   as Obsidian or VS Code.
+- Search matches notes as they are shown: dates in the date format of the settings
+  (`15/10/2026`, not `2026-10-15`), images by their `[Image #N]` label rather than their file
+  path, and no longer the hidden done date.
 
 ### Fixed
 

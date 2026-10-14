@@ -27,4 +27,4 @@ dates in the **Date format** setting and convert at every boundary between a tex
 - Only the first valid due date of a note counts for reminders and snoozing; only a trailing done
   date counts for the archive and the journal.
 - Notes completed before this decision have no done date and are never archived automatically.
-- Search matches stored text, so dates are found by their ISO form.
+- Search originally matched the stored text, so dates were found by their ISO form; since v0.8.2 it matches the text as shown (see [backend](../backend.md)).

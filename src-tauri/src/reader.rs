@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::archive::ARCHIVE_DIR;
 use crate::images::{self, IMAGES_DIR};
 use crate::notes::{first_tag, format_note, note_lines, INBOX_FILE};
+use crate::settings::DateFormat;
 
 /// A notes file as listed in the reader.
 #[derive(Debug, PartialEq, Serialize)]
@@ -150,9 +151,10 @@ pub struct Hit {
     pub text: String,
 }
 
-/// Finds the notes in all notes files that contain `query`, ignoring case; newest first,
-/// at most `limit` of them.
-pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
+/// Finds the notes in all notes files that contain `query`, ignoring case, in their text as the
+/// windows show it (see [`shown_text`]), with dates in `format`; newest first, at most `limit`
+/// of them.
+pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::Result<Vec<Hit>> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
         return Ok(Vec::new());
@@ -169,7 +171,7 @@ pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
                     time,
                     done,
                     text,
-                } if text.to_lowercase().contains(&query) => hits.push(Hit {
+                } if shown_text(&text, format).to_lowercase().contains(&query) => hits.push(Hit {
                     file: file.name.clone(),
                     line,
                     day: day.clone(),
@@ -184,6 +186,29 @@ pub fn search(dir: &Path, query: &str, limit: usize) -> io::Result<Vec<Hit>> {
     hits.sort_by(|a, b| (&b.day, &b.time).cmp(&(&a.day, &a.time)));
     hits.truncate(limit);
     Ok(hits)
+}
+
+/// A note's text as the windows show it: without the day it was done, its images as their
+/// labels `[Image #N]` and its dates (`📅` or `✅`) in `format`.
+fn shown_text(text: &str, format: DateFormat) -> String {
+    let (first, rest) = text.split_at(text.find('\n').unwrap_or(text.len()));
+    let text = images::labels(&format!("{}{rest}", split_done_date(first).0));
+    let mut shown = String::with_capacity(text.len());
+    let mut from = 0;
+    for (at, mark) in text.match_indices(['📅', '✅']) {
+        let start = at + mark.len() + 1;
+        let Some(date) = text[at + mark.len()..]
+            .strip_prefix(' ')
+            .and_then(stored_date)
+        else {
+            continue;
+        };
+        shown.push_str(&text[from..start]);
+        shown.push_str(&format.format(date));
+        from = start + 10;
+    }
+    shown.push_str(&text[from..]);
+    shown
 }
 
 /// A note that is due, or due ahead, found by [`due`].
@@ -288,13 +313,17 @@ fn first_date(text: &str) -> Option<NaiveDate> {
 fn first_date_at(text: &str) -> Option<(usize, NaiveDate)> {
     text.match_indices("📅 ").find_map(|(at, mark)| {
         let start = at + mark.len();
-        let rest = &text[start..];
-        // Like the frontend, a longer number is no date.
-        if rest.get(10..)?.starts_with(|c: char| c.is_ascii_digit()) {
-            return None;
-        }
-        iso_date(&rest[..10]).map(|date| (start, date))
+        stored_date(&text[start..]).map(|date| (start, date))
     })
+}
+
+/// The real date `YYYY-MM-DD` that `text` starts with, as a date is stored after its mark.
+fn stored_date(text: &str) -> Option<NaiveDate> {
+    // Like the frontend, a longer number is no date.
+    if text.get(10..)?.starts_with(|c: char| c.is_ascii_digit()) {
+        return None;
+    }
+    iso_date(&text[..10])
 }
 
 /// A real date written exactly as `YYYY-MM-DD`.
@@ -1114,7 +1143,7 @@ mod tests {
         )
         .unwrap();
 
-        let hits = search(&dir, " MILK ", 10).unwrap();
+        let hits = search(&dir, " MILK ", DateFormat::DayMonthYear, 10).unwrap();
         let found: Vec<_> = hits
             .iter()
             .map(|h| (h.file.as_str(), h.line, h.day.as_str(), h.time.as_str()))
@@ -1127,12 +1156,71 @@ mod tests {
             ]
         );
         assert_eq!(
-            search(&dir, "bread", 10).unwrap()[0].text,
+            search(&dir, "bread", DateFormat::DayMonthYear, 10).unwrap()[0].text,
             "more milk\nand bread"
         );
-        assert_eq!(search(&dir, "milk", 1).unwrap().len(), 1);
-        assert!(search(&dir, "  ", 10).unwrap().is_empty());
+        assert_eq!(
+            search(&dir, "milk", DateFormat::DayMonthYear, 1)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(search(&dir, "  ", DateFormat::DayMonthYear, 10)
+            .unwrap()
+            .is_empty());
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn searches_notes_as_they_are_shown() {
+        let dir = temp_dir("search-shown");
+        fs::write(
+            dir.join("todo.md"),
+            "# todo\n\n- 09:00 call the bank 📅 2026-10-15\n\
+             - 10:00 receipt ![Image #1](images/2026-10-07_14-32-05.png)\n\
+             - [x] 11:00 paid ✅ 2026-10-13\n",
+        )
+        .unwrap();
+        let found = |query: &str, format| -> Vec<String> {
+            search(&dir, query, format, 10)
+                .unwrap()
+                .into_iter()
+                .map(|hit| hit.time)
+                .collect()
+        };
+        let day_first = DateFormat::DayMonthYear;
+        // Dates in the date format, not as stored.
+        assert_eq!(found("📅 15/10/2026", day_first), ["09:00"]);
+        assert!(found("2026-10-15", day_first).is_empty());
+        assert_eq!(found("10/15/2026", DateFormat::MonthDayYear), ["09:00"]);
+        assert_eq!(found("2026-10-15", DateFormat::YearMonthDay), ["09:00"]);
+        // Images as their labels, not their paths.
+        assert_eq!(found("[image #1]", day_first), ["10:00"]);
+        assert!(found("images/", day_first).is_empty());
+        assert!(found("png", day_first).is_empty());
+        // The day a note was done is not shown.
+        assert!(found("13/10/2026", day_first).is_empty());
+        assert_eq!(found("paid", day_first), ["11:00"]);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn shows_a_note_as_the_windows_do() {
+        let format = DateFormat::DayMonthYear;
+        assert_eq!(
+            shown_text(
+                "a 📅 2026-10-15 ✅ 2026-10-01 b ✅ 2026-10-13\n📅 2026-10-15",
+                format
+            ),
+            "a 📅 15/10/2026 ✅ 01/10/2026 b\n📅 15/10/2026"
+        );
+        // Not dates: not real, part of a longer number, or without the space.
+        let not_dates = "📅 2026-02-30 📅 2026-10-123 📅2026-10-15 📅 2026-10-1";
+        assert_eq!(shown_text(not_dates, format), not_dates);
+        assert_eq!(
+            shown_text("![Image #2](../images/a.png) ✅ 2026-10-13", format),
+            "[Image #2]"
+        );
     }
 
     #[test]
@@ -1425,7 +1513,10 @@ mod tests {
         assert!(read_file(&dir, "notes.txt").is_err());
         assert!(read_file(&dir, "../2026-09-26.md").is_err());
         assert!(read_file(&dir, "..\\2026-09-26.md").is_err());
-        assert_eq!(search(&dir, "#todo", 10).unwrap()[0].day, "2026-09-26");
+        assert_eq!(
+            search(&dir, "#todo", DateFormat::DayMonthYear, 10).unwrap()[0].day,
+            "2026-09-26"
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -1446,7 +1537,12 @@ mod tests {
             .map(|f| f.name)
             .collect();
         assert_eq!(names, ["todo.md"]);
-        assert_eq!(search(&dir, "milk", 10).unwrap().len(), 1);
+        assert_eq!(
+            search(&dir, "milk", DateFormat::DayMonthYear, 10)
+                .unwrap()
+                .len(),
+            1
+        );
         assert_eq!(list_tags(&dir).unwrap(), ["todo"]);
         assert!(read_file(&dir, "archive/todo.md").is_err());
         fs::remove_dir_all(&dir).unwrap();
@@ -1572,7 +1668,7 @@ mod tests {
                 "work/quicklly"
             ]
         );
-        let hit = &search(&dir, "milk", 50).unwrap();
+        let hit = &search(&dir, "milk", DateFormat::DayMonthYear, 50).unwrap();
         assert_eq!(hit.len(), names.len());
         assert!(hit
             .iter()

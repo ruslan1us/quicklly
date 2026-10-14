@@ -45,8 +45,10 @@ opens the file in append mode. The full format is in [Data format](data-format.m
   then subfolders by name. The reader re-sorts by modification time for its "recent first" view.
 - `parse` is the shared parser used by listing, search, due and done queries, edits and the
   archive.
-- `search(dir, query, limit)` is a case-insensitive substring match over each note's stored text;
-  the day of a note is the daily file's date or the last `## ` heading above it; results are
+- `search(dir, query, format, limit)` is a case-insensitive substring match over each note's text
+  as the windows show it (`shown_text`: no done date, image labels instead of Markdown images,
+  dates in the date format `format`, read from the settings by the command); the day of a note is
+  the daily file's date or the last `## ` heading above it; results carry the stored text, are
   sorted newest first by day and time and truncated to `limit` (50 from the command).
 - `due(dir, today, ahead)` returns not-done notes whose first due date is on or before today, or
   after today when `ahead`, oldest date first; equal dates keep file and line order (stable sort).

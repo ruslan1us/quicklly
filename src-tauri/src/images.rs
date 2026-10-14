@@ -122,6 +122,36 @@ pub fn paths_in(text: &str) -> Vec<String> {
     paths
 }
 
+/// A note's text with each image as notes store it, `![Image #N](path)`, as its label
+/// `[Image #N]`, the way the windows show it (`markdownNodes` in `images.ts`).
+pub fn labels(text: &str) -> String {
+    let mut shown = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find("![Image #") {
+        let after = &rest[start + "![Image #".len()..];
+        let digits = after.len() - after.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+        let path_end = after[digits..].strip_prefix("](").and_then(|path| {
+            let end = path.find(')')?;
+            let plain = end > 0 && !path[..end].contains(|c: char| c == '(' || c.is_whitespace());
+            plain.then_some(end)
+        });
+        match path_end {
+            Some(end) if digits > 0 => {
+                shown.push_str(&rest[..start]);
+                shown.push_str(&format!("[Image #{}]", &after[..digits]));
+                rest = &after[digits + "](".len() + end + ")".len()..];
+            }
+            // Not an image: keep the `!` and look further.
+            _ => {
+                shown.push_str(&rest[..=start]);
+                rest = &rest[start + 1..];
+            }
+        }
+    }
+    shown.push_str(rest);
+    shown
+}
+
 /// The image files at `paths` (linked from the notes file `file`) that no notes file in `dir`
 /// or its archive, in any folder, links to any more; missing ones are left out.
 fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> {
@@ -278,6 +308,17 @@ mod tests {
             paths_in("![Image #](images/a.png) ![Image #1]() [Image #1] ![Image #1](a b)")
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn shows_images_as_their_labels() {
+        assert_eq!(
+            labels("a ![Image #1](images/a.png) b\n![Image #12](../images/b.jpg)!"),
+            "a [Image #1] b\n[Image #12]!"
+        );
+        let not_images =
+            "![Image #](images/a.png) ![Image #1]() [Image #1] ![Image #1](a b) ![x](y)";
+        assert_eq!(labels(not_images), not_images);
     }
 
     #[test]

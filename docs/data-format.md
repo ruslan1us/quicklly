@@ -189,9 +189,11 @@ dates in the date format. Every boundary converts explicitly:
 | Archive moves a note | Image links gain one `../` for the `archive/` folder | `archive::archived_line` |
 | Done journal copied | Display form: `## <shown date>` headings, `- text` with image labels and shown dates | `done.ts` `markdown()` |
 | Date format changed | Open text fields re-render: `toDisplay(toStored(text, previous))` | `followDateFormat` callbacks |
+| Search matches a note | Rust builds the display form: done date dropped, `images::labels` for image labels, dates in the date format (`DateFormat::format`) | `reader::shown_text` |
 
-Search matches the stored text (`reader::search`), so a date is found by its ISO form, not by the
-date format shown.
+Search matches what the results show (`reader::search`): a date is found in the date format, an
+image by its label `[Image #N]` and not its path, and the hidden done date not at all. Links are
+the exception: they are matched in full, while the results show them short.
 
 ## Reserved names
 

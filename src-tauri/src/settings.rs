@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use chrono::NaiveDate;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -74,6 +75,19 @@ pub enum DateFormat {
     YearMonthDay,
     #[serde(rename = "DD.MM.YYYY")]
     DayMonthYearDots,
+}
+
+impl DateFormat {
+    /// `date` as the windows show it in this format, like `formatDate` in `dates.ts`.
+    pub fn format(self, date: NaiveDate) -> String {
+        let pattern = match self {
+            DateFormat::DayMonthYear => "%d/%m/%Y",
+            DateFormat::MonthDayYear => "%m/%d/%Y",
+            DateFormat::YearMonthDay => "%Y-%m-%d",
+            DateFormat::DayMonthYearDots => "%d.%m.%Y",
+        };
+        date.format(pattern).to_string()
+    }
 }
 
 /// How long after a note is done it is moved to the archive.
@@ -289,7 +303,8 @@ fn theme(app: &AppHandle) -> Theme {
     stored(app, THEME_KEY)
 }
 
-fn date_format(app: &AppHandle) -> DateFormat {
+/// How dates are shown; `DD/MM/YYYY` unless changed in settings.
+pub fn date_format(app: &AppHandle) -> DateFormat {
     stored(app, DATE_FORMAT_KEY)
 }
 
@@ -495,6 +510,19 @@ mod tests {
             );
         }
         assert!(serde_json::from_value::<DateFormat>("D/M/Y".into()).is_err());
+    }
+
+    #[test]
+    fn formats_dates_as_the_windows_show_them() {
+        let date = NaiveDate::from_ymd_opt(2026, 10, 5).unwrap();
+        for (format, shown) in [
+            (DateFormat::DayMonthYear, "05/10/2026"),
+            (DateFormat::MonthDayYear, "10/05/2026"),
+            (DateFormat::YearMonthDay, "2026-10-05"),
+            (DateFormat::DayMonthYearDots, "05.10.2026"),
+        ] {
+            assert_eq!(format.format(date), shown);
+        }
     }
 
     #[test]

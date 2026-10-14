@@ -7,13 +7,17 @@ let calls: Call[];
 let note: HTMLTextAreaElement;
 let calendar: HTMLDivElement;
 
-/** Opens the input window, with dates in `dateFormat`, on 13 October 2026. */
-async function open(dateFormat = "DD/MM/YYYY") {
+/**
+ * Opens the input window, with dates in `dateFormat`, on 13 October 2026; other commands are
+ * answered from `replies`.
+ */
+async function open(dateFormat = "DD/MM/YYYY", replies: Record<string, unknown> = {}) {
   vi.setSystemTime(new Date(2026, 9, 13, 15, 40));
   calls = mockTauri({
     get_appearance: { theme: "default", transparency: 0, scale: 100 },
     get_date_format: dateFormat,
     get_update: null,
+    ...replies,
   });
   await loadPage(html, () => import("../src/windows/input/main.ts"));
   note = document.querySelector("#note")!;
@@ -92,4 +96,32 @@ test("dates are typed in the date format of the settings", async () => {
   press(note, "Enter");
   await settle();
   expect(argsOf(calls, "save_note")).toEqual([{ text: "call mom 📅 2026-10-15" }]);
+});
+
+test("search results mark the query in the text as shown, dates and image labels too", async () => {
+  closePage();
+  const hit = {
+    file: "todo.md",
+    line: 2,
+    day: "2026-10-13",
+    time: "09:00",
+    done: false,
+    text: "bank 📅 2026-10-15 ![Image #1](images/a.png)",
+  };
+  await open("DD/MM/YYYY", { search_notes: [hit] });
+  const marked = () => [...document.querySelectorAll("#results mark")].map((m) => m.textContent);
+
+  type(note, "?");
+  type(note, "15/10/2026");
+  await settle();
+  expect(argsOf(calls, "search_notes")).toContainEqual({ query: "15/10/2026" });
+  expect(document.querySelector("#results .text")!.textContent).toBe(
+    "bank 📅 15/10/2026 [Image #1]",
+  );
+  expect(marked()).toEqual(["15/10/2026"]);
+
+  note.select();
+  type(note, "image #1");
+  await settle();
+  expect(marked()).toEqual(["Image #1"]);
 });

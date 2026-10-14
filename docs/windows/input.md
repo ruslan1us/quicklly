@@ -66,9 +66,12 @@ show together.
   results (day, time, done mark, first line with further lines joined by ` ⏎ `) appear under the
   field with the query highlighted, ↑ ↓ select, <kbd>Enter</kbd> or a click opens the result in the
   reader through `open_note`. Each search is numbered so that a slower earlier response cannot
-  replace a newer one. Search covers notes files only, not the archive, and matches the stored text
-  (see [Data format](../data-format.md#display-and-stored-forms)). Tag suggestions and image paste
-  are disabled in search mode.
+  replace a newer one. Search covers notes files only, not the archive, and matches the text as the
+  results show it: dates in the date format, images as `[Image #N]`, no done date; links are
+  matched in full (see [Data format](../data-format.md#display-and-stored-forms)). The highlight
+  runs on the same shown text, so what matched is what is marked, except a query that spans a
+  date, an image label or a link and the text next to it, which is found but not marked. Tag
+  suggestions and image paste are disabled in search mode.
 - **Dates.** `/date` and <kbd>Enter</kbd> open the calendar under the note; `/date tomorrow` or
   `/date <date in the format>` inserts the date at once; an unknown word shows
   `Unknown date: … — use <format> or tomorrow`. One <kbd>Backspace</kbd> after a date removes it as
