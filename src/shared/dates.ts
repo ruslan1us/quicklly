@@ -56,6 +56,12 @@ export function formatDate(date: Date, format = dateFormat) {
     .replace("YYYY", String(date.getFullYear()));
 }
 
+/** A `YYYY-MM-DD` date in `format`. */
+export function shownDate(date: string, format = dateFormat) {
+  const [year, month, day] = date.split("-").map(Number);
+  return formatDate(new Date(year, month - 1, day), format);
+}
+
 /** The date `text` stands for in `format`, or null if it is not a real date in it. */
 export function parseDate(text: string, format = dateFormat) {
   const match = new RegExp(`^${pattern(format)}$`).exec(text);

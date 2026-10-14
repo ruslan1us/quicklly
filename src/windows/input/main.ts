@@ -382,6 +382,10 @@ async function save() {
     await switchTo("open_changelog");
     return;
   }
+  if (text === "/done") {
+    await switchTo("open_done");
+    return;
+  }
   if (text === "/reminders") {
     try {
       if (await invoke<boolean>("open_reminders")) {

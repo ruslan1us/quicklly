@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { dateNodes, followDateFormat, formatDate, toDisplay } from "../../shared/dates";
+import { dateNodes, followDateFormat, shownDate, toDisplay } from "../../shared/dates";
 import { markdownNodes } from "../../shared/images";
 import { linkNodes, shortLink } from "../../shared/links";
 import { appWindow, fitToContent } from "../../shared/popup";
@@ -61,12 +61,6 @@ function dueInfo(overdue: number) {
   if (overdue === -1) return span("tomorrow");
   if (overdue < 0) return span(`in ${-overdue} days`);
   return span(`${overdue} ${overdue === 1 ? "day" : "days"} overdue`, "overdue");
-}
-
-/** A `YYYY-MM-DD` date in the date format. */
-function shownDate(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return formatDate(new Date(year, month - 1, day));
 }
 
 /** The line above the notes ahead of one day: its date. */

@@ -41,6 +41,7 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | What's new                     | Type `/changelog` and press <kbd>Enter</kbd> (see [CHANGELOG.md](CHANGELOG.md)) |
 | Save a note from a script or a link | `quicklly.exe add "buy milk #todo"` or `quicklly://add?text=buy%20milk%20%23todo`; see [From scripts and links](#from-scripts-and-links) |
 | Notes due                      | Type `/reminders` and press <kbd>Enter</kbd>; see [Reminders](#reminders) |
+| What you did this week         | Type `/done` and press <kbd>Enter</kbd>; see [Done](#done) |
 | Update                         | When a new version is out, the hint says so for two seconds; type `/update` and press <kbd>Enter</kbd> to install it now. Otherwise it is downloaded in the background and installed on the next start (unless **Auto update** is off in the settings) |
 | Exit                           | Type `/exit` and press <kbd>Enter</kbd>, or tray menu → **Quit** |
 
@@ -138,6 +139,15 @@ notes folder: `todo.md` → `archive/todo.md`, `2026-10-08.md` → `archive/2026
 by day like the original. This happens when Quicklly starts, when a new day begins and when the
 setting is changed. The reader, the search and the reminders don't show the archive. Notes marked
 done before this version have no done date, so they stay where they are.
+
+### Done
+
+`/done` in the input window lists the notes marked done in the last 7 days (today and the six
+days before), from every notes file and the archive, under a line with the date each was done,
+the latest day first. <kbd>C</kbd> copies the list as Markdown for a report, a `## <date>`
+heading for each day and the notes under it; <kbd>↑</kbd> <kbd>↓</kbd> <kbd>PgUp</kbd>
+<kbd>PgDn</kbd> scroll a long list and <kbd>Esc</kbd> closes it. Notes
+marked done before v0.8.1 have no done date, so they are not listed.
 
 ## Reader
 

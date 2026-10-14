@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../../shared/themes.css" />
+    <link rel="stylesheet" href="./done.css" />
+    <title>Quicklly Done</title>
+    <script type="module" src="./done.ts" defer></script>
+  </head>
+
+  <body>
+    <main>
+      <header id="title" data-tauri-drag-region>Quicklly · Done</header>
+      <ul id="rows"></ul>
+      <p id="empty" class="dim" hidden>Nothing done in the last 7 days.</p>
+      <p id="error" class="error" hidden></p>
+      <footer id="help"></footer>
+    </main>
+  </body>
+</html>

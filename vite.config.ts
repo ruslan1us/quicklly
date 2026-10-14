@@ -48,6 +48,7 @@ export default defineConfig(() => ({
         help: "src/windows/help/index.html",
         changelog: "src/windows/changelog/index.html",
         reminders: "src/windows/reminders/index.html",
+        done: "src/windows/done/index.html",
       },
     },
   },

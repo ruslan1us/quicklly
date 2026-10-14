@@ -1,0 +1,36 @@
+/* Done journal layout on top of terminal.css, which is imported here (rather than linked
+   separately) so that the build always puts it first. */
+@import "../../shared/terminal.css";
+
+/* A done note: the first line of its text, not crossed out — this is a journal. */
+.note {
+  overflow: hidden;
+  color: var(--fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Links are shown short (see links.ts) and underlined. */
+.note .link {
+  text-decoration: underline;
+}
+
+/* The date above the notes done that day, as in the reminders. */
+.day {
+  margin-top: 6px;
+  color: var(--dim);
+}
+
+.day:first-child {
+  margin-top: 0;
+}
+
+.dim {
+  margin: 0;
+  color: var(--dim);
+}
+
+/* An answer in front of the help, like "Copied 3 notes". */
+#help .message {
+  color: var(--accent);
+}

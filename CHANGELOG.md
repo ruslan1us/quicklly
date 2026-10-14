@@ -13,6 +13,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   comes back then.
 - Tab in the reminders shows the notes ahead, with a later date, by day; `/reminders` opens on
   them when nothing is due.
+- `/done` lists the notes done in the last 7 days, archived ones too, by day; C copies them as
+  Markdown for a report.
 
 ## [0.8.1] - 2026-10-13
 

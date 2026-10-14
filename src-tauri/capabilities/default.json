@@ -9,7 +9,8 @@
     "pad",
     "help",
     "changelog",
-    "reminders"
+    "reminders",
+    "done"
   ],
   "permissions": [
     "core:default",

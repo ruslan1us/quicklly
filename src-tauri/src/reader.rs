@@ -234,6 +234,51 @@ pub fn due(dir: &Path, today: NaiveDate, ahead: bool) -> io::Result<Vec<Due>> {
     Ok(found)
 }
 
+/// A done note found by [`done_since`].
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Done {
+    /// The notes file it is in; `archive/…` once archived.
+    pub file: String,
+    /// Its text, without the day it was done.
+    pub text: String,
+    /// The day it was done, `YYYY-MM-DD`.
+    pub date: String,
+}
+
+/// Finds the notes in all notes files and in the archive that were done (`✅ YYYY-MM-DD`) on
+/// `from` or later: the latest day first, notes of the same day in the order of the files (the
+/// archive last) and of the notes in them. Notes done without a date are left out.
+pub fn done_since(dir: &Path, from: NaiveDate) -> io::Result<Vec<Done>> {
+    let mut found = Vec::new();
+    for (folder, prefix) in [(dir.to_path_buf(), ""), (dir.join(ARCHIVE_DIR), "archive/")] {
+        for file in list_files(&folder)? {
+            for item in parse(&fs::read_to_string(path_of(&folder, &file.name))?) {
+                let Item::Note {
+                    done: true, text, ..
+                } = item
+                else {
+                    continue;
+                };
+                let (first, rest) = text.split_at(text.find('\n').unwrap_or(text.len()));
+                let (first, Some(date)) = split_done_date(first) else {
+                    continue;
+                };
+                if date < from {
+                    continue;
+                }
+                found.push(Done {
+                    file: format!("{prefix}{}", file.name),
+                    text: format!("{first}{rest}"),
+                    date: date.format("%Y-%m-%d").to_string(),
+                });
+            }
+        }
+    }
+    // A stable sort, so notes of the same day keep their order.
+    found.sort_by(|a, b| b.date.cmp(&a.date));
+    Ok(found)
+}
+
 /// The first real date stored in a note's text as `📅 YYYY-MM-DD`.
 fn first_date(text: &str) -> Option<NaiveDate> {
     first_date_at(text).map(|(_, date)| date)
@@ -1068,6 +1113,61 @@ mod tests {
                 (2, String::from("2026-10-20"), -7),
             ]
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn finds_notes_done_lately_latest_day_first() {
+        let dir = temp_dir("done-since");
+        fs::create_dir_all(dir.join("work")).unwrap();
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::write(
+            dir.join("inbox.md"),
+            [
+                "# Inbox",
+                "",
+                "## 2026-10-01",
+                "",
+                "- [x] 08:00 six days ago ✅ 2026-10-07",
+                "- [x] 08:30 a week ago ✅ 2026-10-06",
+                "- [x] 09:00 today ✅ 2026-10-13",
+                "  second line",
+                "- 09:30 not done ✅ 2026-10-13",
+                "- [x] 10:00 done without a date",
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+        fs::write(
+            dir.join("work").join("quicklly.md"),
+            "# work/quicklly\n\n- [x] 09:00 ship #work/quicklly ✅ 2026-10-13\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("archive").join("todo.md"),
+            "# todo\n\n- [x] 09:00 archived ✅ 2026-10-10\n- [x] 10:00 long ago ✅ 2026-09-01\n",
+        )
+        .unwrap();
+
+        let from = today() - chrono::Days::new(6);
+        let found: Vec<_> = done_since(&dir, from)
+            .unwrap()
+            .into_iter()
+            .map(|d| (d.file, d.text, d.date))
+            .collect();
+        let entry = |file: &str, text: &str, date: &str| {
+            (String::from(file), String::from(text), String::from(date))
+        };
+        assert_eq!(
+            found,
+            [
+                entry("inbox.md", "today\nsecond line", "2026-10-13"),
+                entry("work/quicklly.md", "ship #work/quicklly", "2026-10-13"),
+                entry("archive/todo.md", "archived", "2026-10-10"),
+                entry("inbox.md", "six days ago", "2026-10-07"),
+            ]
+        );
+        assert!(done_since(&dir.join("missing"), from).unwrap().is_empty());
         fs::remove_dir_all(&dir).unwrap();
     }
 
