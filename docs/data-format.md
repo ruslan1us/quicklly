@@ -137,10 +137,15 @@ stored in ISO form. See [ADR 0004](decisions/0004-obsidian-tasks-formats-for-due
   by another digit, is the note's date for reminders and snoozing (`reader::first_date`). Further
   dates in the note are ordinary text. Snoozing replaces only that first date.
 - **Done date.** Marking a note done writes `- [x] HH:MM text ✅ YYYY-MM-DD` with the current date;
-  a note with an empty text becomes `- [x] HH:MM ✅ YYYY-MM-DD`. Marking it not done removes the
-  checkbox and a trailing done date. Only a `✅ date` at the very end of the first line, after a
-  space or alone, counts (`reader::split_done_date`); one in the middle of the text is left alone.
-  The pages hide the done date, and an edit keeps it.
+  a note with an empty text becomes `- [x] HH:MM ✅ YYYY-MM-DD`. Marking it not done writes an
+  open checkbox, `- [ ] HH:MM text`, and removes a trailing done date. Only a `✅ date` at the very
+  end of the first line, after a space or alone, counts (`reader::split_done_date`); one in the
+  middle of the text is left alone. The pages hide the done date, and an edit keeps it and the
+  checkbox (or its absence) as they are.
+- **Open checkbox.** New notes are written as `- HH:MM text`, without a checkbox. A note that was
+  done and is marked not done again becomes an open task, `- [ ] HH:MM text`, as Obsidian would
+  have it; a done line does not record whether it had `[ ]` before, so the plain form is not
+  restored. Quicklly treats `- [ ] HH:MM` and `- HH:MM` the same everywhere.
 - Notes done without a done date (marked before version 0.8.1) are never archived and do not
   appear in the done journal.
 - **Display.** Windows show and accept dates in the **Date format** setting (`DD/MM/YYYY`,

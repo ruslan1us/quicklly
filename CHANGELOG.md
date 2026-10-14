@@ -29,6 +29,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The help gives the archive delay set in **Archive done notes**, or says the archive is off,
   instead of always "after 7 days".
 - `/done` updates while it is open when notes are done, undone, edited or archived elsewhere.
+- A task written as `- [ ] HH:MM` keeps its open checkbox when edited in the reader, and a done
+  note marked not done again becomes an open task `- [ ]` instead of a plain list item.
 
 ## [0.8.1] - 2026-10-13
 

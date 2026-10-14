@@ -398,14 +398,19 @@ fn daily_date(name: &str) -> Option<&str> {
         .filter(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok())
 }
 
-/// Splits `- HH:MM text` or `- [x] HH:MM text` into (done, time, text).
+/// The checkbox of a note line: `[x] `, `[X] `, `[ ] ` or none (`""`).
+fn checkbox(line: &str) -> &str {
+    line.strip_prefix("- ")
+        .and_then(|rest| rest.get(..4))
+        .filter(|mark| matches!(*mark, "[x] " | "[X] " | "[ ] "))
+        .unwrap_or("")
+}
+
+/// Splits `- HH:MM text`, `- [ ] HH:MM text` or `- [x] HH:MM text` into (done, time, text).
 fn parse_note_line(line: &str) -> Option<(bool, &str, &str)> {
-    let rest = line.strip_prefix("- ")?;
-    let (done, rest) = match rest.get(..4) {
-        Some("[x] " | "[X] ") => (true, &rest[4..]),
-        Some("[ ] ") => (false, &rest[4..]),
-        _ => (false, rest),
-    };
+    let mark = checkbox(line);
+    let rest = line.strip_prefix("- ")?.get(mark.len()..)?;
+    let done = matches!(mark, "[x] " | "[X] ");
     let bytes = rest.as_bytes();
     let is_time = bytes.len() >= 5
         && bytes[0].is_ascii_digit()
@@ -497,7 +502,8 @@ pub struct Change {
 }
 
 /// Marks a note as done on `today` (`- [x] HH:MM text ✅ YYYY-MM-DD`) or not done
-/// (`- HH:MM text`, without the done date).
+/// (`- [ ] HH:MM text`, without the done date). A note done and then not done again is an open
+/// task, as in Obsidian: the plain `- HH:MM` it may have had is not remembered.
 pub fn set_done(
     dir: &Path,
     name: &str,
@@ -512,7 +518,8 @@ pub fn set_done(
             (true, true) => format!("{DONE_MARK}{}", today.format("%Y-%m-%d")),
             (true, false) => format!("{first} {DONE_MARK}{}", today.format("%Y-%m-%d")),
         };
-        lines[span.start] = note_line(done, &note.time, &first);
+        let mark = if done { "[x] " } else { "[ ] " };
+        lines[span.start] = note_line(mark, &note.time, &first);
     })
 }
 
@@ -565,7 +572,7 @@ pub(crate) fn remove_empty_days(lines: &mut Vec<String>) {
     }
 }
 
-/// Replaces the text of a note, keeping its time and done mark. Extra lines are indented
+/// Replaces the text of a note, keeping its time and checkbox. Extra lines are indented
 /// under the first one, like new notes; a blank text is refused (Del deletes a note).
 pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Result<Change> {
     let new_lines = note_lines(text);
@@ -597,7 +604,7 @@ pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Resul
         .collect();
     let rest: Vec<&str> = rest.iter().map(String::as_str).collect();
     edit_note(dir, name, note, |lines, span| {
-        let first = note_line(note.done, &note.time, &first);
+        let first = note_line(checkbox(&lines[span.start]), &note.time, &first);
         let rest = format_note(&[&[""], rest.as_slice()].concat());
         // `rest` starts with the empty first line, so skip it.
         let rest = rest.lines().skip(1).map(String::from);
@@ -605,8 +612,8 @@ pub fn set_text(dir: &Path, name: &str, note: &NoteRef, text: &str) -> io::Resul
     })
 }
 
-fn note_line(done: bool, time: &str, text: &str) -> String {
-    let checkbox = if done { "[x] " } else { "" };
+/// A note's first line, with `checkbox` (`[x] `, `[ ] ` or `""`) before the time.
+fn note_line(checkbox: &str, time: &str, text: &str) -> String {
     if text.is_empty() {
         format!("- {checkbox}{time}")
     } else {
@@ -753,7 +760,48 @@ mod tests {
         .unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            "# 2026-09-26\r\n\r\n- 14:32 one\r\n  two\r\n- 15:00 three\r\n"
+            "# 2026-09-26\r\n\r\n- [ ] 14:32 one\r\n  two\r\n- 15:00 three\r\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_open_task_stays_one_after_done_and_not_done() {
+        let dir = temp_dir("open-task");
+        let path = dir.join("todo.md");
+        fs::write(&path, "# todo\n\n- [ ] 09:00 call the bank\n").unwrap();
+
+        set_done(
+            &dir,
+            "todo.md",
+            &note_ref(2, "09:00", false, "call the bank"),
+            true,
+            today(),
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n- [x] 09:00 call the bank ✅ 2026-10-13\n"
+        );
+        set_done(
+            &dir,
+            "todo.md",
+            &note_ref(2, "09:00", true, "call the bank ✅ 2026-10-13"),
+            false,
+            today(),
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n- [ ] 09:00 call the bank\n"
+        );
+
+        // An edit keeps the checkbox too.
+        let note = note_ref(2, "09:00", false, "call the bank");
+        set_text(&dir, "todo.md", &note, "call the bank today").unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# todo\n\n- [ ] 09:00 call the bank today\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -794,7 +842,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            "# todo\n\n- [x] 09:00 ✅ 2026-10-13\n- 10:00\n- 11:00 a ✅ 2026-10-01 b\n"
+            "# todo\n\n- [x] 09:00 ✅ 2026-10-13\n- [ ] 10:00\n- [ ] 11:00 a ✅ 2026-10-01 b\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -988,6 +1036,11 @@ mod tests {
             parse_note_line("- [x] 14:32 text"),
             Some((true, "14:32", "text"))
         );
+        assert_eq!(
+            parse_note_line("- [ ] 14:32 text"),
+            Some((false, "14:32", "text"))
+        );
+        assert_eq!(parse_note_line("- [ ]14:32 text"), None);
         assert_eq!(parse_note_line("- 14:32"), Some((false, "14:32", "")));
         assert_eq!(parse_note_line("  second line of a note"), None);
         assert_eq!(parse_note_line("# 2026-09-26"), None);

@@ -55,7 +55,7 @@ opened file selects its latest note.
 | Key | Action | Command |
 | --- | --- | --- |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Select a note (wraps; headings skipped) | |
-| <kbd>Space</kbd> | Toggle done | `set_note_done` |
+| <kbd>Space</kbd> | Toggle done; a note marked not done becomes `- [ ] HH:MM` (see [Data format](../data-format.md#dates)) | `set_note_done` |
 | <kbd>Enter</kbd> | Edit inline | `edit_note` |
 | <kbd>Shift</kbd>+<kbd>Enter</kbd> | Edit in the Pad | `edit_in_pad` |
 | <kbd>C</kbd> | Copy the note's links, whole, one per line | |
