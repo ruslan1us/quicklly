@@ -25,6 +25,9 @@ read-only view. User-facing description: root README, [Done](../../README.md#don
 - Each row shows the first line of the note, with links shortened, images as labels and dates in
   the date format. Each day starts with a `── <date>` row in the date format.
 - The window fits its content up to 400 CSS pixels and then scrolls; it is shown with `reveal()`.
+- It reloads on `notes-changed` (a note done or undone in the reader or the reminders, or the
+  archive), refits itself and keeps its scroll position as far as the new list reaches. A message
+  in the footer stays.
 
 ## Keys
 
@@ -52,6 +55,5 @@ continuation lines indented by two spaces.
 
 ## Limitations
 
-- The window does not listen for `notes-changed`; it shows the state at the moment it was opened.
 - Notes marked done before version 0.8.1 have no done date and are not listed.
 - The seven-day window is fixed in code (`DONE_DAYS`), not a setting.

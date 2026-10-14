@@ -18,16 +18,20 @@ const WINDOW_REPLIES: Record<string, Reply> = {
 
 /**
  * Stands in for the Rust side of a window: every command is recorded in the returned list and
- * answered from `replies`; commands not in it answer nothing.
+ * answered from `replies`; commands not in it answer nothing. Events sent with `emit` from
+ * `@tauri-apps/api/event` reach the page's listeners, as if from the Rust side.
  */
 export function mockTauri(replies: Record<string, Reply> = {}) {
   const calls: Call[] = [];
   mockWindows("main");
-  mockIPC((cmd, args) => {
-    calls.push({ cmd, args });
-    const reply = cmd in replies ? replies[cmd] : WINDOW_REPLIES[cmd];
-    return typeof reply === "function" ? reply(args) : reply;
-  });
+  mockIPC(
+    (cmd, args) => {
+      calls.push({ cmd, args });
+      const reply = cmd in replies ? replies[cmd] : WINDOW_REPLIES[cmd];
+      return typeof reply === "function" ? reply(args) : reply;
+    },
+    { shouldMockEvents: true },
+  );
   return calls;
 }
 

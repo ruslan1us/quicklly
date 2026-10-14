@@ -29,7 +29,7 @@ caret after the change and dispatch an `input` event, like a browser.
 
 | Helper | Purpose |
 | --- | --- |
-| `mockTauri(replies)` | Calls `mockWindows("main")` and `mockIPC` from `@tauri-apps/api/mocks`; records every command in the returned list and answers from `replies` (a value, or a function of the arguments that may throw). Answers `plugin:window|scale_factor` and `plugin:window|inner_size` by default so pages can fit themselves. |
+| `mockTauri(replies)` | Calls `mockWindows("main")` and `mockIPC` from `@tauri-apps/api/mocks`; records every command in the returned list and answers from `replies` (a value, or a function of the arguments that may throw). Answers `plugin:window|scale_factor` and `plugin:window|inner_size` by default so pages can fit themselves. Events are mocked too (`shouldMockEvents`): `emit` from `@tauri-apps/api/event` reaches the page's `listen` handlers, as an event from Rust would. |
 | `argsOf(calls, cmd)` | The arguments of each call of a command |
 | `loadPage(html, load)` | Puts the `<body>` of a page's `index.html` (imported with `?raw`) into the document, resets modules, imports a fresh copy of the page script and waits for it to settle; spies on listeners added to `document` and `window` |
 | `closePage()` | Removes those listeners and empties the body, so the next test starts clean |
@@ -54,7 +54,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format |
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, Ctrl+Z in its cases |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
-| `done.test.ts` | Grouping by day, empty state, copying Markdown, Esc |
+| `done.test.ts` | Grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
 | `help.test.ts` | Version in the header, the Archive text following the setting |
 
 Not covered by automated tests: the Pad, settings and changelog pages, the rest of the help,

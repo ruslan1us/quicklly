@@ -79,11 +79,12 @@ fn open_images(app: AppHandle, name: String, paths: Vec<String>) -> Result<(), S
     Ok(())
 }
 
-/// Tells the reader and the reminders that a notes file changed, so a pinned reader shows it
-/// right away and the reminders stay up to date.
+/// Tells the reader, the reminders and the done journal that a notes file changed, so a pinned
+/// reader shows it right away and the others stay up to date.
 pub(crate) fn notes_changed(app: &AppHandle) {
     let _ = app.emit_to(READER_WINDOW, "notes-changed", ());
     let _ = app.emit_to(reminders::REMINDERS_WINDOW, "notes-changed", ());
+    let _ = app.emit_to(DONE_WINDOW, "notes-changed", ());
 }
 
 fn show_input(app: &AppHandle) {

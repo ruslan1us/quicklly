@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { dateNodes, followDateFormat, shownDate, toDisplay } from "../../shared/dates";
 import { fromMarkdown, markdownNodes } from "../../shared/images";
 import { linkNodes, shortLink } from "../../shared/links";
@@ -147,15 +148,26 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+/**
+ * Loads the notes done and shows them, refitting the window. On a reload the list stays where
+ * it was scrolled to, as far as it still reaches.
+ */
 async function load() {
+  error.hidden = true;
   try {
     done = await invoke<Done[]>("list_done");
   } catch (err) {
     showError(err);
   }
+  const scrolled = document.body.scrollTop;
   render();
   await fitToContent(MAX_HEIGHT);
+  // The body is what scrolls (see terminal.css).
+  document.body.scrollTop = scrolled;
 }
+
+// Notes may be done, undone, changed or archived anywhere while the journal is open.
+void listen("notes-changed", () => void load());
 
 // Shown only once themed and filled in, so it never flickers.
 // The zoom has to be known before the window is fitted to its content.

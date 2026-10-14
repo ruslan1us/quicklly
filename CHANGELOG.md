@@ -22,6 +22,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The help gives the archive delay set in **Archive done notes**, or says the archive is off,
   instead of always "after 7 days".
+- `/done` updates while it is open when notes are done, undone, edited or archived elsewhere.
 
 ## [0.8.1] - 2026-10-13
 
