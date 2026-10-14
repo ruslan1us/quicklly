@@ -86,7 +86,8 @@ the README's [Installation](../README.md#installation) section.
   It is never committed or written into documentation. Local `npm run tauri build` needs it in the
   environment; without it, `npm run tauri build -- --no-bundle` builds the executable only.
 - Installed copies download and verify a newer release in the background and install it at the
-  next start, or immediately on `/update`; see [Architecture](architecture.md#updates) and
+  next start, or immediately on `/update`. A download superseded by a later release before it was
+  installed is removed at the next check; see [Architecture](architecture.md#updates) and
   [ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md).
 - Losing the private key would mean that installed copies can no longer verify new releases and
   would have to be updated by reinstalling manually.

@@ -39,6 +39,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   note marked not done again becomes an open task `- [ ]` instead of a plain list item.
 - Deleting a note with a hand-written link to something other than a pasted image no longer
   moves that file to the Recycle Bin.
+- Update downloads superseded by a newer release before being installed no longer pile up in
+  the app cache.
 
 ## [0.8.1] - 2026-10-13
 

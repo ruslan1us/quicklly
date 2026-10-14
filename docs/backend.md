@@ -128,8 +128,12 @@ command) returns `false` and opens nothing when there is nothing due and nothing
 A thread checks at start and then every 6 hours while automatic updates are on. A found release is
 downloaded (the plugin verifies the signature) and stored as `update-<version>.bin` in the app
 cache directory; at the next start the stored bytes are installed instead of downloaded again.
-`install_update` (`/update`) installs right away, from the cache when possible. Turning automatic
-updates off clears the announced version; turning them on checks immediately.
+`install_update` (`/update`) installs right away, from the cache when possible. Every successful
+check, including the one `install_update` makes, removes the other `update-*.bin` files from the
+cache: only the latest release can be installed, so downloads of superseded releases and of the
+running version are useless; when there is no newer release, all of them go. Failures to remove are
+logged and ignored. Turning automatic updates off clears the announced version; turning them on
+checks immediately.
 
 ### `cli`
 

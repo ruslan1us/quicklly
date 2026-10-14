@@ -1,5 +1,6 @@
 use std::fs;
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -18,7 +19,56 @@ pub struct AvailableUpdate(Mutex<Option<String>>);
 /// Where a downloaded (and already signature-checked) release waits for the next start.
 fn download_path(app: &AppHandle, version: &str) -> Option<PathBuf> {
     let dir = app.path().app_cache_dir().ok()?;
-    Some(dir.join(format!("update-{version}.bin")))
+    Some(dir.join(download_name(version)))
+}
+
+fn download_name(version: &str) -> String {
+    format!("update-{version}.bin")
+}
+
+/// The downloads among `names` that can never be installed: every `update-<version>.bin` except
+/// the one for `keep`, the latest release (none when the running version is the latest).
+fn stale_downloads(names: Vec<String>, keep: Option<&str>) -> Vec<String> {
+    let kept = keep.map(download_name);
+    names
+        .into_iter()
+        .filter(|name| {
+            let is_download = name
+                .strip_prefix("update-")
+                .and_then(|rest| rest.strip_suffix(".bin"))
+                .is_some_and(|version| !version.is_empty());
+            is_download && kept.as_ref() != Some(name)
+        })
+        .collect()
+}
+
+/// Removes the stale downloads from `dir`; see `stale_downloads`.
+fn remove_stale_downloads_in(dir: &Path, keep: Option<&str>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return,
+        Err(e) => {
+            eprintln!("Could not read the update cache {}: {e}", dir.display());
+            return;
+        }
+    };
+    let names = entries
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .collect();
+    for name in stale_downloads(names, keep) {
+        let path = dir.join(name);
+        if let Err(e) = fs::remove_file(&path) {
+            eprintln!("Could not remove the old update {}: {e}", path.display());
+        }
+    }
+}
+
+/// Removes downloads of releases that were superseded or already installed, keeping only the one
+/// for `keep`, the latest release.
+fn remove_stale_downloads(app: &AppHandle, keep: Option<&str>) {
+    if let Ok(dir) = app.path().app_cache_dir() {
+        remove_stale_downloads_in(&dir, keep);
+    }
 }
 
 /// Looks for updates now and then every few hours, in the background, unless automatic
@@ -80,9 +130,13 @@ async fn check(app: &AppHandle, at_startup: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// Looks for a newer release. Only the latest release can be installed, so downloads of any other
+/// release (superseded, or the running one, already installed) are removed from the cache.
 async fn find(app: &AppHandle) -> Result<Option<Update>, String> {
     let updater = app.updater().map_err(|e| e.to_string())?;
-    updater.check().await.map_err(|e| e.to_string())
+    let update = updater.check().await.map_err(|e| e.to_string())?;
+    remove_stale_downloads(app, update.as_ref().map(|update| update.version.as_str()));
+    Ok(update)
 }
 
 /// Downloads a release and checks its signature.
@@ -120,4 +174,70 @@ pub async fn install_update(app: AppHandle) -> Result<bool, String> {
     };
     install(&app, &update, bytes)?;
     Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn names(names: &[&str]) -> Vec<String> {
+        names.iter().map(|name| name.to_string()).collect()
+    }
+
+    #[test]
+    fn keeps_only_the_latest_download() {
+        let found = names(&["update-0.8.0.bin", "update-0.8.1.bin", "update-0.8.2.bin"]);
+        assert_eq!(
+            stale_downloads(found, Some("0.8.2")),
+            names(&["update-0.8.0.bin", "update-0.8.1.bin"])
+        );
+    }
+
+    #[test]
+    fn removes_every_download_when_there_is_no_newer_release() {
+        let found = names(&["update-0.8.1.bin", "update-0.8.2.bin"]);
+        assert_eq!(stale_downloads(found.clone(), None), found);
+    }
+
+    #[test]
+    fn leaves_other_files_alone() {
+        let found = names(&[
+            "update-.bin",
+            "update-0.8.1.bin.tmp",
+            "old-update-0.8.1.bin",
+            "update-0.8.1.exe",
+            "Update-0.8.1.bin",
+            "notes.md",
+        ]);
+        assert!(stale_downloads(found, None).is_empty());
+    }
+
+    #[test]
+    fn removes_stale_downloads_from_the_directory() {
+        let dir =
+            std::env::temp_dir().join(format!("quicklly-test-update-cache-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        for name in ["update-0.8.1.bin", "update-0.8.2.bin", "other.txt"] {
+            fs::write(dir.join(name), b"").unwrap();
+        }
+        remove_stale_downloads_in(&dir, Some("0.8.2"));
+        let mut left: Vec<String> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+            .collect();
+        left.sort();
+        assert_eq!(left, names(&["other.txt", "update-0.8.2.bin"]));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_missing_cache_directory_is_not_an_error() {
+        let dir = std::env::temp_dir().join(format!(
+            "quicklly-test-no-update-cache-{}",
+            std::process::id()
+        ));
+        remove_stale_downloads_in(&dir, None);
+        assert!(!dir.exists());
+    }
 }

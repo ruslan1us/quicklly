@@ -220,7 +220,8 @@ Releases are signed and published on GitHub; the updater plugin reads
 [`tauri.conf.json`](../src-tauri/tauri.conf.json). A running instance downloads a newer release in
 the background to the app cache directory (`update-<version>.bin`) and announces it with
 `update-available`; the next start installs it (the NSIS installer in passive mode, which exits
-and restarts the app). `/update` installs immediately. See [Release](release.md) and
+and restarts the app). `/update` installs immediately. Each check keeps only the download of the
+latest release and removes the others. See [Release](release.md) and
 [ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md).
 
 ## Known limitations
