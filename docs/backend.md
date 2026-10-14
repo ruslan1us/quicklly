@@ -84,10 +84,11 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   component by component, and returns `None` for anything that could leave the folder (absolute
   paths, drives, `.`, too many `..`). `open_images` uses it before opening anything.
 - `trash_unused(dir, file, paths)` moves to the Recycle Bin the images a deleted or edited note
-  linked to, unless any notes file (archive included, links resolved from each file's folder)
-  still links to them; it returns their original full paths. `restore(paths)` brings each back by
-  finding the latest Recycle Bin entry with that original path, and returns how many could not be
-  restored.
+  linked to — only files right in the root `images/` folder, so a hand-written link to a notes
+  file or any other file never sends it there — unless any notes file (archive included, links
+  resolved from each file's folder) still links to them; it returns their original full paths.
+  `restore(paths)` brings each back by finding the latest Recycle Bin entry with that original
+  path, and returns how many could not be restored.
 
 ### `settings`
 

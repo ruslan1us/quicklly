@@ -175,6 +175,9 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
     Ok(paths
         .iter()
         .filter_map(|path| from_notes_folder(file, path))
+        // Only pasted images, right in `images/`: a hand-written link to anything else, a
+        // notes file say, never sends it to the Recycle Bin.
+        .filter(|parts| parts.len() == 2 && parts[0] == IMAGES_DIR)
         .filter(|parts| !used.contains(parts))
         .map(|parts| {
             parts
@@ -396,6 +399,12 @@ mod tests {
             unused(&dir, "a/b/c.md", &paths).unwrap(),
             [dir.join("images").join(&free["images/".len()..])]
         );
+        // A link to a notes file or to an image outside `images/` is never taken for one.
+        fs::write(dir.join("inbox.md"), "").unwrap();
+        fs::create_dir_all(dir.join("pics")).unwrap();
+        fs::write(dir.join("pics").join("a.png"), "").unwrap();
+        let other = ["inbox.md".to_string(), "pics/a.png".to_string()];
+        assert!(unused(&dir, "todo.md", &other).unwrap().is_empty());
         fs::remove_dir_all(&dir).unwrap();
     }
 

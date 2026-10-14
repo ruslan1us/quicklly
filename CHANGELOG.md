@@ -34,6 +34,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `/done` updates while it is open when notes are done, undone, edited or archived elsewhere.
 - A task written as `- [ ] HH:MM` keeps its open checkbox when edited in the reader, and a done
   note marked not done again becomes an open task `- [ ]` instead of a plain list item.
+- Deleting a note with a hand-written link to something other than a pasted image no longer
+  moves that file to the Recycle Bin.
 
 ## [0.8.1] - 2026-10-13
 
