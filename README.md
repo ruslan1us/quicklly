@@ -308,6 +308,11 @@ npm test              # run the frontend tests
 
 The Rust tests run with `cargo test` in `src-tauri/`.
 
+## Documentation
+
+How Quicklly is built, its data format, conventions and design decisions are documented in
+[docs/](docs/README.md).
+
 ## License
 
 [MIT](LICENSE)
