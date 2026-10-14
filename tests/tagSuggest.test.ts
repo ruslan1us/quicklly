@@ -1,6 +1,6 @@
 import { clearMocks } from "@tauri-apps/api/mocks";
 import { afterEach, expect, test } from "vitest";
-import { type TagSuggest, tagSuggest } from "../src/tagSuggest";
+import { type TagSuggest, tagSuggest } from "../src/shared/tagSuggest";
 import { keydown, mockTauri, textField, type } from "./helpers";
 
 let field: HTMLTextAreaElement;

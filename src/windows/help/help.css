@@ -1,6 +1,6 @@
 /* Help layout on top of terminal.css, which is imported here (rather than linked separately)
    so that the build always puts it first. */
-@import "./terminal.css";
+@import "../../shared/terminal.css";
 
 .intro,
 p {

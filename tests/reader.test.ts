@@ -1,5 +1,5 @@
 import { type MockInstance, afterEach, beforeEach, expect, test, vi } from "vitest";
-import html from "../reader.html?raw";
+import html from "../src/windows/reader/index.html?raw";
 import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle } from "./helpers";
 
 // The reader, with its real page and code; only the Rust side is pretended.
@@ -38,7 +38,7 @@ async function open(replies: Record<string, unknown> = {}) {
     get_archive_days: 7,
     ...replies,
   });
-  await loadPage(html, () => import("../src/reader.ts"));
+  await loadPage(html, () => import("../src/windows/reader/reader.ts"));
 }
 
 beforeEach(async () => {

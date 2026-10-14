@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { type DatePicker, datePicker } from "../src/calendar";
+import { type DatePicker, datePicker } from "../src/shared/calendar";
 import { keydown, textField, type } from "./helpers";
 
 let field: HTMLTextAreaElement;

@@ -14,6 +14,7 @@
     "windows": [
       {
         "label": "main",
+        "url": "windows/input/index.html",
         "title": "Quicklly",
         "width": 640,
         "height": 56,

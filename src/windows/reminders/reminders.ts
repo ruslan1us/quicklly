@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { dateNodes, followDateFormat, formatDate, toDisplay } from "./dates";
-import { markdownNodes } from "./images";
-import { linkNodes, shortLink } from "./links";
-import { appWindow, fitToContent } from "./popup";
-import { followTheme } from "./theme";
+import { dateNodes, followDateFormat, formatDate, toDisplay } from "../../shared/dates";
+import { markdownNodes } from "../../shared/images";
+import { linkNodes, shortLink } from "../../shared/links";
+import { appWindow, fitToContent } from "../../shared/popup";
+import { followTheme } from "../../shared/theme";
 
 /** A note as the reader sees it, so it can be marked done the same way. */
 interface Note {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { findLinks, shortLink, splitLinks } from "../src/links";
+import { findLinks, shortLink, splitLinks } from "../src/shared/links";
 
 const urls = (text: string) => findLinks(text).map((link) => link.url);
 

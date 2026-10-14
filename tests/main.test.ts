@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import html from "../index.html?raw";
+import html from "../src/windows/input/index.html?raw";
 import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle, type } from "./helpers";
 
 // The input window, with its real page and code; only the Rust side is pretended.
@@ -15,7 +15,7 @@ async function open(dateFormat = "DD/MM/YYYY") {
     get_date_format: dateFormat,
     get_update: null,
   });
-  await loadPage(html, () => import("../src/main.ts"));
+  await loadPage(html, () => import("../src/windows/input/main.ts"));
   note = document.querySelector("#note")!;
   calendar = document.querySelector("#calendar")!;
 }

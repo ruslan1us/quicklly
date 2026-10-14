@@ -118,9 +118,14 @@ async fn exit_app(app: AppHandle) {
     app.exit(0);
 }
 
+/// The page of a window: each one is `src/windows/<name>/index.html`, built to `dist/windows/`.
+pub(crate) fn page(name: &str) -> WebviewUrl {
+    WebviewUrl::App(format!("windows/{name}/index.html").into())
+}
+
 /// Shows a terminal-style popup window, creating it on first use so it costs nothing until
 /// opened. The page sizes the window to its content and then shows it, so it never flickers.
-fn show_popup(app: &AppHandle, label: &str, page: &str, title: &str) {
+fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.unminimize();
         let _ = window.show();
@@ -128,7 +133,7 @@ fn show_popup(app: &AppHandle, label: &str, page: &str, title: &str) {
         return;
     }
     let zoom = settings::scale(app);
-    let result = WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
+    let result = WebviewWindowBuilder::new(app, label, page(name))
         .title(title)
         .inner_size(POPUP_WIDTH * zoom, 200.0)
         .visible(false)
@@ -175,7 +180,7 @@ pub(crate) fn apply_scale(app: &AppHandle) {
 }
 
 fn show_settings(app: &AppHandle) {
-    show_popup(app, SETTINGS_WINDOW, "settings.html", "Quicklly Settings");
+    show_popup(app, SETTINGS_WINDOW, "settings", "Quicklly Settings");
 }
 
 /// Opens the help from the input window (the `/help` command).
@@ -183,7 +188,7 @@ fn show_settings(app: &AppHandle) {
 /// Async on purpose: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 async fn open_help(app: AppHandle) {
-    show_popup(&app, HELP_WINDOW, "help.html", "Quicklly Help");
+    show_popup(&app, HELP_WINDOW, "help", "Quicklly Help");
 }
 
 /// Opens the changelog from the input window (the `/changelog` command).
@@ -191,12 +196,7 @@ async fn open_help(app: AppHandle) {
 /// Async on purpose: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 async fn open_changelog(app: AppHandle) {
-    show_popup(
-        &app,
-        CHANGELOG_WINDOW,
-        "changelog.html",
-        "Quicklly Changelog",
-    );
+    show_popup(&app, CHANGELOG_WINDOW, "changelog", "Quicklly Changelog");
 }
 
 /// Opens the notes reader from the input window (← in an empty note).
@@ -204,7 +204,7 @@ async fn open_changelog(app: AppHandle) {
 /// Async on purpose: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 async fn open_reader(app: AppHandle) {
-    show_popup(&app, READER_WINDOW, "reader.html", "Quicklly Notes");
+    show_popup(&app, READER_WINDOW, "reader", "Quicklly Notes");
 }
 
 /// Reads one notes file for the reader.
@@ -313,7 +313,7 @@ async fn open_note(app: AppHandle, file: String, line: usize) {
     if app.get_webview_window(READER_WINDOW).is_some() {
         let _ = app.emit_to(READER_WINDOW, "reader-target", ());
     }
-    show_popup(&app, READER_WINDOW, "reader.html", "Quicklly Notes");
+    show_popup(&app, READER_WINDOW, "reader", "Quicklly Notes");
 }
 
 /// Hands the pending note, if any, to the reader.

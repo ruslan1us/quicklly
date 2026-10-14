@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { appWindow, fitToContent, reveal } from "./popup";
-import { followTheme } from "./theme";
+import { appWindow, fitToContent, reveal } from "../../shared/popup";
+import { followTheme } from "../../shared/theme";
 
 const header = document.querySelector<HTMLElement>("header")!;
 const footer = document.querySelector<HTMLElement>("#footer")!;

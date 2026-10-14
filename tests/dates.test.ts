@@ -10,7 +10,7 @@ import {
   toDisplay,
   toStored,
   tomorrow,
-} from "../src/dates";
+} from "../src/shared/dates";
 import { press, textField } from "./helpers";
 
 /** A date as `YYYY-MM-DD`, to compare dates by their day. */

@@ -1,4 +1,4 @@
-@import "./calendar.css";
+@import "../../shared/calendar.css";
 
 :root {
   font-family: "Cascadia Mono", Consolas, monospace;

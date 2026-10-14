@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { blockCaret } from "./blockCaret";
-import { datePicker } from "./calendar";
+import { blockCaret } from "../../shared/blockCaret";
+import { datePicker } from "../../shared/calendar";
 import {
   dateNodes,
   deleteDatesWhole,
@@ -10,11 +10,11 @@ import {
   splitDoneDate,
   toDisplay,
   toStored,
-} from "./dates";
-import { type Images, fromMarkdown, labelNodes, pasteImages, toMarkdown } from "./images";
-import { linkNodes } from "./links";
-import { tagSuggest } from "./tagSuggest";
-import { followTheme } from "./theme";
+} from "../../shared/dates";
+import { type Images, fromMarkdown, labelNodes, pasteImages, toMarkdown } from "../../shared/images";
+import { linkNodes } from "../../shared/links";
+import { tagSuggest } from "../../shared/tagSuggest";
+import { followTheme } from "../../shared/theme";
 
 const appWindow = getCurrentWindow();
 const text = document.querySelector<HTMLTextAreaElement>("#text")!;

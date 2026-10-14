@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "vitest";
-import html from "../reminders.html?raw";
+import html from "../src/windows/reminders/index.html?raw";
 import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle } from "./helpers";
 
 // The reminders window, with its real page and code; only the Rust side is pretended.
@@ -60,7 +60,7 @@ async function open(dueNotes: typeof DUE, aheadNotes: typeof AHEAD) {
     set_note_done: (args: { name: string; note: { line: number } }) => drop(args),
     snooze_note: (args: { name: string; note: { line: number } }) => drop(args),
   });
-  await loadPage(html, () => import("../src/reminders.ts"));
+  await loadPage(html, () => import("../src/windows/reminders/reminders.ts"));
 }
 
 beforeEach(() => open(DUE, AHEAD));

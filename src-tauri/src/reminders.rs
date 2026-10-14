@@ -3,8 +3,7 @@ use std::time::Duration;
 
 use chrono::{Local, NaiveDate};
 use tauri::{
-    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder,
+    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewWindow, WebviewWindowBuilder,
 };
 
 use crate::{archive, monitor, pad, reader, settings};
@@ -66,23 +65,19 @@ fn show(app: &AppHandle, focus: bool) {
     }
     app.state::<FocusOnShow>().0.store(focus, Ordering::Relaxed);
     let zoom = settings::scale(app);
-    let result = WebviewWindowBuilder::new(
-        app,
-        REMINDERS_WINDOW,
-        WebviewUrl::App("reminders.html".into()),
-    )
-    .title("Quicklly Reminders")
-    .inner_size(crate::POPUP_WIDTH * zoom, 200.0)
-    .visible(false)
-    // Shown without taking the focus (see `reveal_reminders`); a click on it gives it the keys.
-    .focused(false)
-    .decorations(false)
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .resizable(false)
-    .transparent(true)
-    .effects(crate::blur_behind())
-    .build();
+    let result = WebviewWindowBuilder::new(app, REMINDERS_WINDOW, crate::page("reminders"))
+        .title("Quicklly Reminders")
+        .inner_size(crate::POPUP_WIDTH * zoom, 200.0)
+        .visible(false)
+        // Shown without taking the focus (see `reveal_reminders`); a click on it gives it the keys.
+        .focused(false)
+        .decorations(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .transparent(true)
+        .effects(crate::blur_behind())
+        .build();
     match result {
         Ok(window) => {
             let _ = window.set_zoom(zoom);

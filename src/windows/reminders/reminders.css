@@ -1,6 +1,6 @@
 /* Reminders layout on top of terminal.css, which is imported here (rather than linked
    separately) so that the build always puts it first. */
-@import "./terminal.css";
+@import "../../shared/terminal.css";
 
 /* A due note: cursor · first line of the text (with its date) · today / N days overdue (or
    tomorrow / in N days, ahead). */

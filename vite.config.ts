@@ -27,17 +27,27 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // The pages live in src/windows/<name>/index.html and are served and built from src/,
+  // so the app opens them as windows/<name>/index.html.
+  root: "src",
+  // The dev server looks for dependencies from the pages too, but resolves them from the root
+  // (src/), unlike the build inputs below.
+  optimizeDeps: {
+    entries: ["windows/*/index.html"],
+  },
   // Each window is its own page.
   build: {
+    outDir: "../dist",
+    emptyOutDir: true,
     rolldownOptions: {
       input: {
-        main: "index.html",
-        settings: "settings.html",
-        reader: "reader.html",
-        pad: "pad.html",
-        help: "help.html",
-        changelog: "changelog.html",
-        reminders: "reminders.html",
+        input: "src/windows/input/index.html",
+        settings: "src/windows/settings/index.html",
+        reader: "src/windows/reader/index.html",
+        pad: "src/windows/pad/index.html",
+        help: "src/windows/help/index.html",
+        changelog: "src/windows/changelog/index.html",
+        reminders: "src/windows/reminders/index.html",
       },
     },
   },

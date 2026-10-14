@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DateFormat } from "./dates";
-import { appWindow, fitToContent, reveal } from "./popup";
-import { type Theme, applyTheme, followTheme } from "./theme";
+import type { DateFormat } from "../../shared/dates";
+import { appWindow, fitToContent, reveal } from "../../shared/popup";
+import { type Theme, applyTheme, followTheme } from "../../shared/theme";
 
 interface Settings {
   notesDir: string;

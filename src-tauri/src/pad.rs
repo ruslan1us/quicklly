@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindow,
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
     WebviewWindowBuilder, Window,
 };
 use tauri_plugin_store::StoreExt;
@@ -78,7 +78,7 @@ pub fn show(app: &AppHandle) {
         let _ = window.set_focus();
         return;
     }
-    let result = WebviewWindowBuilder::new(app, PAD_WINDOW, WebviewUrl::App("pad.html".into()))
+    let result = WebviewWindowBuilder::new(app, PAD_WINDOW, crate::page("pad"))
         .title("Quicklly Pad")
         .inner_size(WIDTH * settings::scale(app), HEIGHT * settings::scale(app))
         .visible(false)

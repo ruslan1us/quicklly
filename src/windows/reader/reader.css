@@ -1,7 +1,7 @@
 /* Reader-specific layout on top of terminal.css, which is imported here (rather than linked
    separately) so that the build always puts it first. */
-@import "./terminal.css";
-@import "./calendar.css";
+@import "../../shared/terminal.css";
+@import "../../shared/calendar.css";
 
 header {
   display: flex;

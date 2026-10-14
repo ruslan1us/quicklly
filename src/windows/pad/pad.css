@@ -1,5 +1,5 @@
 /* The Pad: a terminal-style editor for longer notes; colours come from themes.css. */
-@import "./calendar.css";
+@import "../../shared/calendar.css";
 
 :root {
   font-family: "Cascadia Mono", Consolas, monospace;

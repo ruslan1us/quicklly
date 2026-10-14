@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { blockCaret } from "./blockCaret";
-import { datePicker } from "./calendar";
+import { blockCaret } from "../../shared/blockCaret";
+import { datePicker } from "../../shared/calendar";
 import {
   type DateFormat,
   dateNodes,
@@ -10,11 +10,11 @@ import {
   splitDoneDate,
   toDisplay,
   toStored,
-} from "./dates";
-import { type Images, fromMarkdown, imagePaths, markdownNodes, toMarkdown } from "./images";
-import { findLinks, linkNodes, shortLink } from "./links";
-import { appWindow, fitToContent, reveal } from "./popup";
-import { followTheme } from "./theme";
+} from "../../shared/dates";
+import { type Images, fromMarkdown, imagePaths, markdownNodes, toMarkdown } from "../../shared/images";
+import { findLinks, linkNodes, shortLink } from "../../shared/links";
+import { appWindow, fitToContent, reveal } from "../../shared/popup";
+import { followTheme } from "../../shared/theme";
 
 interface NoteFile {
   name: string;

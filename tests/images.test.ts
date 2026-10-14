@@ -7,7 +7,7 @@ import {
   nextImage,
   pasteImages,
   toMarkdown,
-} from "../src/images";
+} from "../src/shared/images";
 import { type Call, argsOf, mockTauri, settle, textField } from "./helpers";
 
 const images = new Map([
