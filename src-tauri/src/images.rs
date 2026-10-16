@@ -282,8 +282,16 @@ fn trash_each(images: Vec<PathBuf>, delete: impl Fn(&Path) -> io::Result<()>) ->
 /// without the `\\?\` in front that Windows adds to it.
 fn full_path(path: &Path) -> io::Result<PathBuf> {
     let full = fs::canonicalize(path)?;
-    let full = full.to_string_lossy();
-    Ok(PathBuf::from(full.strip_prefix(r"\\?\").unwrap_or(&full)))
+    Ok(PathBuf::from(plain_path(&full.to_string_lossy())))
+}
+
+/// A canonical path written the usual way, as the Recycle Bin remembers it: `\\?\C:\x` becomes
+/// `C:\x` and `\\?\UNC\server\share\x` (a network share) becomes `\\server\share\x`.
+fn plain_path(path: &str) -> String {
+    match path.strip_prefix(r"\\?\UNC\") {
+        Some(share) => format!(r"\\{share}"),
+        None => path.strip_prefix(r"\\?\").unwrap_or(path).to_string(),
+    }
 }
 
 /// Of the items in the Recycle Bin, the ones that bring back the images that were at `paths`:
@@ -659,6 +667,26 @@ mod tests {
         );
         assert_eq!(tried.into_inner(), images);
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn writes_a_canonical_path_the_usual_way() {
+        assert_eq!(
+            plain_path(r"\\?\C:\notes\images\a.png"),
+            r"C:\notes\images\a.png"
+        );
+        assert_eq!(
+            plain_path(r"\\?\UNC\server\share\notes\images\a.png"),
+            r"\\server\share\notes\images\a.png"
+        );
+        assert_eq!(
+            plain_path(r"C:\notes\images\a.png"),
+            r"C:\notes\images\a.png"
+        );
+        assert_eq!(
+            plain_path(r"\\server\share\notes\images\a.png"),
+            r"\\server\share\notes\images\a.png"
+        );
     }
 
     fn in_bin(id: &str, path: &str, time_deleted: i64) -> TrashItem {

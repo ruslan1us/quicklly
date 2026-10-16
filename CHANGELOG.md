@@ -32,6 +32,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   while saving) is no longer run as the installer at the next start; it is downloaded again.
 - Deleting or editing a note in the reader no longer moves an image to the Recycle Bin while
   another note still links to it with the name in other letter case.
+- Ctrl+Z in the reader brings back the images of a deleted note when the notes folder is on a
+  network share (`\\server\share\…`).
 
 ## [0.8.2] - 2026-10-14
 

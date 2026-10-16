@@ -103,7 +103,9 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   linked to — only files right in the root `images/` folder, so a hand-written link to a notes
   file or any other file never sends it there — unless any notes file (archive included, links
   resolved from each file's folder) still links to them, ignoring case as Windows file names do;
-  it returns their original full paths.
+  it returns their original full paths, written as the Recycle Bin remembers them (`plain_path`:
+  `C:\…`, or `\\server\share\…` for a notes folder on a network share, without the `\\?\` or
+  `\\?\UNC\` of a canonical path).
   A notes file that can't be read fails it (and `trash_unsaved`), with the file's name, rather
   than being skipped: it may link to the images.
   Each image is tried in turn (`trash_each`): one that can't be moved is logged and stays, the
