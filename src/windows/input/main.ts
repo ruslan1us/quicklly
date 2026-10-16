@@ -8,6 +8,7 @@ import {
   dateNodes,
   deleteDatesWhole,
   followDateFormat,
+  shownDate,
   splitDoneDate,
   toDisplay,
   toStored,
@@ -134,7 +135,8 @@ function remember(text: string) {
 interface Hit {
   file: string;
   line: number;
-  day: string;
+  /** `YYYY-MM-DD`, or null for a note under no day heading. */
+  day: string | null;
   time: string;
   done: boolean;
   text: string;
@@ -263,7 +265,7 @@ function renderResults() {
       text.append(...highlightNote(shown.split("\n").join(" ⏎ "), query));
       li.append(
         cell(i === selectedHit ? "❯" : ""),
-        cell(hit.day),
+        cell(hit.day ? shownDate(hit.day) : ""),
         cell(hit.time),
         cell(hit.done ? "✓" : ""),
         text,

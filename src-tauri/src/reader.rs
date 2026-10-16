@@ -147,8 +147,9 @@ pub struct Hit {
     pub file: String,
     /// First line of the note in the file (0-based), to open it in the reader.
     pub line: usize,
-    /// The note's day: the daily file's date, or the `## YYYY-MM-DD` heading above it.
-    pub day: String,
+    /// The note's day: the daily file's date, or the `## YYYY-MM-DD` heading above it; none
+    /// under any other heading or no heading.
+    pub day: Option<String>,
     pub time: String,
     pub done: bool,
     pub text: String,
@@ -164,14 +165,15 @@ pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::
     }
     let mut hits = Vec::new();
     for file in list_files(dir)? {
-        // Notes in other files take their day from the `## YYYY-MM-DD` heading above them.
-        let mut day = daily_date(&file.name).unwrap_or_default().to_string();
+        // Notes in other files take their day from the `## YYYY-MM-DD` heading above them; a
+        // heading that is not a date, like `## Ideas`, gives the notes under it none.
+        let mut day = daily_date(&file.name).map(String::from);
         let Ok(content) = fs::read_to_string(path_of(dir, &file.name)) else {
             continue;
         };
         for item in parse(&content) {
             match item {
-                Item::Day { date } => day = date,
+                Item::Day { date } => day = iso_date(&date).map(|_| date),
                 Item::Note {
                     line,
                     time,
@@ -189,7 +191,12 @@ pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::
             }
         }
     }
-    hits.sort_by(|a, b| (&b.day, &b.time).cmp(&(&a.day, &a.time)));
+    // Notes with a day come first, newest first; those without one follow in the order of the
+    // files and of the notes in them (a stable sort).
+    hits.sort_by(|a, b| match (&a.day, &b.day) {
+        (Some(a_day), Some(b_day)) => (b_day, &b.time).cmp(&(a_day, &a.time)),
+        _ => a.day.is_none().cmp(&b.day.is_none()),
+    });
     hits.truncate(limit);
     Ok(hits)
 }
@@ -1188,13 +1195,13 @@ mod tests {
         let hits = search(&dir, " MILK ", DateFormat::DayMonthYear, 10).unwrap();
         let found: Vec<_> = hits
             .iter()
-            .map(|h| (h.file.as_str(), h.line, h.day.as_str(), h.time.as_str()))
+            .map(|h| (h.file.as_str(), h.line, h.day.as_deref(), h.time.as_str()))
             .collect();
         assert_eq!(
             found,
             [
-                ("inbox.md", 4, "2026-09-26", "08:00"),
-                ("2026-09-25.md", 2, "2026-09-25", "09:00"),
+                ("inbox.md", 4, Some("2026-09-26"), "08:00"),
+                ("2026-09-25.md", 2, Some("2026-09-25"), "09:00"),
             ]
         );
         assert_eq!(
@@ -1210,6 +1217,46 @@ mod tests {
         assert!(search(&dir, "  ", DateFormat::DayMonthYear, 10)
             .unwrap()
             .is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn search_takes_only_date_headings_as_days() {
+        let dir = temp_dir("search-days");
+        fs::write(
+            dir.join("ideas.md"),
+            "# ideas\n\n- 09:00 milk a\n\n## Ideas\n\n- 23:00 milk b\n\n\
+             ## 2026-09-20\n\n- 10:00 milk c\n\n## 2026-02-30\n\n- 08:00 milk d\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("2026-09-25.md"),
+            "# 2026-09-25\n\n- 09:00 milk e\n",
+        )
+        .unwrap();
+
+        let found = |limit| -> Vec<(usize, Option<String>)> {
+            search(&dir, "milk", DateFormat::DayMonthYear, limit)
+                .unwrap()
+                .into_iter()
+                .map(|hit| (hit.line, hit.day))
+                .collect()
+        };
+        let day = |date: &str| Some(date.to_string());
+        // Notes with a day newest first; then those under no heading, a heading that is not a
+        // date or not a real date, in file order rather than by time.
+        assert_eq!(
+            found(10),
+            [
+                (2, day("2026-09-25")),
+                (10, day("2026-09-20")),
+                (2, None),
+                (6, None),
+                (14, None),
+            ]
+        );
+        // The limit keeps the notes with a day.
+        assert_eq!(found(2), [(2, day("2026-09-25")), (10, day("2026-09-20"))]);
         fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -1557,7 +1604,7 @@ mod tests {
         assert!(read_file(&dir, "..\\2026-09-26.md").is_err());
         assert_eq!(
             search(&dir, "#todo", DateFormat::DayMonthYear, 10).unwrap()[0].day,
-            "2026-09-26"
+            Some("2026-09-26".to_string())
         );
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -1714,7 +1761,7 @@ mod tests {
         assert_eq!(hit.len(), names.len());
         assert!(hit
             .iter()
-            .any(|h| h.file == "work/2026-09-25.md" && h.day == "2026-09-25"));
+            .any(|h| h.file == "work/2026-09-25.md" && h.day.as_deref() == Some("2026-09-25")));
         assert_eq!(read_file(&dir, "work/deep/x.md").unwrap().len(), 1);
         assert!(read_file(&dir, "archive/work/old.md").is_err());
         fs::remove_dir_all(&dir).unwrap();

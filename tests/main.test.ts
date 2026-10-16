@@ -126,6 +126,27 @@ test("search results mark the query in the text as shown, dates and image labels
   expect(marked()).toEqual(["Image #1"]);
 });
 
+test("search results show the day in the date format, and none without a day", async () => {
+  closePage();
+  const hit = (day: string | null, line: number) => ({
+    file: "ideas.md",
+    line,
+    day,
+    time: "09:00",
+    done: false,
+    text: "milk",
+  });
+  await open("MM/DD/YYYY", { search_notes: [hit("2026-10-13", 2), hit(null, 6)] });
+
+  type(note, "?");
+  type(note, "milk");
+  await settle();
+  const days = [...document.querySelectorAll("#results .hit")].map(
+    (li) => li.children[1].textContent,
+  );
+  expect(days).toEqual(["10/13/2026", ""]);
+});
+
 /** Pastes a clipboard with a small PNG in it into the note. */
 async function pasteImage() {
   const clipboardData = new DataTransfer();

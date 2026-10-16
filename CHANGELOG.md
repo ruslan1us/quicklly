@@ -25,6 +25,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   monitors are rearranged: it keeps its size and opens in its default place instead.
 - A Pad draft that can't be read is no longer overwritten: the Pad shows the error instead, and
   Ctrl+E keeps the typed text in the input window with the error.
+- Search results show a note's day in the date format of the settings, and no day for a note
+  under a heading that is not a date, such as `## Ideas`; such notes are listed after the dated
+  ones instead of above them.
 
 ## [0.8.2] - 2026-10-14
 

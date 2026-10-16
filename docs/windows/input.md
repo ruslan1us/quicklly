@@ -65,7 +65,9 @@ show together. <kbd>Ctrl</kbd>+<kbd>E</kbd> hides it the same way but clears the
   the application quits.
 - **Search mode.** A `?` typed into an empty field switches to search: the `?` becomes a prompt,
   results (day, time, done mark, first line with further lines joined by ` ⏎ `) appear under the
-  field with the query highlighted, ↑ ↓ select, <kbd>Enter</kbd> or a click opens the result in the
+  field with the query highlighted. The day is shown in the date format (`shownDate`) and left
+  blank for a note under no `## YYYY-MM-DD` heading in a file that is not a daily file; such notes
+  come after the dated ones. ↑ ↓ select, <kbd>Enter</kbd> or a click opens the result in the
   reader through `open_note`. Each search is numbered so that a slower earlier response cannot
   replace a newer one. Search covers notes files only, not the archive, and matches the text as the
   results show it: dates in the date format, images as `[Image #N]`, no done date; links are

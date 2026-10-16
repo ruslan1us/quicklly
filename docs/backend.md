@@ -53,8 +53,12 @@ opens the file in append mode. The full format is in [Data format](data-format.m
 - `search(dir, query, format, limit)` is a case-insensitive substring match over each note's text
   as the windows show it (`shown_text`: no done date, image labels instead of Markdown images,
   dates in the date format `format`, read from the settings by the command); the day of a note is
-  the daily file's date or the last `## ` heading above it; results carry the stored text, are
-  sorted newest first by day and time and truncated to `limit` (50 from the command).
+  the daily file's date or the last `## ` heading above it when that heading is a real
+  `YYYY-MM-DD` date, and none under any other heading (`## Ideas`) or no heading; results carry
+  the stored text, are sorted newest first by day and time, followed by the notes without a day
+  in file and line order, and truncated to `limit` (50 from the command), so the dated notes are
+  kept. Only search reads headings this way: `parse` still returns every `## ` heading, which the
+  reader shows and the archive keeps as they are.
 - `due(dir, today, ahead)` returns not-done notes whose first due date is on or before today, or
   after today when `ahead`, oldest date first; equal dates keep file and line order (stable sort).
   `overdue` is the number of days since the date (negative ahead).
