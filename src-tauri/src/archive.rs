@@ -160,8 +160,8 @@ fn archive_file(dir: &Path, name: &str, today: NaiveDate, days: i64) -> io::Resu
 /// into the archive. Returns how many were moved.
 pub fn archive_all(dir: &Path, today: NaiveDate, days: i64) -> io::Result<usize> {
     let mut moved = 0;
-    for file in reader::list_files(dir)? {
-        moved += archive_file(dir, &file.name, today, days)?;
+    for file in reader::list_names(dir)? {
+        moved += archive_file(dir, &file, today, days)?;
     }
     Ok(moved)
 }

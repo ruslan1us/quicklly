@@ -172,8 +172,8 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
     // Each link is resolved from the folder of the file it is in.
     let archive = (dir.join(ARCHIVE_DIR), format!("{ARCHIVE_DIR}/"));
     for (folder, prefix) in [(dir.to_path_buf(), String::new()), archive] {
-        for note_file in reader::list_files(&folder)? {
-            let name = format!("{prefix}{}", note_file.name);
+        for note_file in reader::list_names(&folder)? {
+            let name = format!("{prefix}{note_file}");
             // A file that can't be read might link to the images: fail rather than skip it.
             let content = reader::read_named(dir, &name)?;
             used.extend(
@@ -233,12 +233,12 @@ fn unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Result<Vec<Path
     }
     let archive = (dir.join(ARCHIVE_DIR), format!("{ARCHIVE_DIR}/"));
     for (folder, prefix) in [(dir.to_path_buf(), String::new()), archive] {
-        for note_file in reader::list_files(&folder)? {
+        for note_file in reader::list_names(&folder)? {
             if left.is_empty() {
                 return Ok(Vec::new());
             }
             // A file that can't be read might mention the images: fail rather than skip it.
-            let content = reader::read_named(dir, &format!("{prefix}{}", note_file.name))?;
+            let content = reader::read_named(dir, &format!("{prefix}{note_file}"))?;
             drop_mentioned(&mut left, &content);
         }
     }

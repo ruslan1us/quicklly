@@ -38,6 +38,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `YYYY-MM-DD.md` names are, and the reader lists it with the other files by name.
 - Tags in scripts with vowel signs, like `#हिंदी` in Devanagari, are highlighted in the Pad and
   suggested while typing as a whole, the same as the file they go to.
+- A large notes folder no longer freezes the windows and the hotkey while notes are searched or
+  listed: search runs once typing pauses, and each file is read once per search.
 
 ## [0.8.2] - 2026-10-14
 

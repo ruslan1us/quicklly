@@ -12,7 +12,7 @@ for errors, file writes and undo.
 
 | Module | Responsibility |
 | --- | --- |
-| [`lib.rs`](../src-tauri/src/lib.rs) | Entry point `run()`: CLI short-circuit, plugins, managed state, set-up, window-event rules, tray, the command list. Note commands that combine modules (save, edit, delete, undo, search, done journal), popup creation (`show_popup`), scale and acrylic effect helpers, `notes_changed`. |
+| [`lib.rs`](../src-tauri/src/lib.rs) | Entry point `run()`: CLI short-circuit, plugins, managed state, set-up, window-event rules, tray, the command list. Note commands that combine modules (save, edit, delete, undo, search, done journal), popup creation (`show_popup`), scale and acrylic effect helpers, `notes_changed`, `in_background` for the commands that scan the notes folder. |
 | [`notes.rs`](../src-tauri/src/notes.rs) | Writing new notes: normalisation (`note_lines`, `format_note`), tag detection (`first_tag`), target file choice, headings, append (`append_note`). The `Mode` enum (daily or inbox). |
 | [`reader.rs`](../src-tauri/src/reader.rs) | Reading and changing existing notes: listing files as a tree, parsing, search, due and done queries, done marks, snooze, edit, delete, undo, file deletion, path validation, line-ending-preserving atomic rewrites. |
 | [`archive.rs`](../src-tauri/src/archive.rs) | Moving done notes to `archive/<same path>` after the configured number of days. |
@@ -45,6 +45,9 @@ opens the file in append mode. The full format is in [Data format](data-format.m
   then subfolders by name. The reader re-sorts by modification time for its "recent first" view.
   A file that can't be read is listed with no notes; `search`, `due`, `done_since` and the
   archive skip it (see [Data format](data-format.md#the-notes-folder)).
+- `list_names` walks the folder the same way and returns the names in the same order without
+  reading the files. `list_tags`, search, due and done queries, the archive and the image checks
+  use it, so each file is read once per scan (by the scan itself), and tags need no file content.
 - `read_named(dir, name)` reads a file by its name from the notes folder and puts the name in the
   error (`couldn't read archive/todo.md: …`); used where one file among many is read and a
   failure must stop the operation: saving a note, image clean-up.
@@ -188,6 +191,17 @@ harmless, and no attempt is made to tell those writes apart. See
 [ADR 0017](decisions/0017-watch-the-notes-folder-for-changes.md).
 
 ## Conventions
+
+### Sync and async commands
+
+- A command that writes notes files is sync: it runs on the main thread, so writes from the windows
+  never run at the same time as each other.
+- A command that reads every notes file (`search_notes`, `list_note_files`, `list_tags`,
+  `list_done`, `list_due`) is `async` and wraps its work in `in_background` (in `lib.rs`), which
+  runs it with `spawn_blocking`, so the main thread, and with it every window and the hotkey, never
+  waits for a scan. Reading while a write happens is safe: rewrites replace the file atomically
+  (see [File writes](#file-writes)). See [Architecture](architecture.md#threads-of-the-commands).
+- A command that may create a window is `async` too ([ADR 0008](decisions/0008-windows-created-lazily-from-async-commands.md)).
 
 ### Errors
 

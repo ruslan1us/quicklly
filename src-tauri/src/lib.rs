@@ -232,13 +232,29 @@ async fn open_done(app: AppHandle) {
     show_popup(&app, DONE_WINDOW, "done", "Quicklly Done");
 }
 
+/// Runs `read`, a command's work that reads every notes file and so may take a while in a big
+/// notes folder, on a thread of its own, so the windows, the tray and the hotkey don't wait for it.
+///
+/// Only for commands that read: those that write stay sync, on the main thread, so they never run
+/// at the same time as each other.
+pub(crate) async fn in_background<T: Send + 'static>(
+    read: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(read)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Lists the notes done in the last `days` days, today included, archived ones too, for the
 /// journal.
 #[tauri::command]
-fn list_done(app: AppHandle, days: u64) -> Result<Vec<reader::Done>, String> {
-    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    let from = chrono::Local::now().date_naive() - chrono::Days::new(days - 1);
-    reader::done_since(&dir, from).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+async fn list_done(app: AppHandle, days: u64) -> Result<Vec<reader::Done>, String> {
+    in_background(move || {
+        let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+        let from = chrono::Local::now().date_naive() - chrono::Days::new(days - 1);
+        reader::done_since(&dir, from).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+    })
+    .await
 }
 
 /// Opens the notes reader from the input window (← in an empty note).
@@ -355,10 +371,13 @@ fn undo_change(app: AppHandle, name: String, change: reader::Change) -> Result<u
 /// Finds notes containing `query`, as they are shown, in all notes files, for search in the
 /// input window.
 #[tauri::command]
-fn search_notes(app: AppHandle, query: String) -> Result<Vec<reader::Hit>, String> {
-    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    let format = settings::date_format(&app);
-    reader::search(&dir, &query, format, 50).map_err(|e| format!("Search failed: {e}"))
+async fn search_notes(app: AppHandle, query: String) -> Result<Vec<reader::Hit>, String> {
+    in_background(move || {
+        let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+        let format = settings::date_format(&app);
+        reader::search(&dir, &query, format, 50).map_err(|e| format!("Search failed: {e}"))
+    })
+    .await
 }
 
 /// A note for the reader to open, e.g. a search result.
@@ -398,16 +417,22 @@ fn open_input(app: AppHandle) {
 
 /// Lists the notes files for the reader.
 #[tauri::command]
-fn list_note_files(app: AppHandle) -> Result<Vec<reader::NoteFile>, String> {
-    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::list_files(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+async fn list_note_files(app: AppHandle) -> Result<Vec<reader::NoteFile>, String> {
+    in_background(move || {
+        let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+        reader::list_files(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+    })
+    .await
 }
 
 /// Lists the tags that have their own file, to suggest them while a `#tag` is typed.
 #[tauri::command]
-fn list_tags(app: AppHandle) -> Result<Vec<String>, String> {
-    let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    reader::list_tags(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+async fn list_tags(app: AppHandle) -> Result<Vec<String>, String> {
+    in_background(move || {
+        let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
+        reader::list_tags(&dir).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
+    })
+    .await
 }
 
 fn setup_tray(app: &App) -> tauri::Result<()> {

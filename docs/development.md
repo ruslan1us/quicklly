@@ -131,7 +131,11 @@ Using the done journal as the model:
 2. Add a `#[tauri::command]` wrapper. Resolve the notes folder with `settings::notes_dir`; validate
    any file name from the page with `reader::notes_file` (or work through functions that do); map
    errors to `String` with context.
-3. Make it `async` if it may create a window.
+3. Make it `async` if it may create a window. Make it `async` too if it only reads and may read
+   many files (a scan of the notes folder), with its work in `in_background(move || …).await`, so
+   it runs off the main thread. Keep a command that writes notes files sync, so writes stay
+   one at a time on the main thread (see
+   [Architecture](architecture.md#threads-of-the-commands)).
 4. If it changes a notes file, call `notes_changed(&app)` after writing; if it changes an existing
    note, go through `reader::edit_note` so it is guarded and returns a `Change`.
 5. Register it in `generate_handler!`.

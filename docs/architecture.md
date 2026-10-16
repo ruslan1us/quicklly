@@ -120,7 +120,23 @@ and zoomed to the scale setting.
 Commands are registered in `generate_handler!` in [`lib.rs`](../src-tauri/src/lib.rs). Argument
 names are camelCase on the JavaScript side (Tauri's default). Commands that read or change notes
 resolve the notes folder through `settings::notes_dir` on every call. Commands marked *async*
-create or may create a window.
+create or may create a window, or read every notes file (see [below](#threads-of-the-commands)).
+
+### Threads of the commands
+
+- **Sync commands run on the main thread**, the one that also runs the windows, the tray and the
+  hotkey. While one runs, the whole application waits for it. Every command that writes notes
+  files (save, edit, done mark, snooze, delete, undo, file deletion) is sync, so the writes made
+  from the windows run one at a time and never interleave.
+- **Async commands run off the main thread.** Those that create windows must be async (see
+  [Creation rules](#creation-rules)). Those that read every notes file (`search_notes`,
+  `list_note_files`, `list_tags`, `list_done`, `list_due`) are async as well, and run their work
+  through `in_background` in `lib.rs` (`spawn_blocking` on Tauri's async runtime), so a big notes
+  folder slows only their own answer, not the windows or the hotkey.
+- **Reads may overlap a write.** A change to an existing note rewrites the file atomically (a
+  `*.md.tmp` copy renamed over it), so a read sees the file either before or after it, never half
+  written. A new note is appended, so a read at that moment at worst misses the note being added;
+  the `notes-changed` that follows the write makes the windows read again.
 
 | Command | Module | Used by | Purpose |
 | --- | --- | --- | --- |
@@ -128,9 +144,9 @@ create or may create a window.
 | `save_image(raw body)` | lib | input, Pad | Save a pasted image (MIME type in the `Image-Type` header); returns `images/…` |
 | `trash_unsaved_images(paths, kept)` | lib | input, Pad | Move the pasted images a window let go of to the Recycle Bin unless a notes file, the Pad draft or `kept` mentions them; failures only logged |
 | `open_images(name, paths)` | lib | reader | Open a note's images in the default viewer |
-| `search_notes(query)` | lib | input | Up to 50 matching notes, newest first |
-| `list_note_files` | lib | reader | Notes files with counts and modification times |
-| `list_tags` | lib | input, Pad | Tags that have a file, for suggestions |
+| `search_notes(query)` *async* | lib | input | Up to 50 matching notes, newest first |
+| `list_note_files` *async* | lib | reader | Notes files with counts and modification times |
+| `list_tags` *async* | lib | input, Pad | Tags that have a file, for suggestions |
 | `read_note_file(name)` | lib | reader | Parsed day headings and notes of one file |
 | `set_note_done(name, note, done)` | lib | reader, reminders | Toggle done; returns a `Change` |
 | `edit_note(name, note, text)` | lib | reader, Pad | Replace a note's text; returns a `Change` |
@@ -138,14 +154,14 @@ create or may create a window.
 | `undo_change(name, change)` | lib | reader | Restore the file before a `Change` and its images |
 | `delete_note_file(name)` | lib | reader | Move a notes file and its unused images to the Recycle Bin |
 | `snooze_note(name, note, days)` | lib | reminders | Move a note's due date to today plus `days` |
-| `list_done(days)` | lib | done | Notes done in the last `days` days (today included), archive included |
+| `list_done(days)` *async* | lib | done | Notes done in the last `days` days (today included), archive included |
 | `open_note(file, line)` *async* | lib | input, reminders | Open the reader on a note |
 | `take_reader_target` | lib | reader | Take the pending note to open |
 | `open_input` | lib | reader, Pad | Show the input window |
 | `open_reader`, `open_settings`, `open_help`, `open_changelog`, `open_done` *async* | lib | input | Open a popup |
 | `exit_app` *async* | lib | input | Quit |
 | `open_reminders` *async* | reminders | input | Open focused; returns `false` when nothing is due or ahead |
-| `list_due(ahead)` | reminders | reminders | Notes due today or earlier, or ahead |
+| `list_due(ahead)` *async* | reminders | reminders | Notes due today or earlier, or ahead |
 | `reveal_reminders`, `place_reminders` | reminders | reminders | Show in the corner; keep the corner after a resize |
 | `open_pad`, `expand_to_pad(text)`, `edit_in_pad(name, note)` *async* | pad | input, reader | Open the Pad, append text to its draft, or edit a note in it |
 | `get_pad_draft`, `set_pad_draft(text)`, `take_pad_edit` | pad | Pad | Draft persistence and the pending edit |

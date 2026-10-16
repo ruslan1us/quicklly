@@ -282,16 +282,52 @@ function renderResults() {
   results.children[selectedHit]?.scrollIntoView({ block: "nearest" });
 }
 
-async function search() {
+/** How long search waits after the last key before it reads the notes, in milliseconds. */
+const SEARCH_DELAY = 150;
+let searchTimer: number | undefined;
+/** The latest search sent, until its results are shown. */
+let lastSearch: Promise<void> = Promise.resolve();
+
+/** Searches for the query once typing pauses; with no query the results clear at once. */
+function search() {
+  window.clearTimeout(searchTimer);
+  searchTimer = undefined;
   const count = ++searchCount;
-  let found: Hit[] = [];
   if (searching() && searchQuery()) {
-    try {
-      found = await invoke<Hit[]>("search_notes", { query: searchQuery() });
-    } catch (err) {
-      showError(err);
-    }
+    searchTimer = window.setTimeout(() => {
+      searchTimer = undefined;
+      lastSearch = findHits(count, searchQuery());
+    }, SEARCH_DELAY);
+  } else {
+    void showHits(count, []);
   }
+}
+
+/**
+ * Runs a search still waiting for typing to pause right away, and waits for the latest one, so
+ * Enter opens a result of the query as typed, not of the one before.
+ */
+async function searchNow() {
+  if (searchTimer !== undefined) {
+    window.clearTimeout(searchTimer);
+    searchTimer = undefined;
+    lastSearch = findHits(searchCount, searchQuery());
+  }
+  await lastSearch;
+}
+
+async function findHits(count: number, query: string) {
+  let found: Hit[] = [];
+  try {
+    found = await invoke<Hit[]>("search_notes", { query });
+  } catch (err) {
+    showError(err);
+  }
+  await showHits(count, found);
+}
+
+/** Shows the results of search number `count`, unless a newer search has started since. */
+async function showHits(count: number, found: Hit[]) {
   if (count !== searchCount) return;
   hits = found;
   selectedHit = 0;
@@ -351,6 +387,8 @@ async function hide() {
   setSearchMode(false);
   historyIndex = history.length;
   hits = [];
+  window.clearTimeout(searchTimer);
+  searchTimer = undefined;
   searchCount++;
   clearError();
   renderResults();
@@ -396,6 +434,7 @@ async function save() {
     return;
   }
   if (searching()) {
+    await searchNow();
     await openHit();
     return;
   }
@@ -488,7 +527,7 @@ input.addEventListener("keydown", (e) => {
     // Backspace on an empty query leaves search mode.
     e.preventDefault();
     setSearchMode(false);
-    void search();
+    search();
   } else if (searching() && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
     // While searching, ↑/↓ pick a result.
     e.preventDefault();
@@ -519,7 +558,7 @@ input.addEventListener("input", () => {
   clearError();
   renderBackdrop();
   updateCaret();
-  void search();
+  search();
 });
 
 const HINT = hint.textContent ?? "";

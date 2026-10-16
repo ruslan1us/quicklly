@@ -118,8 +118,8 @@ pub async fn open_reminders(app: AppHandle) -> Result<bool, String> {
 /// Lists the notes due today or earlier, or with `ahead` those due after today, for the
 /// reminders window.
 #[tauri::command]
-pub fn list_due(app: AppHandle, ahead: bool) -> Result<Vec<reader::Due>, String> {
-    due_notes(&app, ahead)
+pub async fn list_due(app: AppHandle, ahead: bool) -> Result<Vec<reader::Due>, String> {
+    crate::in_background(move || due_notes(&app, ahead)).await
 }
 
 /// Shows the reminders window, once the page is ready, in the corner of the screen in use. It

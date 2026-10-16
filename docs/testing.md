@@ -51,7 +51,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, held, text wins, errors), `releaseImages` |
 | `calendar.test.ts` | `/date` resolution and the calendar keys |
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
-| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search results (the query marked in the shown text, the day in the date format or blank), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails |
+| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search (marks in the shown text, the day in the date format or blank, the delay after typing, Enter during the delay, late results of an older search ignored), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails |
 | `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over |
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, inline edit saved and refused, Ctrl+Z in its cases |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
@@ -59,7 +59,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period |
 
 Not covered by automated tests: the Pad beyond its pasted images, settings and changelog pages,
-the rest of the help, and search in the input window beyond how its results are shown.
+the rest of the help, and opening a search result in the input window.
 
 ## Rust tests
 
@@ -69,7 +69,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | Module | Covers |
 | --- | --- |
 | `notes` | File choice by mode and tag, headings, nested tags and image links, missing trailing newline, normalisation of lines, an unreadable target file named in the error |
-| `reader` | Parsing, listing order and tree, tags, path validation, search (only date headings as days, undated notes last), due and ahead, done journal, done marks and dates, edit, delete, snooze, removal of empty day headings (other headings kept), undo, refusing stale changes, line endings, a file that is not UTF-8 listed with no notes and left out of search, due and the done journal |
+| `reader` | Parsing, listing order and tree, listing names without reading the files, tags, path validation, search (only date headings as days, undated notes last), due and ahead, done journal, done marks and dates, edit, delete, snooze, removal of empty day headings (other headings kept), undo, refusing stale changes, line endings, a file that is not UTF-8 listed with no notes and left out of search, due and the done journal |
 | `archive` | Selection by done date, daily, grouped, tag, hand-written and nested files, empty headings that are no day kept, appending to an existing archive, notes and archive files that can't be read left alone |
 | `images` | Naming and numbering, extensions, path extraction, relinking, safe resolution (only pasted images right in `images/` with an image extension), unused-image detection (archive and nested files included, links in other case), pasted images nothing mentions (notes, archive, tag folders, kept texts, any link form, case) and only files right in `images/`, failing with the file's name when a notes file can't be read, going on after an image that can't be moved (with a stand-in for the Recycle Bin), original paths without the `\\?\` or `\\?\UNC\` prefix (local and network share), Recycle Bin item matching |
 | `settings` | Serialised strings of date formats and archive periods; reading the notes folder and mode from a settings file |

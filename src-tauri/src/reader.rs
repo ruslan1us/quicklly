@@ -47,15 +47,41 @@ pub enum Item {
 /// reader can instead sort them by when they last changed.) A missing folder just has no notes
 /// yet; a file that can't be read is listed with no notes.
 pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
-    let mut files = Vec::new();
-    add_files(dir, "", &mut files)?;
-    files.sort_by(|a, b| tree_order(&a.name, &b.name));
-    Ok(files)
+    list_names(dir)?
+        .into_iter()
+        .map(|name| {
+            let path = path_of(dir, &name);
+            let changed = fs::metadata(&path)
+                .and_then(|meta| meta.modified())
+                .ok()
+                .and_then(|modified| modified.duration_since(SystemTime::UNIX_EPOCH).ok())
+                .map_or(0, |since| since.as_millis() as u64);
+            // A file that can't be read (not UTF-8, say) is still listed, with no notes, so the
+            // reader shows it and says why when it is opened.
+            let (notes, done) =
+                fs::read_to_string(&path).map_or((0, 0), |content| count_notes(&content));
+            Ok(NoteFile {
+                name,
+                notes,
+                done,
+                changed,
+            })
+        })
+        .collect()
 }
 
-/// Adds the notes files in the folder `prefix` (`""` or `work/`) of `dir` to `files`, and those
-/// of the folders in it.
-fn add_files(dir: &Path, prefix: &str, files: &mut Vec<NoteFile>) -> io::Result<()> {
+/// The names of the notes files in `dir`, in the order of [`list_files`], without reading them:
+/// for the scans that read each file themselves, and for the tags.
+pub fn list_names(dir: &Path) -> io::Result<Vec<String>> {
+    let mut names = Vec::new();
+    add_names(dir, "", &mut names)?;
+    names.sort_by(|a, b| tree_order(a, b));
+    Ok(names)
+}
+
+/// Adds the names of the notes files in the folder `prefix` (`""` or `work/`) of `dir` to
+/// `names`, and those of the folders in it.
+fn add_names(dir: &Path, prefix: &str, names: &mut Vec<String>) -> io::Result<()> {
     let entries = match fs::read_dir(path_of(dir, prefix)) {
         Ok(entries) => entries,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
@@ -67,27 +93,11 @@ fn add_files(dir: &Path, prefix: &str, files: &mut Vec<NoteFile>) -> io::Result<
         let kind = entry.file_type()?;
         // A folder notes files can be in.
         if kind.is_dir() && is_notes_file(&format!("{name}/x.md")) {
-            add_files(dir, &format!("{name}/"), files)?;
+            add_names(dir, &format!("{name}/"), names)?;
         }
-        if !kind.is_file() || !is_notes_file(&name) {
-            continue;
+        if kind.is_file() && is_notes_file(&name) {
+            names.push(name);
         }
-        let changed = entry
-            .metadata()
-            .and_then(|meta| meta.modified())
-            .ok()
-            .and_then(|modified| modified.duration_since(SystemTime::UNIX_EPOCH).ok())
-            .map_or(0, |since| since.as_millis() as u64);
-        // A file that can't be read (not UTF-8, say) is still listed, with no notes, so the
-        // reader shows it and says why when it is opened.
-        let (notes, done) =
-            fs::read_to_string(entry.path()).map_or((0, 0), |content| count_notes(&content));
-        files.push(NoteFile {
-            name,
-            notes,
-            done,
-            changed,
-        });
     }
     Ok(())
 }
@@ -130,10 +140,10 @@ fn file_order(a: &str, b: &str) -> Ordering {
 /// The tags that have a file of their own: the names, without `.md`, of the notes files that
 /// are neither the inbox nor daily files, sorted. Suggested while a `#tag` is typed.
 pub fn list_tags(dir: &Path) -> io::Result<Vec<String>> {
-    let mut tags: Vec<String> = list_files(dir)?
+    let mut tags: Vec<String> = list_names(dir)?
         .into_iter()
-        .filter(|file| file.name != INBOX_FILE && daily_date(&file.name).is_none())
-        .filter_map(|file| file.name.strip_suffix(".md").map(String::from))
+        .filter(|name| name != INBOX_FILE && daily_date(name).is_none())
+        .filter_map(|name| name.strip_suffix(".md").map(String::from))
         // Only names a note's `#tag` can lead to: `My Notes.md` is no tag file.
         .filter(|name| first_tag(&format!("#{name}")).as_deref() == Some(name.as_str()))
         .collect();
@@ -164,11 +174,11 @@ pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::
         return Ok(Vec::new());
     }
     let mut hits = Vec::new();
-    for file in list_files(dir)? {
+    for file in list_names(dir)? {
         // Notes in other files take their day from the `## YYYY-MM-DD` heading above them; a
         // heading that is not a date, like `## Ideas`, gives the notes under it none.
-        let mut day = daily_date(&file.name).map(String::from);
-        let Ok(content) = fs::read_to_string(path_of(dir, &file.name)) else {
+        let mut day = daily_date(&file).map(String::from);
+        let Ok(content) = fs::read_to_string(path_of(dir, &file)) else {
             continue;
         };
         for item in parse(&content) {
@@ -180,7 +190,7 @@ pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::
                     done,
                     text,
                 } if shown_text(&text, format).to_lowercase().contains(&query) => hits.push(Hit {
-                    file: file.name.clone(),
+                    file: file.clone(),
                     line,
                     day: day.clone(),
                     time,
@@ -241,8 +251,8 @@ pub struct Due {
 /// Files that can't be read are left out.
 pub fn due(dir: &Path, today: NaiveDate, ahead: bool) -> io::Result<Vec<Due>> {
     let mut found = Vec::new();
-    for file in list_files(dir)? {
-        let Ok(content) = fs::read_to_string(path_of(dir, &file.name)) else {
+    for file in list_names(dir)? {
+        let Ok(content) = fs::read_to_string(path_of(dir, &file)) else {
             continue;
         };
         for item in parse(&content) {
@@ -259,7 +269,7 @@ pub fn due(dir: &Path, today: NaiveDate, ahead: bool) -> io::Result<Vec<Due>> {
                 continue;
             };
             found.push(Due {
-                file: file.name.clone(),
+                file: file.clone(),
                 note: NoteRef {
                     line,
                     time,
@@ -294,8 +304,8 @@ pub struct Done {
 pub fn done_since(dir: &Path, from: NaiveDate) -> io::Result<Vec<Done>> {
     let mut found = Vec::new();
     for (folder, prefix) in [(dir.to_path_buf(), ""), (dir.join(ARCHIVE_DIR), "archive/")] {
-        for file in list_files(&folder)? {
-            let Ok(content) = fs::read_to_string(path_of(&folder, &file.name)) else {
+        for file in list_names(&folder)? {
+            let Ok(content) = fs::read_to_string(path_of(&folder, &file)) else {
                 continue;
             };
             for item in parse(&content) {
@@ -313,7 +323,7 @@ pub fn done_since(dir: &Path, from: NaiveDate) -> io::Result<Vec<Done>> {
                     continue;
                 }
                 found.push(Done {
-                    file: format!("{prefix}{}", file.name),
+                    file: format!("{prefix}{file}"),
                     text: format!("{first}{rest}"),
                     date: date.format("%Y-%m-%d").to_string(),
                 });
@@ -1680,6 +1690,42 @@ mod tests {
 
         assert_eq!(list_tags(&dir).unwrap(), ["ideas", "todo"]);
         assert!(list_tags(&dir.join("missing")).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn lists_names_without_reading_the_files() {
+        let dir = temp_dir("list-names");
+        fs::create_dir_all(dir.join("work")).unwrap();
+        for name in ["2026-09-26.md", "inbox.md", "todo.md", "work/quicklly.md"] {
+            fs::write(path_of(&dir, name), "- 09:00 milk\n").unwrap();
+        }
+        // Not UTF-8, so reading it fails: only listing its name works.
+        fs::write(dir.join("binary.md"), [0xff, 0xfe, 0x00]).unwrap();
+
+        assert_eq!(
+            list_names(&dir).unwrap(),
+            [
+                "inbox.md",
+                "binary.md",
+                "todo.md",
+                "2026-09-26.md",
+                "work/quicklly.md"
+            ]
+        );
+        assert_eq!(
+            list_tags(&dir).unwrap(),
+            ["binary", "todo", "work/quicklly"]
+        );
+        assert!(list_names(&dir.join("missing")).unwrap().is_empty());
+
+        fs::remove_file(dir.join("binary.md")).unwrap();
+        let listed: Vec<_> = list_files(&dir)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.name)
+            .collect();
+        assert_eq!(listed, list_names(&dir).unwrap());
         fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -24,6 +24,12 @@ async function open(dateFormat = "DD/MM/YYYY", replies: Record<string, unknown> 
   calendar = document.querySelector("#calendar")!;
 }
 
+/** Fakes the timers of the page, once it has loaded, so the search delay can be stepped over. */
+const fakeTimers = () => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+/** Lets the search delay pass after typing, and what it started finish. */
+const pause = () => vi.advanceTimersByTimeAsync(150);
+
 /** Whether the window was hidden. */
 const hidden = () => calls.some((call) => call.cmd === "plugin:window|hide");
 
@@ -109,11 +115,12 @@ test("search results mark the query in the text as shown, dates and image labels
     text: "bank 📅 2026-10-15 ![Image #1](images/a.png)",
   };
   await open("DD/MM/YYYY", { search_notes: [hit] });
+  fakeTimers();
   const marked = () => [...document.querySelectorAll("#results mark")].map((m) => m.textContent);
 
   type(note, "?");
   type(note, "15/10/2026");
-  await settle();
+  await pause();
   expect(argsOf(calls, "search_notes")).toContainEqual({ query: "15/10/2026" });
   expect(document.querySelector("#results .text")!.textContent).toBe(
     "bank 📅 15/10/2026 [Image #1]",
@@ -122,7 +129,7 @@ test("search results mark the query in the text as shown, dates and image labels
 
   note.select();
   type(note, "image #1");
-  await settle();
+  await pause();
   expect(marked()).toEqual(["Image #1"]);
 });
 
@@ -137,14 +144,92 @@ test("search results show the day in the date format, and none without a day", a
     text: "milk",
   });
   await open("MM/DD/YYYY", { search_notes: [hit("2026-10-13", 2), hit(null, 6)] });
+  fakeTimers();
 
   type(note, "?");
   type(note, "milk");
-  await settle();
+  await pause();
   const days = [...document.querySelectorAll("#results .hit")].map(
     (li) => li.children[1].textContent,
   );
   expect(days).toEqual(["10/13/2026", ""]);
+});
+
+/** A found note with `text`, for search results. */
+const hitWith = (text: string) => ({
+  file: "inbox.md",
+  line: 3,
+  day: "2026-10-13",
+  time: "09:00",
+  done: false,
+  text,
+});
+
+/** The texts of the search results shown. */
+const shownHits = () =>
+  [...document.querySelectorAll("#results .text")].map((text) => text.textContent);
+
+test("search waits for a pause in typing before it reads the notes", async () => {
+  closePage();
+  await open("DD/MM/YYYY", { search_notes: [hitWith("bank")] });
+  fakeTimers();
+
+  type(note, "?");
+  type(note, "b");
+  await vi.advanceTimersByTimeAsync(100);
+  type(note, "a");
+  await vi.advanceTimersByTimeAsync(100);
+  expect(argsOf(calls, "search_notes")).toEqual([]);
+
+  await vi.advanceTimersByTimeAsync(50);
+  expect(argsOf(calls, "search_notes")).toEqual([{ query: "ba" }]);
+  expect(shownHits()).toEqual(["bank"]);
+});
+
+test("Enter right after typing opens a result of the query as typed", async () => {
+  closePage();
+  await open("DD/MM/YYYY", {
+    search_notes: ({ query }: { query: string }) =>
+      query === "ba"
+        ? [{ ...hitWith("bank"), line: 1 }]
+        : [{ ...hitWith("bread"), line: 2 }],
+  });
+  fakeTimers();
+
+  type(note, "?");
+  type(note, "ba");
+  await pause();
+  note.select();
+  type(note, "bread");
+  press(note, "Enter");
+  await vi.advanceTimersByTimeAsync(0);
+  expect(argsOf(calls, "search_notes")).toEqual([{ query: "ba" }, { query: "bread" }]);
+  expect(argsOf(calls, "open_note")).toEqual([{ file: "inbox.md", line: 2 }]);
+});
+
+test("results of an older search that come late don't replace a newer one", async () => {
+  closePage();
+  let answerMilk = (_hits: unknown) => {};
+  await open("DD/MM/YYYY", {
+    search_notes: ({ query }: { query: string }) =>
+      query === "milk"
+        ? new Promise((resolve) => (answerMilk = resolve))
+        : [hitWith("bread")],
+  });
+  fakeTimers();
+
+  type(note, "?");
+  type(note, "milk");
+  await pause();
+  note.select();
+  type(note, "bread");
+  await pause();
+  expect(shownHits()).toEqual(["bread"]);
+
+  answerMilk([hitWith("milk")]);
+  await pause();
+  expect(argsOf(calls, "search_notes")).toEqual([{ query: "milk" }, { query: "bread" }]);
+  expect(shownHits()).toEqual(["bread"]);
 });
 
 /** Pastes a clipboard with a small PNG in it into the note. */

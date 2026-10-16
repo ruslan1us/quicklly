@@ -68,8 +68,12 @@ show together. <kbd>Ctrl</kbd>+<kbd>E</kbd> hides it the same way but clears the
   field with the query highlighted. The day is shown in the date format (`shownDate`) and left
   blank for a note under no `## YYYY-MM-DD` heading in a file that is not a daily file; such notes
   come after the dated ones. ↑ ↓ select, <kbd>Enter</kbd> or a click opens the result in the
-  reader through `open_note`. Each search is numbered so that a slower earlier response cannot
-  replace a newer one. Search covers notes files only, not the archive, and matches the text as the
+  reader through `open_note`. The search runs 150 ms after the last change to the query
+  (`SEARCH_DELAY`), not on every key, since each one reads every notes file; an empty query clears
+  the results at once. <kbd>Enter</kbd> before the delay is over runs the waiting search at once
+  and opens the first result of the query as typed. Each search is numbered so that a slower
+  earlier response cannot replace a newer one. Search covers notes files only, not the archive,
+  and matches the text as the
   results show it: dates in the date format, images as `[Image #N]`, no done date; links are
   matched in full (see [Data format](../data-format.md#display-and-stored-forms)). The highlight
   runs on the same shown text, so what matched is what is marked, except a query that spans a
