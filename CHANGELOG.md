@@ -43,6 +43,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `/date` calendar in the reader's editor is scrolled into view when it opens, instead of
   being left below the bottom of the window under the last note of a file.
 - The reader no longer splits an image label like `[Image #2]` over two lines when a note wraps.
+- The block caret at the end of a full line stays on that line, right after its text, instead of
+  dropping to the line below; after selecting all and pressing an arrow it no longer stretches the
+  reader past its window with scrollbars.
 
 ## [0.8.2] - 2026-10-14
 

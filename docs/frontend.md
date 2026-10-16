@@ -47,7 +47,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 | [`tagSuggest.ts`](../src/shared/tagSuggest.ts) | Suggests existing tags (`list_tags`) for a `#tag` being typed; ↑ ↓ choose, Enter or Tab pick, Esc closes until the typed tag changes; exports `TAG_NAME`, the tag rule of `notes::first_tag`, which the Pad also highlights tags by | Input, Pad |
 | [`images.ts`](../src/shared/images.ts) | Label ↔ Markdown conversion (`toMarkdown`, `fromMarkdown`), `imagePaths`, highlighting nodes, `pasteImages` (adds each pasted image to the window's held set), `releaseImages` (lets go of the held images when the text starts over, see [ADR 0018](decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md)) | Input, Pad, reader, reminders, done |
 | [`links.ts`](../src/shared/links.ts) | Link recognition (`http(s)://…` or a bare domain with a known top-level domain), sentence-punctuation trimming, `shortLink`, `linkNodes` | Input, Pad, reader, reminders, done |
-| [`blockCaret.ts`](../src/shared/blockCaret.ts) | Terminal-style block caret over a textarea whose native caret is hidden, positioned with a mirror element | Input, Pad, reader editor |
+| [`blockCaret.ts`](../src/shared/blockCaret.ts) | Terminal-style block caret over a textarea whose native caret is hidden, positioned with a mirror element that holds the whole text (so it wraps like the textarea); at the end of a line it goes just after the last character, and never past the edge of the text | Input, Pad, reader editor |
 | [`themes.css`](../src/shared/themes.css) | Theme colour variables, `--surface`, thin themed scrollbars | Every page |
 | [`terminal.css`](../src/shared/terminal.css) | Popup base: font, body-scrolling layout, header, rows, error, footer | Popups |
 
