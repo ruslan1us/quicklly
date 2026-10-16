@@ -261,18 +261,19 @@ fn delete_note_file(app: AppHandle, name: String) -> Result<(), String> {
         .unwrap_or_default();
     reader::trash_file(&dir, &name).map_err(|e| format!("Couldn't delete {name}: {e}"))?;
     notes_changed(&app);
-    trash_images(&dir, &name, images::paths_in(&content))?;
+    trash_images(&dir, &name, images::paths_in(&content));
     Ok(())
 }
 
 /// Moves images that notes no longer link to to the Recycle Bin; `paths` as the notes file
-/// `name` links to them. Returns where the images were, to bring them back on undo.
-fn trash_images(
-    dir: &std::path::Path,
-    name: &str,
-    paths: Vec<String>,
-) -> Result<Vec<std::path::PathBuf>, String> {
-    images::trash_unused(dir, name, &paths).map_err(|e| format!("Couldn't delete the images: {e}"))
+/// `name` links to them. Returns where the images were, to bring them back on undo. Called once
+/// the notes file is written, so a failure is only logged: the change itself is made, and the
+/// images that couldn't be moved just stay in `images/`.
+fn trash_images(dir: &std::path::Path, name: &str, paths: Vec<String>) -> Vec<std::path::PathBuf> {
+    images::trash_unused(dir, name, &paths).unwrap_or_else(|e| {
+        eprintln!("Failed to delete the images of {name}: {e}");
+        Vec::new()
+    })
 }
 
 /// Marks a note in a notes file as done or not done; returns the change, for the reader to undo.
@@ -316,7 +317,7 @@ fn delete_note(
     let mut change =
         reader::delete(&dir, &name, &note).map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    change.images = trash_images(&dir, &name, images::paths_in(&note.text))?;
+    change.images = trash_images(&dir, &name, images::paths_in(&note.text));
     Ok(change)
 }
 
@@ -333,7 +334,7 @@ fn edit_note(
     let mut change = reader::set_text(&dir, &name, &note, &text)
         .map_err(|e| format!("Couldn't update {name}: {e}"))?;
     notes_changed(&app);
-    change.images = trash_images(&dir, &name, images::paths_in(&note.text))?;
+    change.images = trash_images(&dir, &name, images::paths_in(&note.text));
     Ok(change)
 }
 

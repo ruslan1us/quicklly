@@ -81,8 +81,10 @@ While a delete waits for confirmation the footer says so; any other key or a cli
   is no longer exactly as the change left it) and its images, opens that file if another one is
   shown, selects the note and reports `Undone: delete`, `Undone: done` or `Undone: edit`, plus
   `couldn't bring back N images` when some images were no longer in the Recycle Bin. The entry is
-  dropped even if the undo fails, so the next press moves on to the one before. Inside the inline
-  editor <kbd>Ctrl</kbd>+<kbd>Z</kbd> is the editor's own text undo.
+  dropped even if the undo fails, so the next press moves on to the one before. A change whose
+  images couldn't all be moved to the Recycle Bin is still saved and pushed: those images stay in
+  `images/` and the failure is only logged. Inside the inline editor <kbd>Ctrl</kbd>+<kbd>Z</kbd> is
+  the editor's own text undo.
 - **Pinning.** A file must be open to pin. Pinning saves the pin state and the open file and makes
   the window resizable (minimum 440×200 at 100 % scale); moves and resizes are saved. A pinned
   reader keeps its size, scrolls its rows between a fixed header and footer, and reopens on its

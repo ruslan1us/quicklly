@@ -95,6 +95,8 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   resolved from each file's folder) still links to them; it returns their original full paths.
   A notes file that can't be read fails it (and `trash_unsaved`), with the file's name, rather
   than being skipped: it may link to the images.
+  Each image is tried in turn (`trash_each`): one that can't be moved is logged and stays, the
+  others still go, and only the ones moved are returned.
   `restore(paths)` brings each back by finding the latest Recycle Bin entry with that original
   path, and returns how many could not be restored.
 - `trash_unsaved(dir, paths, kept)` moves to the Recycle Bin the images a window let go of
@@ -104,7 +106,8 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   the `kept` texts contains its file name, ignoring case. Nothing is restored: these images were
   never in a saved note. The command `trash_unsaved_images(paths, kept)` in `lib.rs` adds the Pad
   draft (`pad::draft`, which fails rather than reads as empty when the file can't be read) to
-  `kept` and only logs failures.
+  `kept` and only logs failures. Like `trash_unused`, it goes on after an image that can't be
+  moved.
 
 ### `settings`
 
@@ -174,6 +177,10 @@ harmless, and no attempt is made to tell those writes apart. See
 - Window operations whose failure has no useful remedy (`show`, `set_focus`, `set_position`, …)
   are deliberately ignored with `let _ =`.
 - Settings getters never fail: a missing or unreadable value means the default.
+- Moving images to the Recycle Bin after a note or a notes file is deleted or edited
+  (`trash_images` in `lib.rs`) happens once the notes file is written, so its failures are only
+  logged: the command still succeeds, emits `notes-changed` and returns the `Change` with the
+  images actually moved, so the change can be undone.
 
 ### File writes
 
@@ -198,7 +205,8 @@ rewrite of line endings described in [Data format](data-format.md#line-endings).
 ### Undo snapshots
 
 `edit_note` returns a `Change { before, after, images }`: the whole file content before and after
-the change, and (filled in by the command) the original paths of images moved to the Recycle Bin.
+the change, and (filled in by the command) the original paths of images moved to the Recycle Bin;
+an image that couldn't be moved is left out and stays in `images/`.
 The reader keeps these in memory. `undo` writes `before` back only if the file content is still
 exactly `after`; otherwise it fails with "<file> has changed since" and nothing is written. After a
 successful file restore, `images::restore` brings the images back. Snapshots of a whole file are

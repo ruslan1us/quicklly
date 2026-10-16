@@ -193,15 +193,10 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
 /// Moves the images at `paths` (from a deleted or edited note, or a deleted file, in the notes
 /// file `file`) to the Recycle Bin, unless a notes file in `dir` still links to them, like a
 /// note saved twice from the input window's history, or an archived note. Returns where the
-/// images were, as the Recycle Bin remembers it, to bring them back with [`restore`].
+/// images were, as the Recycle Bin remembers it, to bring them back with [`restore`]: only the
+/// ones actually moved, as an image that can't be moved is only logged.
 pub fn trash_unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> {
-    let mut trashed = Vec::new();
-    for image in unused(dir, file, paths)? {
-        let full = full_path(&image)?;
-        trash::delete(&image).map_err(io::Error::other)?;
-        trashed.push(full);
-    }
-    Ok(trashed)
+    Ok(trash_each(unused(dir, file, paths)?, to_recycle_bin))
 }
 
 /// The file name of an image pasted into a window, from its path `images/<name>` as the window
@@ -251,10 +246,26 @@ pub fn trash_unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Resul
     if paths.is_empty() {
         return Ok(());
     }
-    for image in unsaved(dir, paths, kept)? {
-        trash::delete(&image).map_err(io::Error::other)?;
-    }
+    trash_each(unsaved(dir, paths, kept)?, to_recycle_bin);
     Ok(())
+}
+
+/// Moves a file to the Recycle Bin.
+fn to_recycle_bin(path: &Path) -> io::Result<()> {
+    trash::delete(path).map_err(io::Error::other)
+}
+
+/// Moves each of `images` away with `delete` (to the Recycle Bin), going on after one that
+/// fails, which is only logged. Returns where the moved ones were, as [`full_path`] gives it.
+fn trash_each(images: Vec<PathBuf>, delete: impl Fn(&Path) -> io::Result<()>) -> Vec<PathBuf> {
+    let mut trashed = Vec::new();
+    for image in images {
+        match full_path(&image).and_then(|full| delete(&image).map(|()| full)) {
+            Ok(full) => trashed.push(full),
+            Err(e) => eprintln!("Couldn't delete {}: {e}", image.display()),
+        }
+    }
+    trashed
 }
 
 /// The whole path of an existing file, as `trash` gives it to the Recycle Bin: canonical, but
@@ -578,6 +589,46 @@ mod tests {
         assert!(full.is_absolute());
         assert!(!full.to_string_lossy().starts_with(r"\\?\"));
         assert!(full.ends_with(&image));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn goes_on_deleting_images_after_one_fails() {
+        let dir = temp_dir("trash-each");
+        fs::create_dir_all(&dir).unwrap();
+        let images: Vec<PathBuf> = ["a.png", "b.png", "c.png"]
+            .iter()
+            .map(|name| dir.join(name))
+            .collect();
+        for image in &images {
+            fs::write(image, b"image").unwrap();
+        }
+        let missing = dir.join("missing.png");
+        let tried = std::cell::RefCell::new(Vec::new());
+        let trashed = trash_each(
+            vec![
+                images[0].clone(),
+                images[1].clone(),
+                missing,
+                images[2].clone(),
+            ],
+            |image| {
+                tried.borrow_mut().push(image.to_path_buf());
+                if image.ends_with("b.png") {
+                    Err(io::Error::other("locked"))
+                } else {
+                    Ok(())
+                }
+            },
+        );
+        assert_eq!(
+            trashed,
+            vec![
+                full_path(&images[0]).unwrap(),
+                full_path(&images[2]).unwrap()
+            ]
+        );
+        assert_eq!(tried.into_inner(), images);
         fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -12,6 +12,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A notes file that can't be read, such as one saved by Notepad in another encoding than UTF-8,
   no longer breaks the reader, search, reminders, `/done`, tag suggestions and the archive: it is
   listed with no notes and the rest work without it. Errors about it name the file.
+- Deleting or editing a note, or deleting a notes file, no longer shows an error when its images
+  can't be moved to the Recycle Bin: the change is saved, Ctrl+Z still undoes it, and the other
+  images are still moved.
 
 ## [0.8.2] - 2026-10-14
 
