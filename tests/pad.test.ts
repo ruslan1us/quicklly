@@ -10,6 +10,9 @@ let draft: string;
 /** The note the reader sends to edit next (Shift+Enter there). */
 let edit: unknown;
 
+/** Why the draft file can't be read, if it can't. */
+let unreadable: string | null;
+
 /** Opens an unpinned Pad with `saved` as its draft. */
 async function open(saved = "") {
   draft = saved;
@@ -19,7 +22,10 @@ async function open(saved = "") {
     get_appearance: { theme: "default", transparency: 0, scale: 100 },
     get_date_format: "DD/MM/YYYY",
     get_pad_pinned: false,
-    get_pad_draft: () => draft,
+    get_pad_draft: () => {
+      if (unreadable) throw unreadable;
+      return draft;
+    },
     set_pad_draft: (args: unknown) => {
       draft = (args as { text: string }).text;
     },
@@ -47,7 +53,10 @@ async function pasteImage() {
   await vi.waitFor(() => expect(text.value).not.toBe(before));
 }
 
-afterEach(() => closePage());
+afterEach(() => {
+  closePage();
+  unreadable = null;
+});
 
 test("a saved note lets go of the images pasted but left out of it", async () => {
   await open();
@@ -102,4 +111,22 @@ test("text moved here from the input window brings its images with it", async ()
   await vi.waitFor(() => expect(released()).toHaveLength(1));
   expect(released()).toEqual([{ paths: ["images/moved.png"], kept: [] }]);
   await settle();
+});
+
+test("a draft that can't be read is shown as an error and never saved over", async () => {
+  unreadable = "Failed to read pad-draft.md: stream did not contain valid UTF-8";
+  await open("the draft on disk");
+  const status = document.querySelector("#status")!;
+  expect(text.value).toBe("");
+  expect(status.textContent).toBe(unreadable);
+  expect(calls.some((call) => call.cmd === "plugin:window|show")).toBe(true);
+
+  // Neither typing (saved 300 ms after it stops) nor closing saves over it.
+  type(text, "typed meanwhile");
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  expect(status.textContent).toBe(unreadable);
+  press(text, "Escape");
+  await settle();
+  expect(argsOf(calls, "set_pad_draft")).toEqual([]);
+  expect(draft).toBe("the draft on disk");
 });

@@ -40,6 +40,9 @@ interface PadEdit {
 }
 let editing: PadEdit | null = null;
 
+/** Why the draft file couldn't be read, if it couldn't; the Pad then never saves over it. */
+let draftError: unknown = null;
+
 /** The images pasted into the text, by the number in their `[Image #N]` label. */
 let images: Images = new Map();
 
@@ -230,6 +233,11 @@ function renderStatus() {
     status.textContent = "saved ✓";
     return;
   }
+  // Until the draft can be read, the status bar says why it isn't kept.
+  if (draftError) {
+    showError(draftError);
+    return;
+  }
   const before = text.value.slice(0, text.selectionStart);
   const column = before.length - before.lastIndexOf("\n");
   const chars = text.value.length;
@@ -323,6 +331,8 @@ function saveDraftSoon() {
 
 async function saveDraft() {
   window.clearTimeout(draftTimer);
+  // A draft that couldn't be read stays as it is on disk, rather than be replaced.
+  if (draftError) return;
   try {
     await invoke("set_pad_draft", { text: stored() });
   } catch (err) {
@@ -349,10 +359,21 @@ async function startEditing() {
   refresh();
 }
 
+/** Shows the draft; when it can't be read, an empty Pad and the error. */
+async function loadDraft() {
+  try {
+    setText(await invoke<string>("get_pad_draft"), true);
+    draftError = null;
+  } catch (err) {
+    setText("", true);
+    draftError = err;
+  }
+}
+
 /** Ends an edit and brings the draft back. */
 async function stopEditing() {
   editing = null;
-  setText(await invoke<string>("get_pad_draft"), true);
+  await loadDraft();
   refresh();
 }
 
@@ -457,7 +478,7 @@ void listen("pad-edit", () => void startEditing());
 // Text moved here from the input window with Ctrl+E (it shows once an edit is over).
 void listen("pad-draft-changed", async () => {
   if (editing) return;
-  setText(await invoke<string>("get_pad_draft"), true);
+  await loadDraft();
   refresh();
 });
 
@@ -481,12 +502,12 @@ void Promise.all([
     text.setSelectionRange(selectionStart, selectionEnd);
     refresh();
   }),
-  invoke<string>("get_pad_draft"),
   invoke<boolean>("get_pad_pinned"),
-]).then(async ([, , draft, isPinned]) => {
+]).then(async ([, , isPinned]) => {
   pinned = isPinned;
   renderPin();
-  setText(draft, true);
+  // After the date format is known: the draft shows its dates in it.
+  await loadDraft();
   await startEditing();
   await appWindow.show();
   await appWindow.setFocus();

@@ -51,8 +51,8 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, held, text wins, errors), `releaseImages` |
 | `calendar.test.ts` | `/date` resolution and the calendar keys |
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
-| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E |
-| `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window |
+| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails |
+| `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over |
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, inline edit saved and refused, Ctrl+Z in its cases |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
 | `done.test.ts` | Grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
@@ -74,6 +74,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | `images` | Naming and numbering, extensions, path extraction, relinking, safe resolution (only pasted images right in `images/` with an image extension), unused-image detection (archive and nested files included), pasted images nothing mentions (notes, archive, tag folders, kept texts, any link form, case) and only files right in `images/`, failing with the file's name when a notes file can't be read, going on after an image that can't be moved (with a stand-in for the Recycle Bin), Recycle Bin item matching |
 | `settings` | Serialised strings of date formats and archive periods; reading the notes folder and mode from a settings file |
 | `hotkey` | Parsing, labels, round trip of the stored form |
+| `pad` | Draft file: missing reads as empty, appending text, an unreadable draft an error and left unchanged |
 | `cli` | Request parsing for `add` and links, decoding, rejection of other input, relative file names |
 | `watcher` | Which paths count as a notes change; a real watcher on a temporary folder reports a `.md.tmp` renamed into place and ignores images and temporary files |
 

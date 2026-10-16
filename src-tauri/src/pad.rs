@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
@@ -27,32 +27,53 @@ fn draft_path(app: &AppHandle) -> Option<PathBuf> {
 }
 
 #[tauri::command]
-pub fn get_pad_draft(app: AppHandle) -> String {
-    draft(&app).unwrap_or_default()
+pub fn get_pad_draft(app: AppHandle) -> Result<String, String> {
+    draft(&app)
 }
 
 /// The Pad draft, empty when there is none; an error when it is there but can't be read.
 pub fn draft(app: &AppHandle) -> Result<String, String> {
-    let path = draft_path(app).ok_or("No app data folder")?;
-    match fs::read_to_string(path) {
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
-        result => result.map_err(|e| e.to_string()),
-    }
+    read_draft(&draft_path(app).ok_or("No app data folder")?)
 }
 
 #[tauri::command]
 pub fn set_pad_draft(app: AppHandle, text: String) -> Result<(), String> {
-    let path = draft_path(&app).ok_or("No app data folder")?;
+    write_draft(&draft_path(&app).ok_or("No app data folder")?, &text)
+}
+
+/// The draft at `path`, empty when there is none; an error when it is there but can't be read
+/// (not UTF-8, locked, no access), so that nothing takes it for empty and overwrites it.
+fn read_draft(path: &Path) -> Result<String, String> {
+    match fs::read_to_string(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        result => result.map_err(|e| format!("Failed to read {}: {e}", path.display())),
+    }
+}
+
+/// Saves the draft at `path`; an empty one removes the file.
+fn write_draft(path: &Path, text: &str) -> Result<(), String> {
     if text.is_empty() {
         if path.exists() {
-            fs::remove_file(&path).map_err(|e| e.to_string())?;
+            fs::remove_file(path).map_err(|e| e.to_string())?;
         }
         return Ok(());
     }
     if let Some(dir) = path.parent() {
         fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
-    fs::write(&path, text).map_err(|e| e.to_string())
+    fs::write(path, text).map_err(|e| e.to_string())
+}
+
+/// Appends `text` to the draft at `path` on a new line, or replaces a blank draft. A draft that
+/// can't be read is left as it is.
+fn append_to_draft(path: &Path, text: &str) -> Result<(), String> {
+    let draft = read_draft(path)?;
+    let draft = if draft.trim().is_empty() {
+        text.to_string()
+    } else {
+        format!("{}\n{text}", draft.trim_end())
+    };
+    write_draft(path, &draft)
 }
 
 /// Puts the Pad where the settings say, on the screen in use.
@@ -197,18 +218,13 @@ pub async fn open_pad(app: AppHandle) {
     show(&app);
 }
 
-/// Moves the text typed in the input window into the Pad (Ctrl+E), after any draft there.
+/// Moves the text typed in the input window into the Pad (Ctrl+E), after any draft there; fails,
+/// changing nothing, when the draft can't be read.
 ///
 /// Async on purpose: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 pub async fn expand_to_pad(app: AppHandle, text: String) -> Result<(), String> {
-    let draft = get_pad_draft(app.clone());
-    let draft = if draft.trim().is_empty() {
-        text
-    } else {
-        format!("{}\n{text}", draft.trim_end())
-    };
-    set_pad_draft(app.clone(), draft)?;
+    append_to_draft(&draft_path(&app).ok_or("No app data folder")?, &text)?;
     if app.get_webview_window(PAD_WINDOW).is_some() {
         let _ = app.emit_to(PAD_WINDOW, "pad-draft-changed", ());
     }
@@ -243,4 +259,40 @@ pub async fn edit_in_pad(app: AppHandle, name: String, note: NoteRef) {
 #[tauri::command]
 pub fn take_pad_edit(app: AppHandle) -> Option<PadEdit> {
     app.state::<PendingEdit>().0.lock().unwrap().take()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("quicklly-test-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_missing_draft_is_empty() {
+        let dir = temp_dir("pad-draft-missing");
+        let path = dir.join("pad-draft.md");
+        assert_eq!(read_draft(&path).unwrap(), "");
+        append_to_draft(&path, "moved").unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "moved");
+        append_to_draft(&path, "more").unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "moved\nmore");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_unreadable_draft_is_an_error_and_is_left_alone() {
+        let dir = temp_dir("pad-draft-unreadable");
+        let path = dir.join("pad-draft.md");
+        let bytes = b"old \xff draft".to_vec();
+        fs::write(&path, &bytes).unwrap();
+        assert!(read_draft(&path).is_err());
+        assert!(append_to_draft(&path, "moved").is_err());
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }

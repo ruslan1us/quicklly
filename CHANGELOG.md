@@ -23,6 +23,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   another editor meanwhile, stays open with its text and shows why, instead of losing it.
 - A pinned Pad or reader no longer opens off-screen after a monitor is disconnected or the
   monitors are rearranged: it keeps its size and opens in its default place instead.
+- A Pad draft that can't be read is no longer overwritten: the Pad shows the error instead, and
+  Ctrl+E keeps the typed text in the input window with the error.
 
 ## [0.8.2] - 2026-10-14
 

@@ -37,7 +37,7 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
 | <kbd>↑</kbd> / <kbd>↓</kbd> in an empty field or while showing an unedited history entry | Walk the history | |
 | <kbd>←</kbd> in an empty field | Open the reader | `open_reader` |
 | <kbd>→</kbd> in an empty field (not searching) | Open the Pad | `open_pad` |
-| <kbd>Ctrl</kbd>+<kbd>E</kbd> (not searching) | Move the text into the Pad draft | `expand_to_pad` |
+| <kbd>Ctrl</kbd>+<kbd>E</kbd> (not searching) | Move the text into the Pad draft; when the draft can't be read, come back with the text and the error | `expand_to_pad` |
 | `?` typed into an empty field | Enter search mode | `search_notes` |
 | <kbd>Backspace</kbd> on an empty query | Leave search mode | |
 | `/config`, `/pad`, `/help`, `/changelog`, `/done` | Open that window | `open_settings`, `open_pad`, `open_help`, `open_changelog`, `open_done` |
@@ -47,7 +47,8 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
 
 A command is recognised only when the whole trimmed note equals it; `/config later` is saved as a
 note. Commands that open another window hide the input window first (`switchTo`), so the two never
-show together.
+show together. <kbd>Ctrl</kbd>+<kbd>E</kbd> hides it the same way but clears the note only once
+`expand_to_pad` succeeded.
 
 ## Behaviour
 

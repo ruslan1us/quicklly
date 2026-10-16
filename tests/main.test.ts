@@ -178,3 +178,19 @@ test("Ctrl+E hands the images of the note over to the Pad", async () => {
   expect(argsOf(calls, "expand_to_pad")).toEqual([{ text: "![Image #2](images/2.png)" }]);
   expect(argsOf(calls, "trash_unsaved_images")).toEqual([{ paths: ["images/1.png"], kept: [] }]);
 });
+
+test("Ctrl+E keeps the note and shows why when the Pad draft can't be read", async () => {
+  closePage();
+  const error = "Failed to read pad-draft.md: stream did not contain valid UTF-8";
+  await open("DD/MM/YYYY", {
+    expand_to_pad: () => {
+      throw error;
+    },
+  });
+  type(note, "call mom");
+  press(note, "e", { ctrlKey: true, code: "KeyE" });
+  await settle();
+  expect(note.value).toBe("call mom");
+  expect(document.querySelector("#message")!.textContent).toBe(error);
+  expect(calls.some((call) => call.cmd === "plugin:window|show")).toBe(true);
+});

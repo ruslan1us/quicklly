@@ -365,6 +365,25 @@ async function switchTo(command: string, args?: Record<string, unknown>) {
   await invoke(command, args);
 }
 
+/**
+ * Moves the note into the Pad draft and shows the Pad, which holds its images from then on.
+ * When the draft can't be read, nothing is moved: this window comes back with the note and why.
+ */
+async function expandToPad() {
+  const text = stored();
+  await appWindow.hide();
+  try {
+    await invoke("expand_to_pad", { text });
+  } catch (err) {
+    await appWindow.show();
+    await appWindow.setFocus();
+    showError(err);
+    return;
+  }
+  for (const path of imagePaths(text)) pasted.delete(path);
+  await hide();
+}
+
 /** The note as it is saved: its images in Markdown, its dates as `📅 YYYY-MM-DD`. */
 const stored = () => toStored(toMarkdown(input.value, images));
 
@@ -458,12 +477,9 @@ input.addEventListener("keydown", (e) => {
     e.preventDefault();
     void hide();
   } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
-    // Ctrl+E moves what was typed into the Pad, to go on writing there; the Pad holds its
-    // images from now on.
+    // Ctrl+E moves what was typed into the Pad, to go on writing there.
     e.preventDefault();
-    const text = stored();
-    for (const path of imagePaths(text)) pasted.delete(path);
-    void switchTo("expand_to_pad", { text });
+    void expandToPad();
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
     return;
   } else if (searching() && e.key === "Backspace" && input.value === "") {

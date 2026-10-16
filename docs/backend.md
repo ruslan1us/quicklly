@@ -136,7 +136,9 @@ of `available_monitors()` (`on_screen`, unit-tested); otherwise it sets only the
 `false`, so a pinned Pad goes to its corner from the settings and a pinned reader keeps the
 position it was created at. If the monitors can't be listed, the bounds are restored as saved.
 The Pad's draft is a plain file,
-`pad-draft.md`, removed when empty; `pad::draft` reads it for other modules.
+`pad-draft.md`, removed when empty; `pad::draft` reads it for other modules. A missing file is an
+empty draft; any other read error is an error (`read_draft`), so `get_pad_draft` fails and
+`expand_to_pad` (`append_to_draft`) leaves the file as it is rather than overwrite it.
 
 ### `reminders`
 

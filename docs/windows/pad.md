@@ -47,7 +47,10 @@ List items are lines starting with optional indentation and `- [ ] `, `- [x] `, 
 - **Draft.** The draft is saved in stored form 300 ms after typing stops and on hide, to
   `pad-draft.md` in the app data folder (`set_pad_draft`); an empty draft deletes the file. Saving a
   note empties the Pad; an unpinned Pad then hides, a pinned one shows `saved ✓` in the status bar
-  for 1.5 seconds.
+  for 1.5 seconds. A missing file is an empty draft; a file that can't be read (not UTF-8, locked,
+  no access) makes `get_pad_draft` fail: the Pad starts empty, its status bar shows the error, and
+  it saves no draft until the draft is read again (when an edit ends or text arrives with
+  <kbd>Ctrl</kbd>+<kbd>E</kbd>), so the file is never overwritten.
 - **Images.** <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes an image as in the input window. The Pad holds
   the images pasted into it and those of the draft each time it loads the draft (at start, on
   `pad-draft-changed`, when an edit ends), not those of a note being edited. When its text starts
@@ -58,7 +61,8 @@ List items are lines starting with optional indentation and `- [ ] `, `- [x] `, 
   [ADR 0018](../decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md).
 - **Moving text from the input window.** `expand_to_pad` appends the input text to the draft on a
   new line (or replaces a blank draft) on the Rust side, then shows the Pad; an open Pad reloads the
-  draft on `pad-draft-changed`.
+  draft on `pad-draft-changed`. When the draft can't be read, it fails and changes nothing: the
+  input window hides only while the command runs, then comes back with the note and the error.
 - **Editing a reader note.** <kbd>Shift</kbd>+<kbd>Enter</kbd> in the reader calls `edit_in_pad`,
   which stores the note in `PendingEdit` and emits `pad-edit` if the Pad exists; the Pad takes it
   with `take_pad_edit`, saves its draft, and shows the note without its done date. The title shows
@@ -69,7 +73,8 @@ List items are lines starting with optional indentation and `- [ ] `, `- [x] `, 
   struck-through done item, `#tags`, links, image labels and dates highlighted. The gutter shows one
   number per logical line, as tall as the rows it wraps to; the current line is highlighted. The
   textarea has no scrollbar so that it wraps exactly like its copies.
-- **Status bar.** `Ln N, Col N · N chars`, or the last error.
+- **Status bar.** `Ln N, Col N · N chars`, or the last error; while the draft can't be read,
+  always that error.
 - **Tag suggestions and the calendar** appear above the footer and take space from the text; the
   line being typed is scrolled back into view.
 - **Scale.** After a scale change an unpinned Pad gets the default size at the new scale; a pinned
