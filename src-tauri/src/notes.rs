@@ -122,7 +122,7 @@ pub fn append_note(
     let text = images::link_from(&text, &name);
     let path = reader::path_of(dir, &name);
     fs::create_dir_all(path.parent().unwrap_or(dir))?;
-    let existing = match fs::read_to_string(&path) {
+    let existing = match reader::read_named(dir, &name) {
         Ok(content) => content,
         Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
         Err(e) => return Err(e),
@@ -345,6 +345,23 @@ mod tests {
             fs::read_to_string(&path).unwrap(),
             "# 2026-09-26\n\n- 09:00 one\n\n    - two\n  three\n"
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn names_a_file_it_cant_read() {
+        let dir = temp_dir("notes-unreadable");
+        fs::create_dir_all(dir.join("work")).unwrap();
+        // Saved by hand in Windows-1251, say: not UTF-8.
+        let ansi: &[u8] = b"# work/q\n\n- 09:00 \xec\xee\xeb\xee\xea\xee\n";
+        fs::write(dir.join("work").join("q.md"), ansi).unwrap();
+
+        let err = append_note(&dir, Mode::Daily, at(26, 9, 0), "milk #work/q").unwrap_err();
+        assert!(
+            err.to_string().starts_with("couldn't read work/q.md: "),
+            "{err}"
+        );
+        assert_eq!(fs::read(dir.join("work").join("q.md")).unwrap(), ansi);
         fs::remove_dir_all(&dir).unwrap();
     }
 }

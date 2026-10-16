@@ -45,7 +45,7 @@ pub enum Item {
 /// dot-folders) by name, as a tree: in each folder `inbox.md` first, then tag files and any other
 /// `.md` files by name, then daily files, newest first, and then its folders by name. (The
 /// reader can instead sort them by when they last changed.) A missing folder just has no notes
-/// yet.
+/// yet; a file that can't be read is listed with no notes.
 pub fn list_files(dir: &Path) -> io::Result<Vec<NoteFile>> {
     let mut files = Vec::new();
     add_files(dir, "", &mut files)?;
@@ -78,7 +78,10 @@ fn add_files(dir: &Path, prefix: &str, files: &mut Vec<NoteFile>) -> io::Result<
             .ok()
             .and_then(|modified| modified.duration_since(SystemTime::UNIX_EPOCH).ok())
             .map_or(0, |since| since.as_millis() as u64);
-        let (notes, done) = count_notes(&fs::read_to_string(entry.path())?);
+        // A file that can't be read (not UTF-8, say) is still listed, with no notes, so the
+        // reader shows it and says why when it is opened.
+        let (notes, done) =
+            fs::read_to_string(entry.path()).map_or((0, 0), |content| count_notes(&content));
         files.push(NoteFile {
             name,
             notes,
@@ -153,7 +156,7 @@ pub struct Hit {
 
 /// Finds the notes in all notes files that contain `query`, ignoring case, in their text as the
 /// windows show it (see [`shown_text`]), with dates in `format`; newest first, at most `limit`
-/// of them.
+/// of them. Files that can't be read are left out.
 pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::Result<Vec<Hit>> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
@@ -163,7 +166,10 @@ pub fn search(dir: &Path, query: &str, format: DateFormat, limit: usize) -> io::
     for file in list_files(dir)? {
         // Notes in other files take their day from the `## YYYY-MM-DD` heading above them.
         let mut day = daily_date(&file.name).unwrap_or_default().to_string();
-        for item in parse(&fs::read_to_string(path_of(dir, &file.name))?) {
+        let Ok(content) = fs::read_to_string(path_of(dir, &file.name)) else {
+            continue;
+        };
+        for item in parse(&content) {
             match item {
                 Item::Day { date } => day = date,
                 Item::Note {
@@ -225,10 +231,14 @@ pub struct Due {
 /// Finds the notes in all notes files that are not done and have a date (`📅 YYYY-MM-DD`, the
 /// first one if there are several) of `today` or earlier, or with `ahead` after `today`: the
 /// oldest date first, notes of the same date in the order of the files and of the notes in them.
+/// Files that can't be read are left out.
 pub fn due(dir: &Path, today: NaiveDate, ahead: bool) -> io::Result<Vec<Due>> {
     let mut found = Vec::new();
     for file in list_files(dir)? {
-        for item in parse(&fs::read_to_string(path_of(dir, &file.name))?) {
+        let Ok(content) = fs::read_to_string(path_of(dir, &file.name)) else {
+            continue;
+        };
+        for item in parse(&content) {
             let Item::Note {
                 line,
                 time,
@@ -272,12 +282,16 @@ pub struct Done {
 
 /// Finds the notes in all notes files and in the archive that were done (`✅ YYYY-MM-DD`) on
 /// `from` or later: the latest day first, notes of the same day in the order of the files (the
-/// archive last) and of the notes in them. Notes done without a date are left out.
+/// archive last) and of the notes in them. Notes done without a date, and files that can't be
+/// read, are left out.
 pub fn done_since(dir: &Path, from: NaiveDate) -> io::Result<Vec<Done>> {
     let mut found = Vec::new();
     for (folder, prefix) in [(dir.to_path_buf(), ""), (dir.join(ARCHIVE_DIR), "archive/")] {
         for file in list_files(&folder)? {
-            for item in parse(&fs::read_to_string(path_of(&folder, &file.name))?) {
+            let Ok(content) = fs::read_to_string(path_of(&folder, &file.name)) else {
+                continue;
+            };
+            for item in parse(&content) {
                 let Item::Note {
                     done: true, text, ..
                 } = item
@@ -399,6 +413,13 @@ pub(crate) fn path_of(dir: &Path, name: &str) -> PathBuf {
     name.split('/')
         .filter(|part| !part.is_empty())
         .fold(dir.to_path_buf(), |path, part| path.join(part))
+}
+
+/// Reads the file at `name` (see [`path_of`]); an error names the file, so it can be found
+/// among all the others.
+pub(crate) fn read_named(dir: &Path, name: &str) -> io::Result<String> {
+    fs::read_to_string(path_of(dir, name))
+        .map_err(|e| io::Error::new(e.kind(), format!("couldn't read {name}: {e}")))
 }
 
 /// Any Markdown file in the notes folder or a folder in it: `name.md` or `work/quicklly.md`,
@@ -1718,6 +1739,66 @@ mod tests {
         }
         assert!(dir.join("outside.md").exists());
         assert!(inner.join("notes.txt").exists());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn lists_a_file_it_cant_read_and_leaves_it_out_of_the_rest() {
+        let dir = temp_dir("reader-unreadable");
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        // Saved by hand in Windows-1251, say: not UTF-8, though most of it would be.
+        let ansi: &[u8] =
+            b"# todo\n\n- 09:00 milk \xec\xee\xeb\xee\xea\xee \xf0\x9f\x93\x85 2026-10-01\n\
+                            - [x] 10:00 milk \xe2\x9c\x85 2026-10-13\n";
+        fs::write(dir.join("todo.md"), ansi).unwrap();
+        fs::write(dir.join("archive").join("todo.md"), ansi).unwrap();
+        fs::write(
+            dir.join("ideas.md"),
+            "# ideas\n\n- 09:00 milk 📅 2026-10-01\n- [x] 10:00 milk ✅ 2026-10-13\n",
+        )
+        .unwrap();
+
+        let files: Vec<_> = list_files(&dir)
+            .unwrap()
+            .into_iter()
+            .map(|f| (f.name, f.notes, f.done))
+            .collect();
+        assert_eq!(
+            files,
+            [
+                ("ideas.md".to_string(), 2, 1),
+                ("todo.md".to_string(), 0, 0)
+            ]
+        );
+        assert_eq!(list_tags(&dir).unwrap(), ["ideas", "todo"]);
+        let hits: Vec<_> = search(&dir, "milk", DateFormat::DayMonthYear, 10)
+            .unwrap()
+            .into_iter()
+            .map(|hit| hit.file)
+            .collect();
+        assert_eq!(hits, ["ideas.md", "ideas.md"]);
+        let found: Vec<_> = due(&dir, today(), false)
+            .unwrap()
+            .into_iter()
+            .map(|d| d.file)
+            .collect();
+        assert_eq!(found, ["ideas.md"]);
+        let found: Vec<_> = done_since(&dir, today())
+            .unwrap()
+            .into_iter()
+            .map(|d| d.file)
+            .collect();
+        assert_eq!(found, ["ideas.md"]);
+        // Opening it says why; reading it by name says which file.
+        let err = read_file(&dir, "todo.md").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        let err = read_named(&dir, "archive/todo.md").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(
+            err.to_string()
+                .starts_with("couldn't read archive/todo.md: "),
+            "{err}"
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 }

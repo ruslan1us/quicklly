@@ -47,6 +47,17 @@ validated by `reader::notes_file` / `is_notes_file` in [`reader.rs`](../src-taur
 no `..`, no absolute paths or drives, no `\`, no `:`, and it must end in `.md`. Nothing outside the
 notes folder can be read, changed or deleted through a command.
 
+Files are read as UTF-8 only; no other encoding is guessed and nothing is read lossily. A notes
+file that can't be read (not UTF-8, as Notepad may save it, or locked) does not stop the rest:
+
+| Where | What happens to that file |
+| --- | --- |
+| File list (`reader::list_files`), tag suggestions | Listed with no notes |
+| Opening, editing or saving a note to it | The error names the file |
+| Search, reminders, done journal | Left out |
+| Archive | Left as it is, and so is its archive file; an archive file that can't be read leaves its notes file as it is too |
+| Image clean-up (`images::unused`, `images::unsaved`) | Fails, naming the file, so an image it may link to is never moved to the Recycle Bin |
+
 ## Note lines
 
 A note is one Markdown list item:

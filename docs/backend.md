@@ -43,6 +43,11 @@ opens the file in append mode. The full format is in [Data format](data-format.m
   counts notes and done notes per file and returns modification times in milliseconds. The order
   is a tree: in each folder `inbox.md`, then other files by name, then daily files newest first,
   then subfolders by name. The reader re-sorts by modification time for its "recent first" view.
+  A file that can't be read is listed with no notes; `search`, `due`, `done_since` and the
+  archive skip it (see [Data format](data-format.md#the-notes-folder)).
+- `read_named(dir, name)` reads a file by its name from the notes folder and puts the name in the
+  error (`couldn't read archive/todo.md: …`); used where one file among many is read and a
+  failure must stop the operation: saving a note, image clean-up.
 - `parse` is the shared parser used by listing, search, due and done queries, edits and the
   archive.
 - `search(dir, query, format, limit)` is a case-insensitive substring match over each note's text
@@ -69,7 +74,8 @@ image links adjusted by one `../`. The archive file is written first and the not
 the second write fails the notes exist twice rather than not at all. The notes file is then
 rewritten without them, and day headings left with nothing under them are removed
 (`remove_empty_days`; a heading with hand-written text under it stays). A new archive file starts
-with the source file's `# ` title, or `# <name>` when it has none.
+with the source file's `# ` title, or `# <name>` when it has none. A notes file, or an existing
+archive file, that can't be read is skipped: neither of the two is written.
 
 `archive_done(app)` runs it with the setting and the local date; it is called by the daily round
 and by `set_archive_after`, and emits `notes-changed` when anything moved. See
@@ -87,6 +93,8 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   linked to — only files right in the root `images/` folder, so a hand-written link to a notes
   file or any other file never sends it there — unless any notes file (archive included, links
   resolved from each file's folder) still links to them; it returns their original full paths.
+  A notes file that can't be read fails it (and `trash_unsaved`), with the file's name, rather
+  than being skipped: it may link to the images.
   `restore(paths)` brings each back by finding the latest Recycle Bin entry with that original
   path, and returns how many could not be restored.
 - `trash_unsaved(dir, paths, kept)` moves to the Recycle Bin the images a window let go of

@@ -153,7 +153,8 @@ pub fn labels(text: &str) -> String {
 }
 
 /// The image files at `paths` (linked from the notes file `file`) that no notes file in `dir`
-/// or its archive, in any folder, links to any more; missing ones are left out.
+/// or its archive, in any folder, links to any more; missing ones are left out. Fails, naming
+/// the file, when a notes file can't be read.
 fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> {
     if paths.is_empty() {
         return Ok(Vec::new());
@@ -164,7 +165,8 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
     for (folder, prefix) in [(dir.to_path_buf(), String::new()), archive] {
         for note_file in reader::list_files(&folder)? {
             let name = format!("{prefix}{}", note_file.name);
-            let content = fs::read_to_string(reader::path_of(&folder, &note_file.name))?;
+            // A file that can't be read might link to the images: fail rather than skip it.
+            let content = reader::read_named(dir, &name)?;
             used.extend(
                 paths_in(&content)
                     .iter()
@@ -214,7 +216,7 @@ fn pasted_name(path: &str) -> Option<&str> {
 /// Of the images pasted into a window at `paths` (`images/<name>`, from the notes folder), the
 /// files that nothing mentions: no notes file in `dir` or its archive, in any folder, and none
 /// of the texts in `kept` has the image's file name in it, ignoring case and however it links
-/// to it. Missing images are left out.
+/// to it. Missing images are left out. Fails, naming the file, when a notes file can't be read.
 fn unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Result<Vec<PathBuf>> {
     fn drop_mentioned(left: &mut Vec<&str>, text: &str) {
         let text = text.to_lowercase();
@@ -224,13 +226,14 @@ fn unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Result<Vec<Path
     for text in kept {
         drop_mentioned(&mut left, text);
     }
-    let archive = dir.join(ARCHIVE_DIR);
-    for folder in [dir, archive.as_path()] {
-        for note_file in reader::list_files(folder)? {
+    let archive = (dir.join(ARCHIVE_DIR), format!("{ARCHIVE_DIR}/"));
+    for (folder, prefix) in [(dir.to_path_buf(), String::new()), archive] {
+        for note_file in reader::list_files(&folder)? {
             if left.is_empty() {
                 return Ok(Vec::new());
             }
-            let content = fs::read_to_string(reader::path_of(folder, &note_file.name))?;
+            // A file that can't be read might mention the images: fail rather than skip it.
+            let content = reader::read_named(dir, &format!("{prefix}{}", note_file.name))?;
             drop_mentioned(&mut left, &content);
         }
     }
@@ -503,6 +506,36 @@ mod tests {
         assert_eq!(
             unsaved(&dir, &paths, &[draft]).unwrap(),
             [dir.join("images").join(name(&free))]
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn fails_naming_a_notes_file_it_cant_read() {
+        let dir = temp_dir("images-unreadable");
+        let image = save(&dir, now(), "image/png", b"").unwrap();
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        fs::write(dir.join("todo.md"), "- 09:00 no images\n").unwrap();
+        // Saved by hand in Windows-1251, say: not UTF-8, and it may link to the image.
+        let ansi = [
+            b"- [x] 09:00 \xec\xee\xeb\xee\xea\xee ".as_slice(),
+            format!("![Image #1](../{image})\n").as_bytes(),
+        ]
+        .concat();
+        fs::write(dir.join("archive").join("todo.md"), ansi).unwrap();
+
+        let paths = [image];
+        let err = unused(&dir, "todo.md", &paths).unwrap_err();
+        assert!(
+            err.to_string()
+                .starts_with("couldn't read archive/todo.md: "),
+            "{err}"
+        );
+        let err = unsaved(&dir, &paths, &[]).unwrap_err();
+        assert!(
+            err.to_string()
+                .starts_with("couldn't read archive/todo.md: "),
+            "{err}"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

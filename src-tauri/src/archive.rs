@@ -104,10 +104,13 @@ fn archived_line(line: &str, name: &str) -> String {
 
 /// Moves the notes of the notes file `name` in `dir` that were done at least `days` days
 /// before `today` to `archive/<name>` (in the same folders), keeping their lines and their day.
-/// Returns how many.
+/// Returns how many. A notes file or archive file that can't be read (not UTF-8, say) is left
+/// as it is, and so is the other one.
 fn archive_file(dir: &Path, name: &str, today: NaiveDate, days: i64) -> io::Result<usize> {
     let path = reader::notes_file(dir, name)?;
-    let content = fs::read_to_string(&path)?;
+    let Ok(content) = fs::read_to_string(&path) else {
+        return Ok(0);
+    };
     let due = due_for_archive(&content, today, days);
     if due.is_empty() {
         return Ok(0);
@@ -131,7 +134,7 @@ fn archive_file(dir: &Path, name: &str, today: NaiveDate, days: i64) -> io::Resu
     let existing = match fs::read_to_string(&archive) {
         Ok(existing) => existing,
         Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
-        Err(e) => return Err(e),
+        Err(_) => return Ok(0),
     };
     let title = lines
         .iter()
@@ -381,6 +384,40 @@ mod tests {
         assert_eq!(read(&dir.join("todo.md")), content);
         assert!(!dir.join("archive").exists());
         assert_eq!(archive_all(&dir.join("missing"), today(), 1).unwrap(), 0);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn leaves_files_it_cant_read_alone() {
+        let dir = temp_dir("archive-unreadable");
+        fs::create_dir_all(dir.join("archive")).unwrap();
+        // Saved by hand in Windows-1251, say: not UTF-8.
+        let ansi: &[u8] =
+            b"# todo\n\n- [x] 09:00 \xec\xee\xeb\xee\xea\xee \xe2\x9c\x85 2026-10-01\n";
+        fs::write(dir.join("todo.md"), ansi).unwrap();
+        // An archive file that can't be read keeps its notes file as it is too.
+        let ideas = "# ideas\n\n- [x] 09:00 a ✅ 2026-10-01\n";
+        fs::write(dir.join("ideas.md"), ideas).unwrap();
+        fs::write(dir.join("archive").join("ideas.md"), ansi).unwrap();
+        fs::write(
+            dir.join("inbox.md"),
+            "# Inbox\n\n- [x] 09:00 b ✅ 2026-10-01\n",
+        )
+        .unwrap();
+
+        assert_eq!(archive_all(&dir, today(), 7).unwrap(), 1);
+        assert_eq!(fs::read(dir.join("todo.md")).unwrap(), ansi);
+        assert!(!dir.join("archive").join("todo.md").exists());
+        assert_eq!(read(&dir.join("ideas.md")), ideas);
+        assert_eq!(
+            fs::read(dir.join("archive").join("ideas.md")).unwrap(),
+            ansi
+        );
+        assert_eq!(read(&dir.join("inbox.md")), "# Inbox\n");
+        assert_eq!(
+            read(&dir.join("archive").join("inbox.md")),
+            "# Inbox\n\n- [x] 09:00 b ✅ 2026-10-01\n"
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 }
