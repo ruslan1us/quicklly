@@ -11,6 +11,9 @@ use crate::reader;
 /// Folder in the notes folder that pasted images are saved to.
 pub const IMAGES_DIR: &str = "images";
 
+/// The extensions pasted images are saved with, as [`extension`] gives them.
+const EXTENSIONS: [&str; 5] = ["png", "jpg", "gif", "webp", "bmp"];
+
 /// File extension for an image of the given MIME type; PNG when it is not one we know.
 fn extension(mime: &str) -> &'static str {
     match mime {
@@ -89,16 +92,18 @@ fn from_notes_folder(file: &str, path: &str) -> Option<Vec<String>> {
     names_a_file.then_some(parts)
 }
 
-/// The file an image path from a note in the notes file `file` points to, inside `dir`; `None`
-/// for a path that could lead outside it. Joined part by part, so the path gets Windows
-/// separators.
-pub fn resolve(dir: &Path, file: &str, path: &str) -> Option<PathBuf> {
-    let parts = from_notes_folder(file, path)?;
-    Some(
-        parts
-            .iter()
-            .fold(dir.to_path_buf(), |dir, part| dir.join(part)),
-    )
+/// The pasted image an image path from a note in the notes file `file` points to, inside `dir`;
+/// `None` for anything else: a path that could lead outside it, a file not right in `images/`,
+/// or one without an extension pasted images are saved with. So a link to a program, by hand
+/// or from a shared folder, is never opened.
+pub fn pasted_image(dir: &Path, file: &str, path: &str) -> Option<PathBuf> {
+    let from_dir = from_notes_folder(file, path)?.join("/");
+    let name = pasted_name(&from_dir)?;
+    let ext = Path::new(name).extension()?.to_str()?;
+    EXTENSIONS
+        .iter()
+        .any(|known| known.eq_ignore_ascii_case(ext))
+        .then(|| dir.join(IMAGES_DIR).join(name))
 }
 
 /// The image paths in a note's text, `![Image #N](path)` as notes store them, each once.
@@ -410,7 +415,7 @@ mod tests {
                 &[kept, free.clone(), "images/gone.png".into()]
             )
             .unwrap(),
-            [resolve(&dir, "todo.md", &free).unwrap()]
+            [pasted_image(&dir, "todo.md", &free).unwrap()]
         );
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -440,7 +445,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             unused(&dir, "todo.md", &[archived, nested, free.clone()]).unwrap(),
-            [resolve(&dir, "todo.md", &free).unwrap()]
+            [pasted_image(&dir, "todo.md", &free).unwrap()]
         );
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -585,7 +590,7 @@ mod tests {
     fn gives_the_whole_path_of_an_image() {
         let dir = temp_dir("full-path");
         let image = save(&dir, now(), "image/png", b"").unwrap();
-        let full = full_path(&resolve(&dir, "todo.md", &image).unwrap()).unwrap();
+        let full = full_path(&pasted_image(&dir, "todo.md", &image).unwrap()).unwrap();
         assert!(full.is_absolute());
         assert!(!full.to_string_lossy().starts_with(r"\\?\"));
         assert!(full.ends_with(&image));
@@ -686,27 +691,66 @@ mod tests {
     fn resolves_only_paths_inside_the_notes_folder() {
         let dir = Path::new("notes");
         let image = Some(dir.join("images").join("a.png"));
-        assert_eq!(resolve(dir, "todo.md", "images/a.png"), image);
-        assert_eq!(resolve(dir, "work/q.md", "../images/a.png"), image);
-        assert_eq!(resolve(dir, "a/b/c.md", "../../images/a.png"), image);
+        assert_eq!(pasted_image(dir, "todo.md", "images/a.png"), image);
+        assert_eq!(pasted_image(dir, "work/q.md", "../images/a.png"), image);
+        assert_eq!(pasted_image(dir, "a/b/c.md", "../../images/a.png"), image);
         assert_eq!(
-            resolve(dir, "archive/work/q.md", "../../images/a.png"),
+            pasted_image(dir, "archive/work/q.md", "../../images/a.png"),
             image
         );
         assert_eq!(
-            resolve(dir, "work/q.md", "images/../../images/a.png"),
+            pasted_image(dir, "work/q.md", "images/../../images/a.png"),
             image
         );
-        assert_eq!(resolve(dir, "todo.md", "../secret.png"), None);
-        assert_eq!(resolve(dir, "work/q.md", "../../secret.png"), None);
-        assert_eq!(resolve(dir, "todo.md", "images/../../secret.png"), None);
-        assert_eq!(resolve(dir, "../x/q.md", "images/a.png"), None);
-        assert_eq!(resolve(dir, "C:/x/q.md", "images/a.png"), None);
-        assert_eq!(resolve(dir, "todo.md", "./images/a.png"), None);
-        assert_eq!(resolve(dir, "todo.md", "C:/Windows/a.png"), None);
-        assert_eq!(resolve(dir, "todo.md", "/a.png"), None);
-        assert_eq!(resolve(dir, "todo.md", ""), None);
-        assert_eq!(resolve(dir, "work/q.md", ".."), None);
-        assert_eq!(resolve(dir, "work/q.md", "a/.."), None);
+        assert_eq!(pasted_image(dir, "todo.md", "../secret.png"), None);
+        assert_eq!(pasted_image(dir, "work/q.md", "../../secret.png"), None);
+        assert_eq!(
+            pasted_image(dir, "todo.md", "images/../../secret.png"),
+            None
+        );
+        assert_eq!(pasted_image(dir, "../x/q.md", "images/a.png"), None);
+        assert_eq!(pasted_image(dir, "C:/x/q.md", "images/a.png"), None);
+        assert_eq!(pasted_image(dir, "todo.md", "./images/a.png"), None);
+        assert_eq!(pasted_image(dir, "todo.md", "C:/Windows/a.png"), None);
+        assert_eq!(pasted_image(dir, "todo.md", "/a.png"), None);
+        assert_eq!(pasted_image(dir, "todo.md", ""), None);
+        assert_eq!(pasted_image(dir, "work/q.md", ".."), None);
+        assert_eq!(pasted_image(dir, "work/q.md", "a/.."), None);
+    }
+
+    #[test]
+    fn takes_only_images_right_in_images_for_pasted_images() {
+        let dir = Path::new("notes");
+        let image = |name: &str| Some(dir.join("images").join(name));
+        assert_eq!(pasted_image(dir, "todo.md", "images/x.png"), image("x.png"));
+        assert_eq!(pasted_image(dir, "todo.md", "images/x.JPG"), image("x.JPG"));
+        for ext in ["jpg", "gif", "webp", "bmp"] {
+            let name = format!("x.{ext}");
+            let path = format!("images/{name}");
+            assert_eq!(pasted_image(dir, "todo.md", &path), image(&name));
+        }
+        for path in [
+            "images/sub/x.png",
+            "x.png",
+            "pics/x.png",
+            "images/x.exe",
+            "images/x.lnk",
+            "images/x.bat",
+            "images/x",
+            "images/x.png.exe",
+            "images/.png",
+            "images/x.exe:.png",
+            "images",
+            "images/",
+            "../x.png",
+            "../images/x.png",
+            "C:/notes/images/x.png",
+            "/images/x.png",
+            r"\\server\share\images\x.png",
+        ] {
+            assert_eq!(pasted_image(dir, "todo.md", path), None, "{path}");
+        }
+        assert_eq!(pasted_image(dir, "work/q.md", "images/x.png"), None);
+        assert_eq!(pasted_image(dir, "work/q.md", "x.png"), None);
     }
 }

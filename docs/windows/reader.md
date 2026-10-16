@@ -59,7 +59,7 @@ opened file selects its latest note.
 | <kbd>Enter</kbd> | Edit inline | `edit_note` |
 | <kbd>Shift</kbd>+<kbd>Enter</kbd> | Edit in the Pad | `edit_in_pad` |
 | <kbd>C</kbd> | Copy the note's links, whole, one per line | |
-| <kbd>O</kbd> | Open the note's images in the default viewer | `open_images` |
+| <kbd>O</kbd> | Open the note's images in the default viewer; only pasted images (right in `images/`, with an image extension) open, any other link shows an error and opens nothing | `open_images` |
 | <kbd>Del</kbd> twice | Delete the note and its unused images | `delete_note` |
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Undo the latest change made in this reader | `undo_change` |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd> | Pin or unpin | `set_reader_pin` |

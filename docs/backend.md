@@ -87,9 +87,14 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
 - `save` writes the bytes under a time-based name (see [Data format](data-format.md#images)).
 - `link_from(text, name)` rewrites `](images/` to `](../images/` once per folder level of the
   notes file; links already relative are untouched.
-- `resolve(dir, file, path)` turns a link in a notes file into a path inside the notes folder,
-  component by component, and returns `None` for anything that could leave the folder (absolute
-  paths, drives, `.`, too many `..`). `open_images` uses it before opening anything.
+- `pasted_image(dir, file, path)` turns a link in a notes file into the pasted image it points
+  to, resolved from the file's folder component by component, and returns `None` for anything
+  else: a path that could leave the folder (absolute paths, drives, `.`, too many `..`), a file
+  not right in the root `images/` folder (`pasted_name`), or one whose extension is not one
+  pasted images are saved with (`png`, `jpg`, `gif`, `webp`, `bmp`, any case). `open_images`
+  checks every path with it before opening any, so a link to a program (`.exe`, `.lnk`, `.bat`)
+  is never run; a refused link fails the command with `Not opened: <path> is not an image in the
+  images folder`, which the reader shows.
 - `trash_unused(dir, file, paths)` moves to the Recycle Bin the images a deleted or edited note
   linked to — only files right in the root `images/` folder, so a hand-written link to a notes
   file or any other file never sends it there — unless any notes file (archive included, links

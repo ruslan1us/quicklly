@@ -82,13 +82,19 @@ fn trash_unsaved_images(app: AppHandle, paths: Vec<String>, mut kept: Vec<String
 }
 
 /// Opens a note's images (paths relative to the folder of its notes file `name`) in the default
-/// viewer, from the reader.
+/// viewer, from the reader. Only pasted images, right in `images/`: a link to anything else, a
+/// program say, opens nothing, not even the note's other images.
 #[tauri::command]
 fn open_images(app: AppHandle, name: String, paths: Vec<String>) -> Result<(), String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    for path in paths {
-        let file = images::resolve(&dir, &name, &path)
-            .ok_or_else(|| format!("{path} is not in the notes folder"))?;
+    let files = paths
+        .iter()
+        .map(|path| {
+            images::pasted_image(&dir, &name, path)
+                .ok_or_else(|| format!("Not opened: {path} is not an image in the images folder"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    for (path, file) in paths.iter().zip(files) {
         app.opener()
             .open_path(file.to_string_lossy(), None::<&str>)
             .map_err(|e| format!("Couldn't open {path}: {e}"))?;

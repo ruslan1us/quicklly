@@ -184,6 +184,10 @@ the folder of the notes file, as Obsidian resolves it:
 In text fields the image appears only as its label, `[Image #1]`; the page keeps a map from label
 number to path. See [ADR 0006](decisions/0006-pasted-images-saved-as-files-next-to-the-notes.md).
 
+<kbd>O</kbd> in the reader opens a link only when it points to a file right in the top-level
+`images/` folder with an extension pasted images are saved with; a hand-written link to anything
+else, such as a program, is never opened.
+
 Images leave `images/` only to the Recycle Bin, in two cases:
 
 | When | Which images | Kept while |

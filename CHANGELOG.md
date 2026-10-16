@@ -17,6 +17,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   images are still moved.
 - Deleting a note in the reader or archiving done notes no longer removes empty hand-written
   headings such as `## Ideas`; only a day heading left with no notes under it goes.
+- O in the reader opens only pasted images, right in the `images` folder; a note linking to a
+  program or any other file no longer runs it.
 
 ## [0.8.2] - 2026-10-14
 

@@ -112,6 +112,21 @@ test("O opens the note's images and says how many", async () => {
   expect(text("#help")).toMatch(/^Opened 1 image · /);
 });
 
+test("O shows why the images were not opened", async () => {
+  closePage();
+  await open({
+    open_images: () => {
+      throw `Not opened: ${IMAGE} is not an image in the images folder`;
+    },
+  });
+  await openToday();
+  press(document, "ArrowUp");
+  press(document, "o", { code: "KeyO" });
+  await settle();
+  expect(text("#error")).toBe(`Not opened: ${IMAGE} is not an image in the images folder`);
+  expect(text("#help")).not.toMatch(/^Opened/);
+});
+
 test("O on a note without images says so", async () => {
   await openToday();
   press(document, "o", { code: "KeyO" });
