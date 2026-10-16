@@ -332,6 +332,21 @@ mod tests {
     }
 
     #[test]
+    fn archiving_keeps_empty_headings_that_are_no_day() {
+        let dir = temp_dir("archive-other-headings");
+        let path = dir.join("plan.md");
+        fs::write(
+            &path,
+            "# plan\n\n## Ideas\n\n## 2026-10-01\n\n- [x] 09:00 a ✅ 2026-10-02\n\n## Done\n",
+        )
+        .unwrap();
+
+        assert_eq!(archive_all(&dir, today(), 7).unwrap(), 1);
+        assert_eq!(read(&path), "# plan\n\n## Ideas\n\n## Done\n");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn archives_a_nested_file_into_the_same_folders() {
         let dir = temp_dir("archive-nested");
         fs::create_dir_all(dir.join("work")).unwrap();

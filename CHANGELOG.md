@@ -15,6 +15,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Deleting or editing a note, or deleting a notes file, no longer shows an error when its images
   can't be moved to the Recycle Bin: the change is saved, Ctrl+Z still undoes it, and the other
   images are still moved.
+- Deleting a note in the reader or archiving done notes no longer removes empty hand-written
+  headings such as `## Ideas`; only a day heading left with no notes under it goes.
 
 ## [0.8.2] - 2026-10-14
 

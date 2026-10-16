@@ -69,8 +69,8 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | Module | Covers |
 | --- | --- |
 | `notes` | File choice by mode and tag, headings, nested tags and image links, missing trailing newline, normalisation of lines, an unreadable target file named in the error |
-| `reader` | Parsing, listing order and tree, tags, path validation, search, due and ahead, done journal, done marks and dates, edit, delete, snooze, removal of empty days, undo, refusing stale changes, line endings, a file that is not UTF-8 listed with no notes and left out of search, due and the done journal |
-| `archive` | Selection by done date, daily, grouped, tag, hand-written and nested files, appending to an existing archive, notes and archive files that can't be read left alone |
+| `reader` | Parsing, listing order and tree, tags, path validation, search, due and ahead, done journal, done marks and dates, edit, delete, snooze, removal of empty day headings (other headings kept), undo, refusing stale changes, line endings, a file that is not UTF-8 listed with no notes and left out of search, due and the done journal |
+| `archive` | Selection by done date, daily, grouped, tag, hand-written and nested files, empty headings that are no day kept, appending to an existing archive, notes and archive files that can't be read left alone |
 | `images` | Naming and numbering, extensions, path extraction, relinking, safe resolution, unused-image detection (archive and nested files included), pasted images nothing mentions (notes, archive, tag folders, kept texts, any link form, case) and only files right in `images/`, failing with the file's name when a notes file can't be read, going on after an image that can't be moved (with a stand-in for the Recycle Bin), Recycle Bin item matching |
 | `settings` | Serialised strings of date formats and archive periods; reading the notes folder and mode from a settings file |
 | `hotkey` | Parsing, labels, round trip of the stored form |

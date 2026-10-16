@@ -599,7 +599,8 @@ pub fn delete(dir: &Path, name: &str, note: &NoteRef) -> io::Result<Change> {
 }
 
 /// Drops the `## YYYY-MM-DD` headings that have nothing but blank lines under them any more,
-/// and blank lines left at the end. Text written under a heading by hand keeps it.
+/// and blank lines left at the end. Text written under a heading by hand keeps it, and other
+/// headings always stay.
 pub(crate) fn remove_empty_days(lines: &mut Vec<String>) {
     let mut i = 0;
     while i < lines.len() {
@@ -611,7 +612,8 @@ pub(crate) fn remove_empty_days(lines: &mut Vec<String>) {
             .iter()
             .position(|line| line.starts_with("## "))
             .map_or(lines.len(), |next| i + 1 + next);
-        if lines[i + 1..end].iter().all(|line| line.trim().is_empty()) {
+        let day = iso_date(lines[i][3..].trim_end()).is_some();
+        if day && lines[i + 1..end].iter().all(|line| line.trim().is_empty()) {
             lines.drain(i..end);
         } else {
             i = end;
@@ -979,6 +981,25 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
             "# idea\n\n## 2026-09-27\n\nby hand\n"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn deleting_a_note_keeps_empty_headings_that_are_no_day() {
+        let dir = temp_dir("delete-other-headings");
+        let path = dir.join("plan.md");
+        fs::write(
+            &path,
+            "# plan\n\n## Ideas\n\n## 2026-09-26\n\n- 09:00 one\n\n## Done\n\n\
+             ## 2026-09-27\n\n## 2026-13-01\n",
+        )
+        .unwrap();
+
+        delete(&dir, "plan.md", &note_ref(6, "09:00", false, "one")).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "# plan\n\n## Ideas\n\n## Done\n\n## 2026-13-01\n"
         );
         fs::remove_dir_all(&dir).unwrap();
     }

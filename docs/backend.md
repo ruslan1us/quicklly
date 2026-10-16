@@ -72,8 +72,9 @@ done date is at least `days` days before today are appended to `archive/<same pa
 original `## YYYY-MM-DD` heading (a new heading only when the archive's last heading differs), with
 image links adjusted by one `../`. The archive file is written first and the notes file second: if
 the second write fails the notes exist twice rather than not at all. The notes file is then
-rewritten without them, and day headings left with nothing under them are removed
-(`remove_empty_days`; a heading with hand-written text under it stays). A new archive file starts
+rewritten without them, and `## YYYY-MM-DD` day headings left with nothing under them are removed
+(`remove_empty_days`; a day heading with hand-written text under it stays, and any other `## `
+heading always stays, empty or not). A new archive file starts
 with the source file's `# ` title, or `# <name>` when it has none. A notes file, or an existing
 archive file, that can't be read is skipped: neither of the two is written.
 
@@ -199,7 +200,9 @@ last saw it (`NoteRef`: line, time, done flag, full text). `edit_note` re-reads 
 file and refuses the change, without writing, unless a note with exactly those values still starts
 at that line ("the file has changed since it was shown, so it has been reloaded"). Only the lines
 of that note are replaced; everything else in the file is kept byte for byte apart from the
-rewrite of line endings described in [Data format](data-format.md#line-endings). See
+rewrite of line endings described in [Data format](data-format.md#line-endings). A delete also
+removes a `## YYYY-MM-DD` day heading left with nothing under it (`remove_empty_days`, as the
+archive does); other headings stay. See
 [ADR 0010](decisions/0010-reader-changes-guarded-by-the-note-as-last-seen.md).
 
 ### Undo snapshots
