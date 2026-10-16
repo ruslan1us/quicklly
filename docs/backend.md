@@ -102,7 +102,8 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
 - `trash_unused(dir, file, paths)` moves to the Recycle Bin the images a deleted or edited note
   linked to — only files right in the root `images/` folder, so a hand-written link to a notes
   file or any other file never sends it there — unless any notes file (archive included, links
-  resolved from each file's folder) still links to them; it returns their original full paths.
+  resolved from each file's folder) still links to them, ignoring case as Windows file names do;
+  it returns their original full paths.
   A notes file that can't be read fails it (and `trash_unsaved`), with the file's name, rather
   than being skipped: it may link to the images.
   Each image is tried in turn (`trash_each`): one that can't be moved is logged and stays, the

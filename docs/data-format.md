@@ -192,7 +192,7 @@ Images leave `images/` only to the Recycle Bin, in two cases:
 
 | When | Which images | Kept while |
 | --- | --- | --- |
-| A note is deleted or edited in the reader, or a notes file is deleted | The images the note or file linked to | Any notes file, archive included, links to the same file (links resolved from each file's folder) |
+| A note is deleted or edited in the reader, or a notes file is deleted | The images the note or file linked to | Any notes file, archive included, links to the same file (links resolved from each file's folder, ignoring case) |
 | The input window's note is cleared, or the Pad saves a note or loads the draft or a note to edit in its place | The images that window held: pasted into it, and in the Pad also those of the draft when it was loaded | Any notes file, archive included, the Pad draft or the input window's history has the image's file name in it, ignoring case |
 
 The second case only ever considers files right in the top-level `images/` folder. See

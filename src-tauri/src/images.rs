@@ -158,12 +158,16 @@ pub fn labels(text: &str) -> String {
 }
 
 /// The image files at `paths` (linked from the notes file `file`) that no notes file in `dir`
-/// or its archive, in any folder, links to any more; missing ones are left out. Fails, naming
-/// the file, when a notes file can't be read.
+/// or its archive, in any folder, links to any more, ignoring case; missing ones are left out.
+/// Fails, naming the file, when a notes file can't be read.
 fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> {
     if paths.is_empty() {
         return Ok(Vec::new());
     }
+    // Windows file names ignore case: `images/A.png` and `images/a.png` are the same file.
+    let lowercase = |parts: &[String]| -> Vec<String> {
+        parts.iter().map(|part| part.to_lowercase()).collect()
+    };
     let mut used = Vec::new();
     // Each link is resolved from the folder of the file it is in.
     let archive = (dir.join(ARCHIVE_DIR), format!("{ARCHIVE_DIR}/"));
@@ -175,7 +179,8 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
             used.extend(
                 paths_in(&content)
                     .iter()
-                    .filter_map(|path| from_notes_folder(&name, path)),
+                    .filter_map(|path| from_notes_folder(&name, path))
+                    .map(|parts| lowercase(&parts)),
             );
         }
     }
@@ -185,7 +190,7 @@ fn unused(dir: &Path, file: &str, paths: &[String]) -> io::Result<Vec<PathBuf>> 
         // Only pasted images, right in `images/`: a hand-written link to anything else, a
         // notes file say, never sends it to the Recycle Bin.
         .filter(|parts| parts.len() == 2 && parts[0] == IMAGES_DIR)
-        .filter(|parts| !used.contains(parts))
+        .filter(|parts| !used.contains(&lowercase(parts)))
         .map(|parts| {
             parts
                 .iter()
@@ -476,6 +481,25 @@ mod tests {
         fs::write(dir.join("pics").join("a.png"), "").unwrap();
         let other = ["inbox.md".to_string(), "pics/a.png".to_string()];
         assert!(unused(&dir, "todo.md", &other).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn keeps_images_a_note_links_to_in_other_case() {
+        let dir = temp_dir("unused-images-case");
+        let kept = save(&dir, now(), "image/png", b"kept").unwrap();
+        let free = save(&dir, now(), "image/png", b"free").unwrap();
+        fs::create_dir_all(dir.join("work")).unwrap();
+        // The same file on Windows, linked with its folder and name in other case.
+        fs::write(
+            dir.join("work").join("q.md"),
+            format!("- 10:00 here ![Image #1](../{})\n", kept.to_uppercase()),
+        )
+        .unwrap();
+        assert_eq!(
+            unused(&dir, "todo.md", &[kept, free.clone()]).unwrap(),
+            [pasted_image(&dir, "todo.md", &free).unwrap()]
+        );
         fs::remove_dir_all(&dir).unwrap();
     }
 
