@@ -628,11 +628,11 @@ function startEdit() {
   fitEditor();
 }
 
+/** Ends the edit and reloads the file, which may have changed while it was being edited. */
 function cancelEdit() {
   editing = false;
   editorDates.close();
-  render();
-  void fit();
+  void refresh(true);
 }
 
 /** Saves the edited text; a blank or unchanged text just ends the edit (Del deletes a note). */
@@ -643,8 +643,18 @@ async function saveEdit() {
     cancelEdit();
     return;
   }
+  const name = openFile;
+  try {
+    const change = await invoke("edit_note", { name, note, text });
+    changes.push({ what: "edit", name, line: note.line, change });
+  } catch (err) {
+    // The editor stays open with the text, so nothing typed is lost; Esc ends it and reloads.
+    showError(err);
+    void fit();
+    return;
+  }
   editing = false;
-  await changeNote("edit", "edit_note", { text });
+  await refresh();
 }
 
 editor.addEventListener("input", fitEditor);

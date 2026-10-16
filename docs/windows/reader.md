@@ -71,10 +71,12 @@ While a delete waits for confirmation the footer says so; any other key or a cli
 
 - **Inline editor.** <kbd>Enter</kbd> replaces the note's text with a textarea that has the block
   caret, `/date` with the calendar and whole-date deletion. <kbd>Enter</kbd> saves,
-  <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a line, <kbd>Esc</kbd> cancels. A blank or unchanged text
-  just ends the edit. The editor has no tag suggestions and does not accept pasted images.
+  <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a line, <kbd>Esc</kbd> cancels and reloads the file. A
+  blank or unchanged text just ends the edit. If the save is refused, the editor stays open with the
+  text and the error shows. The editor has no tag suggestions and does not accept pasted images.
 - **Change guard.** Every change sends the note as displayed (`NoteRef`). If the file changed in
-  the meantime, Rust refuses, the error stays visible and the file is reloaded. See
+  the meantime, Rust refuses, the error stays visible and the file is reloaded (for an inline edit,
+  once the edit ends). See
   [Backend](../backend.md#changes-to-existing-notes).
 - **Undo.** Each successful change pushes `{ what, name, line, change }` onto an in-memory stack.
   <kbd>Ctrl</kbd>+<kbd>Z</kbd> pops the latest, asks Rust to restore the file (refused if the file

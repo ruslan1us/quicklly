@@ -302,6 +302,45 @@ test("Ctrl+Z undoes an edit", async () => {
   expect(text("#help")).toMatch(/^Undone: edit · /);
 });
 
+test("a saved edit ends the editor and shows the note as reloaded", async () => {
+  await openToday();
+  const editor = editSelected();
+  press(editor, "Enter");
+  await settle();
+  expect(document.querySelector(".editor")).toBeNull();
+  expect(argsOf(calls, "read_note_file")).toHaveLength(2);
+  expect(rows()[1]).toBe("❯14:32read github.com/rusl... 📅 15/10/2026");
+  expect(document.querySelector<HTMLElement>("#error")!.hidden).toBe(true);
+  expect(text("#help")).toMatch(/^↑↓ select/);
+});
+
+test("an edit that can't be saved stays open with its text and shows why", async () => {
+  closePage();
+  await open({
+    edit_note: () => {
+      throw "the file has changed since it was shown, so it has been reloaded";
+    },
+  });
+  await openToday();
+  const editor = editSelected();
+  press(editor, "Enter");
+  await settle();
+  expect(argsOf(calls, "edit_note")).toHaveLength(1);
+  expect(document.querySelector(".editor textarea")).toBe(editor);
+  expect(editor.value).toBe(`read ${LINK} 📅 15/10/2026 soon`);
+  expect(document.querySelector<HTMLElement>("#error")!.hidden).toBe(false);
+  expect(text("#error")).toBe("the file has changed since it was shown, so it has been reloaded");
+  expect(text("#help")).toBe("Enter save · Shift+Enter new line · Esc cancel");
+  // Nothing to undo: the change was not made.
+  press(editor, "Escape");
+  await settle();
+  expect(document.querySelector(".editor")).toBeNull();
+  expect(argsOf(calls, "read_note_file")).toHaveLength(2);
+  expect(text("#error")).toBe("the file has changed since it was shown, so it has been reloaded");
+  await undo();
+  expect(text("#help")).toMatch(/^Nothing to undo · /);
+});
+
 test("Ctrl+Z in the editor is left to the editor", async () => {
   await deleteFirst();
   const editor = editSelected();

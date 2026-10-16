@@ -53,7 +53,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
 | `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E |
 | `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window |
-| `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, Ctrl+Z in its cases |
+| `reader.test.ts` | File list order and tree, opening a file, Tab sort, copying links, opening images, inline edit saved and refused, Ctrl+Z in its cases |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
 | `done.test.ts` | Grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
 | `help.test.ts` | Version in the header, the Archive text following the setting |

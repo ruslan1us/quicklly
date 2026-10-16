@@ -19,6 +19,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   headings such as `## Ideas`; only a day heading left with no notes under it goes.
 - O in the reader opens only pasted images, right in the `images` folder; a note linking to a
   program or any other file no longer runs it.
+- An inline edit in the reader that can't be saved, for example because the file changed in
+  another editor meanwhile, stays open with its text and shows why, instead of losing it.
 
 ## [0.8.2] - 2026-10-14
 
