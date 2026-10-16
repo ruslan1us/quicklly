@@ -226,7 +226,7 @@ the exception: they are matched in full, while the results show them short.
 | Name | Reserved for |
 | --- | --- |
 | `inbox.md` | The inbox; first in its folder in the reader's by-name order |
-| `YYYY-MM-DD.md` (a real date, in any folder) | Daily files; after the other files of their folder in by-name order, newest first; never tag files |
+| `YYYY-MM-DD.md` (a real date written exactly so, in any folder; `2026-1-5.md` is not one) | Daily files; after the other files of their folder in by-name order, newest first; never tag files |
 | `archive/` (top level) | The archive; excluded from listings, search, reminders and tags |
 | `images/` (top level) | Pasted images; excluded from listings |
 | Names starting with `.` | Ignored at every level (for example `.obsidian/`, `.git/`) |

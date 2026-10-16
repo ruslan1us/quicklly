@@ -452,7 +452,7 @@ fn daily_date(name: &str) -> Option<&str> {
     name.rsplit('/')
         .next()?
         .strip_suffix(".md")
-        .filter(|date| NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok())
+        .filter(|date| iso_date(date).is_some())
 }
 
 /// The checkbox of a note line: `[x] `, `[X] `, `[ ] ` or none (`""`).
@@ -1606,6 +1606,32 @@ mod tests {
             search(&dir, "#todo", DateFormat::DayMonthYear, 10).unwrap()[0].day,
             Some("2026-09-26".to_string())
         );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn takes_only_exact_iso_names_for_daily_files() {
+        let dir = temp_dir("list-daily-names");
+        for name in ["2026-01-05.md", "2026-01-06.md", "2026-1-5.md", "a.md"] {
+            fs::write(dir.join(name), "- 09:00 milk\n").unwrap();
+        }
+
+        let names: Vec<_> = list_files(&dir)
+            .unwrap()
+            .into_iter()
+            .map(|f| f.name)
+            .collect();
+        assert_eq!(
+            names,
+            ["2026-1-5.md", "a.md", "2026-01-06.md", "2026-01-05.md"]
+        );
+        let days: Vec<_> = search(&dir, "milk", DateFormat::DayMonthYear, 10)
+            .unwrap()
+            .into_iter()
+            .map(|h| (h.file, h.day))
+            .collect();
+        assert!(days.contains(&("2026-01-05.md".to_string(), Some("2026-01-05".to_string()))));
+        assert!(days.contains(&("2026-1-5.md".to_string(), None)));
         fs::remove_dir_all(&dir).unwrap();
     }
 

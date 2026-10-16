@@ -34,6 +34,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   another note still links to it with the name in other letter case.
 - Ctrl+Z in the reader brings back the images of a deleted note when the notes folder is on a
   network share (`\\server\share\…`).
+- A hand-made file named like `2026-1-5.md` is no longer taken for a daily file: only
+  `YYYY-MM-DD.md` names are, and the reader lists it with the other files by name.
 
 ## [0.8.2] - 2026-10-14
 
