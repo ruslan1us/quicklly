@@ -28,6 +28,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Search results show a note's day in the date format of the settings, and no day for a note
   under a heading that is not a date, such as `## Ideas`; such notes are listed after the dated
   ones instead of above them.
+- An update download that could not be saved completely (a full disk, the computer turned off
+  while saving) is no longer run as the installer at the next start; it is downloaded again.
 
 ## [0.8.2] - 2026-10-14
 

@@ -156,6 +156,10 @@ command) returns `false` and opens nothing when there is nothing due and nothing
 A thread checks at start and then every 6 hours while automatic updates are on. A found release is
 downloaded (the plugin verifies the signature) and stored as `update-<version>.bin` in the app
 cache directory; at the next start the stored bytes are installed instead of downloaded again.
+The download is written to `update-<version>.bin.tmp` and renamed into place, one check at a time
+(turning automatic updates on can start a check alongside the periodic one), so the stored file is
+always complete; a failed save removes the temporary file, is logged, and the release is not
+announced.
 `install_update` (`/update`) installs right away, from the cache when possible. Every successful
 check, including the one `install_update` makes, removes the other `update-*.bin` files from the
 cache: only the latest release can be installed, so downloads of superseded releases and of the
@@ -205,6 +209,7 @@ harmless, and no attempt is made to tell those writes apart. See
 | --- | --- | --- |
 | New note, archive entry | Append (`OpenOptions::append`) | Never rewrites existing content; a crash can at most leave a partial last entry. |
 | Edit, done mark, snooze, delete, undo, archive source rewrite | `reader::write_file`: write `<file>.md.tmp`, then rename over the file | A failed write cannot leave a half-written notes file. |
+| Downloaded update | `updater::save_download`: write `<file>.bin.tmp`, then rename over the file | The next start installs whatever is stored, and the signature is checked only when downloading, so a cut-short installer must never be there. |
 | Pasted image | `create_new` under a unique name | Never overwrites an existing image. |
 | Pad draft | `fs::write` | Disposable working copy, rewritten every few hundred milliseconds while typing. |
 | Deleting notes files and images | `trash::delete` (Recycle Bin) | Recoverable outside the application; see [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |

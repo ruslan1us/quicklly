@@ -117,17 +117,33 @@ async fn check(app: &AppHandle, at_startup: bool) -> Result<(), String> {
         Some(_) => {}
         None => {
             let bytes = download(&update).await?;
-            if let Some(path) = &path {
-                if let Some(dir) = path.parent() {
-                    let _ = fs::create_dir_all(dir);
-                }
-                let _ = fs::write(path, bytes);
-            }
+            let path = path.ok_or("No cache folder to save the update in")?;
+            save_download(&path, &bytes)
+                .map_err(|e| format!("Could not save the update to {}: {e}", path.display()))?;
         }
     }
     *app.state::<AvailableUpdate>().0.lock().unwrap() = Some(update.version.clone());
     let _ = app.emit("update-available", &update.version);
     Ok(())
+}
+
+/// Writes a download to `path` through `<path>.tmp` renamed into place, so `path` holds either a
+/// complete download or nothing: the next start would run whatever is there. A failed write
+/// removes the temporary file.
+fn save_download(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    // Two checks can run at once (turning automatic updates on starts one); they take turns, so
+    // neither renames the temporary file while the other is still writing it.
+    static SAVING: Mutex<()> = Mutex::new(());
+    let _saving = SAVING.lock().unwrap();
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    let tmp = path.with_extension("bin.tmp");
+    let saved = fs::write(&tmp, bytes).and_then(|()| fs::rename(&tmp, path));
+    if saved.is_err() {
+        let _ = fs::remove_file(&tmp);
+    }
+    saved
 }
 
 /// Looks for a newer release. Only the latest release can be installed, so downloads of any other
@@ -228,6 +244,39 @@ mod tests {
             .collect();
         left.sort();
         assert_eq!(left, names(&["other.txt", "update-0.8.2.bin"]));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn saves_a_download_through_a_temporary_file() {
+        let dir =
+            std::env::temp_dir().join(format!("quicklly-test-update-save-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let path = dir.join(download_name("0.8.2"));
+        save_download(&path, b"first").unwrap();
+        save_download(&path, b"second").unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"second");
+        let left: Vec<String> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+            .collect();
+        assert_eq!(left, names(&["update-0.8.2.bin"]));
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_failed_save_leaves_no_temporary_file() {
+        let dir = std::env::temp_dir().join(format!(
+            "quicklly-test-update-save-fails-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        // A folder in the download's place makes the rename fail.
+        let path = dir.join(download_name("0.8.2"));
+        fs::create_dir_all(&path).unwrap();
+        assert!(save_download(&path, b"bytes").is_err());
+        assert!(path.is_dir());
+        assert!(!dir.join("update-0.8.2.bin.tmp").exists());
         fs::remove_dir_all(&dir).unwrap();
     }
 

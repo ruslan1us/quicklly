@@ -76,6 +76,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | `hotkey` | Parsing, labels, round trip of the stored form |
 | `pad` | Draft file: missing reads as empty, appending text, an unreadable draft an error and left unchanged |
 | `cli` | Request parsing for `add` and links, decoding, rejection of other input, relative file names |
+| `updater` | Which cache files count as stale downloads (temporary files do not), their removal from a folder, saving a download through a temporary file and removing it when the save fails |
 | `watcher` | Which paths count as a notes change; a real watcher on a temporary folder reports a `.md.tmp` renamed into place and ignores images and temporary files |
 
 ### Rules

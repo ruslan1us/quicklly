@@ -242,8 +242,9 @@ Outside the notes folder the application keeps these files in its data folder,
 | `settings.json` | Settings, written by `tauri-plugin-store` |
 | `pad-draft.md` | The Pad's unsaved draft, in stored form; deleted when the draft is empty |
 
-Downloaded updates wait in the app cache directory as `update-<version>.bin` until installed. The
-next update check removes any such file other than the one for the latest release.
+Downloaded updates wait in the app cache directory as `update-<version>.bin` until installed,
+written first as `update-<version>.bin.tmp` and renamed into place. The next update check removes
+any `update-<version>.bin` other than the one for the latest release.
 
 ### `settings.json` keys
 
