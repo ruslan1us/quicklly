@@ -32,9 +32,6 @@ const HELP_WINDOW: &str = "help";
 const CHANGELOG_WINDOW: &str = "changelog";
 const DONE_WINDOW: &str = "done";
 
-/// How many days, today included, the journal of done notes goes back.
-const DONE_DAYS: u64 = 7;
-
 /// Appends `text` to today's note file in the notes folder.
 #[tauri::command]
 fn save_note(app: AppHandle, text: String) -> Result<(), String> {
@@ -235,11 +232,12 @@ async fn open_done(app: AppHandle) {
     show_popup(&app, DONE_WINDOW, "done", "Quicklly Done");
 }
 
-/// Lists the notes done in the last days, archived ones too, for the journal.
+/// Lists the notes done in the last `days` days, today included, archived ones too, for the
+/// journal.
 #[tauri::command]
-fn list_done(app: AppHandle) -> Result<Vec<reader::Done>, String> {
+fn list_done(app: AppHandle, days: u64) -> Result<Vec<reader::Done>, String> {
     let dir = settings::notes_dir(&app).map_err(|e| e.to_string())?;
-    let from = chrono::Local::now().date_naive() - chrono::Days::new(DONE_DAYS - 1);
+    let from = chrono::Local::now().date_naive() - chrono::Days::new(days - 1);
     reader::done_since(&dir, from).map_err(|e| format!("Failed to read {}: {e}", dir.display()))
 }
 

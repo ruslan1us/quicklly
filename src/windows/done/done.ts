@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { dateNodes, followDateFormat, shownDate, toDisplay } from "../../shared/dates";
+import { DONE_DAYS, dateNodes, followDateFormat, shownDate, toDisplay } from "../../shared/dates";
 import { fromMarkdown, markdownNodes } from "../../shared/images";
 import { linkNodes, shortLink } from "../../shared/links";
 import { appWindow, fitToContent, reveal } from "../../shared/popup";
@@ -68,7 +68,8 @@ function renderHelp() {
 }
 
 function render() {
-  title.textContent = `Quicklly · Done · ${done.length} in 7 days`;
+  title.textContent = `Quicklly · Done · ${done.length} in ${plural(DONE_DAYS, "day")}`;
+  empty.textContent = `Nothing done in the last ${plural(DONE_DAYS, "day")}.`;
   empty.hidden = done.length > 0;
   const rows: HTMLLIElement[] = [];
   done.forEach((item, i) => {
@@ -155,7 +156,7 @@ document.addEventListener("keydown", (e) => {
 async function load() {
   error.hidden = true;
   try {
-    done = await invoke<Done[]>("list_done");
+    done = await invoke<Done[]>("list_done", { days: DONE_DAYS });
   } catch (err) {
     showError(err);
   }

@@ -15,6 +15,8 @@ export let dateFormat: DateFormat = "DD/MM/YYYY";
 const MARK = "📅";
 /** The mark of the day a note was done. */
 const DONE_MARK = "✅";
+/** How many days, today included, the journal of done notes goes back. */
+export const DONE_DAYS = 7;
 /** A date as files store it: its mark, then the date. */
 const STORED = /(📅|✅) (\d{4})-(\d{2})-(\d{2})(?!\d)/gu;
 

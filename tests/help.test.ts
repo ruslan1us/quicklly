@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "vitest";
+import { DONE_DAYS } from "../src/shared/dates";
 import html from "../src/windows/help/index.html?raw";
 import { closePage, loadPage, mockTauri } from "./helpers";
 
@@ -46,4 +47,10 @@ test("the archive text follows the setting", async () => {
       "and notes archived before stay in the archive folder, which the reader and the search " +
       "leave out. Archive done notes in /config sets when, or turns the archive off.",
   );
+});
+
+test("the done journal's period is the one it lists", async () => {
+  await open(3);
+  const shown = Array.from(document.querySelectorAll(".done-days"), (el) => el.textContent);
+  expect(shown).toEqual([`${DONE_DAYS} days`, `${DONE_DAYS} days`]);
 });

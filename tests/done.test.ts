@@ -1,5 +1,6 @@
 import { emit } from "@tauri-apps/api/event";
 import { type MockInstance, afterEach, beforeEach, expect, test, vi } from "vitest";
+import { DONE_DAYS } from "../src/shared/dates";
 import html from "../src/windows/done/index.html?raw";
 import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle } from "./helpers";
 
@@ -44,7 +45,8 @@ afterEach(() => {
 });
 
 test("lists the done notes under their days, first lines only", () => {
-  expect(title()).toBe("Quicklly · Done · 3 in 7 days");
+  expect(argsOf(calls, "list_done")).toEqual([{ days: DONE_DAYS }]);
+  expect(title()).toBe(`Quicklly · Done · 3 in ${DONE_DAYS} days`);
   expect(rows()).toEqual([
     "── 14/10/2026",
     "call back 📅 11/10/2026",
@@ -59,11 +61,11 @@ test("lists the done notes under their days, first lines only", () => {
 test("says when nothing was done", async () => {
   closePage();
   await open([]);
-  expect(title()).toBe("Quicklly · Done · 0 in 7 days");
+  expect(title()).toBe(`Quicklly · Done · 0 in ${DONE_DAYS} days`);
   expect(rows()).toEqual([]);
   const empty = document.querySelector<HTMLElement>("#empty")!;
   expect(empty.hidden).toBe(false);
-  expect(empty.textContent).toBe("Nothing done in the last 7 days.");
+  expect(empty.textContent).toBe(`Nothing done in the last ${DONE_DAYS} days.`);
 });
 
 test("C copies the journal as Markdown, on any keyboard layout, and says so", async () => {
@@ -90,7 +92,7 @@ test("reloads when notes change anywhere while it is open", async () => {
   await emit("notes-changed");
   await settle();
   expect(argsOf(calls, "list_done")).toHaveLength(2);
-  expect(title()).toBe("Quicklly · Done · 1 in 7 days");
+  expect(title()).toBe(`Quicklly · Done · 1 in ${DONE_DAYS} days`);
   expect(rows()).toEqual(["── 09/10/2026", "buy milk"]);
   // Once more, as the folder watcher reports the same change: nothing breaks.
   await emit("notes-changed");

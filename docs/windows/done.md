@@ -12,12 +12,14 @@ read-only view. User-facing description: root README, [Done](../../README.md#don
 | [`src/windows/done/index.html`](../../src/windows/done/index.html) | Title, rows, empty and error lines, footer |
 | [`src/windows/done/done.ts`](../../src/windows/done/done.ts) | Behaviour |
 | [`src/windows/done/done.css`](../../src/windows/done/done.css) | Layout; imports `terminal.css`; done notes are not struck through here |
-| [`src-tauri/src/lib.rs`](../../src-tauri/src/lib.rs) | `open_done`, `list_done` (`DONE_DAYS = 7`) |
+| [`src-tauri/src/lib.rs`](../../src-tauri/src/lib.rs) | `open_done`, `list_done(days)` |
 | [`src-tauri/src/reader.rs`](../../src-tauri/src/reader.rs) | `done_since` |
 
 ## Behaviour
 
-- `list_done` computes the first day as today minus six days and calls `reader::done_since`, which
+- The page asks `list_done` for `DONE_DAYS` days (in `src/shared/dates.ts`, also used by the title,
+  the empty line and the help). `list_done` computes the first day as today minus `days - 1`
+  days and calls `reader::done_since`, which
   reads every notes file and every file in `archive/` and keeps done notes whose done date
   (`✅ YYYY-MM-DD` at the end of the first line) is on or after that day.
 - Notes are sorted by done date, latest first, with a stable sort: within a day, notes keep the
@@ -56,4 +58,4 @@ continuation lines indented by two spaces.
 ## Limitations
 
 - Notes marked done before version 0.8.1 have no done date and are not listed.
-- The seven-day window is fixed in code (`DONE_DAYS`), not a setting.
+- The seven-day window is fixed in code (`DONE_DAYS` in `src/shared/dates.ts`), not a setting.

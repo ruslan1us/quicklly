@@ -11,7 +11,7 @@ input window and closed with <kbd>Esc</kbd>.
 | File | Role |
 | --- | --- |
 | [`src/windows/help/index.html`](../../src/windows/help/index.html) | The help content, as static HTML |
-| [`src/windows/help/help.ts`](../../src/windows/help/help.ts) | Version in the header and footer, archive days, keys, fit and reveal |
+| [`src/windows/help/help.ts`](../../src/windows/help/help.ts) | Version in the header and footer, archive days, done journal days, keys, fit and reveal |
 | [`src/windows/help/help.css`](../../src/windows/help/help.css) | Layout; imports `terminal.css` |
 | [`src/windows/changelog/index.html`](../../src/windows/changelog/index.html) | Header, release container, footer |
 | [`src/windows/changelog/changelog.ts`](../../src/windows/changelog/changelog.ts) | Parses and renders `CHANGELOG.md` |
@@ -28,6 +28,8 @@ input window and closed with <kbd>Esc</kbd>.
   `get_archive_days` when the window opens and fills in the number of days, or shows that the
   archive is off. The help is a fresh page each time it is opened, so a change in settings shows
   the next time.
+- The period of the done journal in the Commands and Done sections (`.done-days`) is filled in
+  from `DONE_DAYS`, the constant the done journal uses.
 
 ## Changelog
 

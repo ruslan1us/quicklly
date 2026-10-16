@@ -138,7 +138,7 @@ create or may create a window.
 | `undo_change(name, change)` | lib | reader | Restore the file before a `Change` and its images |
 | `delete_note_file(name)` | lib | reader | Move a notes file and its unused images to the Recycle Bin |
 | `snooze_note(name, note, days)` | lib | reminders | Move a note's due date to today plus `days` |
-| `list_done` | lib | done | Notes done in the last 7 days, archive included |
+| `list_done(days)` | lib | done | Notes done in the last `days` days (today included), archive included |
 | `open_note(file, line)` *async* | lib | input, reminders | Open the reader on a note |
 | `take_reader_target` | lib | reader | Take the pending note to open |
 | `open_input` | lib | reader, Pad | Show the input window |
