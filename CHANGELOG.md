@@ -40,6 +40,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   suggested while typing as a whole, the same as the file they go to.
 - A large notes folder no longer freezes the windows and the hotkey while notes are searched or
   listed: search runs once typing pauses, and each file is read once per search.
+- The `/date` calendar in the reader's editor is scrolled into view when it opens, instead of
+  being left below the bottom of the window under the last note of a file.
 
 ## [0.8.2] - 2026-10-14
 

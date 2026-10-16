@@ -109,9 +109,18 @@ const updateEditorCaret = blockCaret(editor, editorCaret, editorMirror);
 deleteDatesWhole(editor);
 /** `/date` in the edited note: Enter turns it into a date, or picks one in a calendar. */
 const editorDates = datePicker(editor, editorCalendar, {
-  onChange: () => void fit(),
+  onChange: () => void fitCalendar(),
   onError: showError,
 });
+
+/**
+ * Fits the window to the calendar as it shows, changes or hides, then scrolls it into view: under
+ * the last note, or in a long file, it would otherwise be below the bottom of the window.
+ */
+async function fitCalendar() {
+  await fit();
+  if (!editorCalendar.hidden) editorCalendar.scrollIntoView({ block: "nearest" });
+}
 
 /** Daily files are shown by their date, other files by their name. */
 const displayName = (name: string) =>

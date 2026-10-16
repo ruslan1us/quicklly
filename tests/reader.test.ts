@@ -350,6 +350,56 @@ test("Ctrl+Z in the editor is left to the editor", async () => {
   expect(text("#help")).toBe("Enter save · Shift+Enter new line · Esc cancel");
 });
 
+/**
+ * Opens the calendar of `/date` in the editor of the selected note. Scrolling into view is
+ * recorded among the calls, to see that it comes after the window is fitted.
+ */
+async function openCalendar() {
+  vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (this: Element) {
+    calls.push({ cmd: "scrollIntoView", args: this });
+  });
+  press(document, "Enter");
+  const editor = document.querySelector<HTMLTextAreaElement>(".editor textarea")!;
+  type(editor, " /date");
+  calls.length = 0;
+  press(editor, "Enter");
+  await settle();
+  return editor;
+}
+
+const calendar = () => document.querySelector<HTMLElement>(".editor .calendar")!;
+
+test("the calendar under the last note fits the window and is scrolled into view", async () => {
+  await openToday();
+  const editor = await openCalendar();
+  expect(calendar().hidden).toBe(false);
+  expect(calls.map((call) => call.cmd).slice(-2)).toEqual([
+    "plugin:window|set_size",
+    "scrollIntoView",
+  ]);
+  expect(calls[calls.length - 1].args).toBe(calendar());
+  // Closed, the window fits again.
+  calls.length = 0;
+  press(editor, "Escape");
+  await settle();
+  expect(calendar().hidden).toBe(true);
+  expect(calls.map((call) => call.cmd)).toEqual([
+    "plugin:window|scale_factor",
+    "plugin:window|inner_size",
+    "plugin:window|set_size",
+  ]);
+});
+
+test("in a pinned reader the calendar is scrolled into view, the window kept as it is", async () => {
+  closePage();
+  await open({ get_reader_pin: { pinned: true, file: "2026-10-13.md" } });
+  press(document, "ArrowUp");
+  await openCalendar();
+  expect(calendar().hidden).toBe(false);
+  expect(calls.map((call) => call.cmd)).toEqual(["scrollIntoView"]);
+  expect(calls[0].args).toBe(calendar());
+});
+
 test("Ctrl+Z with nothing to undo says so", async () => {
   await undo();
   expect(argsOf(calls, "undo_change")).toEqual([]);

@@ -74,7 +74,10 @@ While a delete waits for confirmation the footer says so; any other key or a cli
   caret, `/date` with the calendar and whole-date deletion. <kbd>Enter</kbd> saves,
   <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a line, <kbd>Esc</kbd> cancels and reloads the file. A
   blank or unchanged text just ends the edit. If the save is refused, the editor stays open with the
-  text and the error shows. The editor has no tag suggestions and does not accept pasted images.
+  text and the error shows. The editor has no tag suggestions and does not accept pasted images. The
+  calendar opens under the note: the window refits (`fit`) as it shows, changes or hides, and then
+  the calendar is scrolled into view (`scrollIntoView({ block: "nearest" })`), so under the last
+  note, in a long file or in a pinned reader it is not left below the bottom of the window.
 - **Change guard.** Every change sends the note as displayed (`NoteRef`). If the file changed in
   the meantime, Rust refuses, the error stays visible and the file is reloaded (for an inline edit,
   once the edit ends). See
