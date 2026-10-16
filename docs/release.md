@@ -63,6 +63,12 @@ The release step runs with `releaseDraft: true` and `updaterJsonPreferNsis: true
 the signing key from the repository secret `TAURI_SIGNING_PRIVATE_KEY` with an empty
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (the key has no password).
 
+Because that job sees the signing key that every installed copy trusts, the actions in
+`release.yml` are pinned to a commit (`uses: owner/action@<sha> # vX.Y.Z`) rather than to a tag
+or branch that could be moved. To update one, look up the commit of the new version
+(`git ls-remote https://github.com/<owner>/<action> refs/tags/vX.Y.Z refs/tags/vX.Y.Z^{}`; for an
+annotated tag the `^{}` line is the commit) and replace the SHA and the comment.
+
 ## Artifacts
 
 | Artifact | Purpose |
