@@ -35,6 +35,19 @@ describe("toMarkdown and fromMarkdown", () => {
     expect(toMarkdown(shown.text, shown.images)).toBe(markdown);
   });
 
+  test("keep the numbers of a note's images, whatever they start from", () => {
+    const note = "#quicklly ![Image #2](images/a.png) then ![Image #1](../images/b.png)";
+    const shown = fromMarkdown(note);
+    expect(shown).toEqual({
+      text: "#quicklly [Image #2] then [Image #1]",
+      images: new Map([
+        [2, "images/a.png"],
+        [1, "../images/b.png"],
+      ]),
+    });
+    expect(toMarkdown(shown.text, shown.images)).toBe(note);
+  });
+
   test("give clashing numbers of different images numbers of their own", () => {
     // A Pad draft with an image, then a note from the input window with its own Image #1.
     const merged =

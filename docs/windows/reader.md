@@ -49,7 +49,7 @@ every note is done and shows at least one cell once any note is. By name, folder
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Undo the latest note change | `undo_change` |
 
 **Notes of a file.** Day headings as `── YYYY-MM-DD`; each note: pointer, time, `✓`, text (links
-shortened, images as labels, dates in the date format, done date hidden) and, for done notes,
+shortened, images as labels that wrap as a whole, dates in the date format, done date hidden) and, for done notes,
 `archive in N days`, `archive tomorrow` or `archive today` (from `get_archive_days`). A newly
 opened file selects its latest note.
 

@@ -42,6 +42,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   listed: search runs once typing pauses, and each file is read once per search.
 - The `/date` calendar in the reader's editor is scrolled into view when it opens, instead of
   being left below the bottom of the window under the last note of a file.
+- The reader no longer splits an image label like `[Image #2]` over two lines when a note wraps.
 
 ## [0.8.2] - 2026-10-14
 

@@ -135,6 +135,62 @@ test("O on a note without images says so", async () => {
   expect(text("#help")).toMatch(/^No images in this note · /);
 });
 
+// Notes with images as they come in practice: numbered from 2 (the first pasted image was
+// removed while writing), after a tag, at the start, done, out of order, a label typed by hand.
+const LABELLED = [
+  `#quicklly ![Image #2](${IMAGE})`,
+  `![Image #2](${IMAGE}) first`,
+  `#quicklly ![Image #2](../images/b.png) ✅ 2026-10-13`,
+  "![Image #3](images/c.png) and\n![Image #1](images/a.png)",
+  "typed #quicklly [Image #2]",
+].map((text, i) => ({ kind: "note", line: i + 1, time: "09:15", done: i === 2, text }));
+
+test("images show as their own labels, marked, wherever they are in the note", async () => {
+  closePage();
+  await open({ read_note_file: LABELLED });
+  await openToday();
+  expect(rows()).toEqual([
+    "09:15#quicklly [Image #2]",
+    "09:15[Image #2] first",
+    "09:15✓#quicklly [Image #2]archive in 7 days",
+    "09:15[Image #3] and\n[Image #1]",
+    "❯09:15typed #quicklly [Image #2]",
+  ]);
+  const marked = (row: number) =>
+    Array.from(
+      document.querySelectorAll(`#rows li:nth-child(${row + 1}) .image`),
+      (span) => span.textContent,
+    );
+  expect([0, 1, 2, 3].map(marked)).toEqual([
+    ["[Image #2]"],
+    ["[Image #2]"],
+    ["[Image #2]"],
+    ["[Image #3]", "[Image #1]"],
+  ]);
+  // A label typed by hand is not an image: plain text.
+  expect(marked(4)).toEqual([]);
+});
+
+test("the editor shows a note's images as their labels and saves them back unchanged", async () => {
+  closePage();
+  await open({ read_note_file: LABELLED });
+  await openToday();
+  press(document, "ArrowDown");
+  press(document, "ArrowDown");
+  press(document, "ArrowDown");
+  const editor = editSelected();
+  expect(editor.value).toBe("#quicklly [Image #2] soon");
+  press(editor, "Enter");
+  await settle();
+  expect(argsOf(calls, "edit_note")).toEqual([
+    {
+      name: "2026-10-13.md",
+      note: LABELLED[2],
+      text: "#quicklly ![Image #2](../images/b.png) soon",
+    },
+  ]);
+});
+
 // Files in folders, as `list_note_files` gives them: by name, as a tree.
 const NESTED = [
   { name: "inbox.md", notes: 0, done: 0, changed: 1 },

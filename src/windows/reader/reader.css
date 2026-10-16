@@ -129,6 +129,11 @@ body.pinned #rows {
   color: var(--accent);
 }
 
+/* A label wraps as a whole, never as `[Image` on one line and `#2]` on the next. */
+.note .image {
+  white-space: nowrap;
+}
+
 /* The day a note was done is dim (see dates.ts). */
 .note .done-date {
   color: var(--dim);
