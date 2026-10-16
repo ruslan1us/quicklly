@@ -36,6 +36,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   network share (`\\server\share\…`).
 - A hand-made file named like `2026-1-5.md` is no longer taken for a daily file: only
   `YYYY-MM-DD.md` names are, and the reader lists it with the other files by name.
+- Tags in scripts with vowel signs, like `#हिंदी` in Devanagari, are highlighted in the Pad and
+  suggested while typing as a whole, the same as the file they go to.
 
 ## [0.8.2] - 2026-10-14
 

@@ -130,3 +130,11 @@ test("a draft that can't be read is shown as an error and never saved over", asy
   expect(argsOf(calls, "set_pad_draft")).toEqual([]);
   expect(draft).toBe("the draft on disk");
 });
+
+test("tags are highlighted whole, in any script, as the notes files understand them", async () => {
+  await open();
+  type(text, "#हिंदी note #work/quicklly-2/ #1 C# a#b #Ünï_x");
+  const tags = Array.from(document.querySelectorAll("#backdrop .tag"), (tag) => tag.textContent);
+  expect(tags).toEqual(["#हिंदी", "#work/quicklly-2", "#Ünï_x"]);
+  await settle();
+});

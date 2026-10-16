@@ -1,13 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
 
 /**
- * A `#tag` being typed right before the caret: `#` at the start of a word, then nothing yet or
- * a letter and more tag characters, like the notes files understand tags. A nested tag has more
- * parts after a `/`, `#work/quicklly`; the `/` before the next part may already be typed.
+ * The letter a tag part starts with, as `notes::first_tag` sees it: Rust's `char::is_alphabetic`,
+ * which counts the vowel signs of scripts like Devanagari as letters too.
  */
-const PARTIAL_TAG = /(?:^|\s)#((?:\p{L}[\p{L}\p{N}_-]*(?:\/\p{L}[\p{L}\p{N}_-]*)*\/?)?)$/u;
+const LETTER = String.raw`\p{Alphabetic}`;
+/** The rest of a tag part: a letter or a digit (Rust's `char::is_alphanumeric`), `_` or `-`. */
+const TAG_CHAR = String.raw`[\p{Alphabetic}\p{N}_-]`;
+
+/**
+ * A tag after its `#`, as the notes files understand it: a letter, then more tag characters; a
+ * nested tag has more such parts after a `/`, `#work/quicklly`. Shared by every window.
+ */
+export const TAG_NAME = `${LETTER}${TAG_CHAR}*(?:/${LETTER}${TAG_CHAR}*)*`;
+
+/**
+ * A `#tag` being typed right before the caret: `#` at the start of a word, then nothing yet or
+ * a tag; the `/` before the next part of a nested tag may already be typed.
+ */
+const PARTIAL_TAG = new RegExp(String.raw`(?:^|\s)#((?:${TAG_NAME}/?)?)$`, "u");
 /** Tag characters right after the caret: picking a tag in the middle of one replaces them too. */
-const TAG_REST = /^[\p{L}\p{N}_/-]*/u;
+const TAG_REST = /^[\p{Alphabetic}\p{N}_/-]*/u;
 
 /** The partial tag before the caret: where its `#` is and what follows the `#`. */
 interface TypedTag {

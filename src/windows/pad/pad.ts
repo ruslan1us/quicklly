@@ -20,7 +20,7 @@ import {
   toMarkdown,
 } from "../../shared/images";
 import { linkNodes } from "../../shared/links";
-import { tagSuggest } from "../../shared/tagSuggest";
+import { TAG_NAME, tagSuggest } from "../../shared/tagSuggest";
 import { followTheme } from "../../shared/theme";
 
 const appWindow = getCurrentWindow();
@@ -124,11 +124,8 @@ deleteDatesWhole(text);
 
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
 
-/**
- * A `#tag`, as the notes files understand it: `#` at the start of a word, then a letter; a
- * nested tag has more such parts after a `/`, `#work/quicklly`.
- */
-const TAG = /(^|\s)(#\p{L}[\p{L}\p{N}_-]*(?:\/\p{L}[\p{L}\p{N}_-]*)*)/gu;
+/** A `#tag`, as the notes files understand it: `#` at the start of a word, then a tag. */
+const TAG = new RegExp(String.raw`(^|\s)(#${TAG_NAME})`, "gu");
 /** A list item: indentation, then `- [ ] `, `- [x] `, `- `, `* ` or `1. `. */
 const LIST_ITEM = /^(\s*)(- \[[ xX]\] |- |\* |(\d+)\. )/;
 

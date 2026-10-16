@@ -100,3 +100,15 @@ test("picking in the middle of a nested tag replaces all of it", async () => {
   suggestions.keydown(keydown("Enter"));
   expect(field.value).toBe("#work/quicklly ");
 });
+
+test("tags with the vowel signs of their script are suggested and replaced whole", async () => {
+  await setUp(["हिंदी", "हिंदू", "work"]);
+  type(field, "नोट #हिं");
+  expect(shown()).toEqual(["❯#हिंदी", "#हिंदू"]);
+  type(field, "दx");
+  field.setSelectionRange("नोट #हि".length, "नोट #हि".length);
+  field.dispatchEvent(new Event("input"));
+  expect(shown()).toEqual(["❯#हिंदी", "#हिंदू"]);
+  suggestions.keydown(keydown("Enter"));
+  expect(field.value).toBe("नोट #हिंदी ");
+});

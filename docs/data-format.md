@@ -122,6 +122,11 @@ letter, then letters, digits, `_` or `-`. `#1`, `#2026-09-26`, `C#` and `a#b` ar
 nested tag adds parts after `/`, each starting with a letter: `#work/quicklly`. A part that does
 not start with a letter ends the tag, so `#work/` and `#work//x` are `work`.
 
+Letters and digits are Unicode ones, as Rust's `char::is_alphabetic` and `char::is_numeric` see
+them, so the vowel signs of scripts like Devanagari count as letters: `#हिंदी` is one tag. The
+frontend matches tags by the same rule (`\p{Alphabetic}` and `\p{N}` in `TAG_NAME`, exported by
+`src/shared/tagSuggest.ts`), for the suggestions and the Pad's highlighting.
+
 - Only the **first** tag in the note decides the file (`notes::first_tag`). The tag stays in the
   note text.
 - The file name is the tag in lower case: `#Todo` goes to `todo.md`, `#Work/Quicklly` to
