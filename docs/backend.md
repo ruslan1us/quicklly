@@ -130,7 +130,12 @@ Enum values are serialised with the exact strings the frontend uses; tests pin t
 Both keep a pin flag in managed state (an `AtomicBool`, loaded at start) so that the window-event
 handler can decide quickly whether to hide, close or remember bounds. Pinned windows are resizable
 with a minimum size (Pad 360×200, reader 440×200 logical pixels at 100 % scale) and save their
-bounds in physical pixels on every move or resize. The Pad's draft is a plain file,
+bounds in physical pixels on every move or resize. `window_bounds::restore` puts the position
+back only if the top of the saved rectangle (where the window is dragged, 32 pixels) overlaps one
+of `available_monitors()` (`on_screen`, unit-tested); otherwise it sets only the size and returns
+`false`, so a pinned Pad goes to its corner from the settings and a pinned reader keeps the
+position it was created at. If the monitors can't be listed, the bounds are restored as saved.
+The Pad's draft is a plain file,
 `pad-draft.md`, removed when empty; `pad::draft` reads it for other modules.
 
 ### `reminders`

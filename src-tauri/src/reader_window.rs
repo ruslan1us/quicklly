@@ -37,7 +37,8 @@ pub fn is_pinned(app: &AppHandle) -> bool {
     app.state::<Pinned>().0.load(Ordering::Relaxed)
 }
 
-/// A new pinned reader goes back where it was left; an unpinned one is placed by its page.
+/// A new pinned reader goes back where it was left (only to its size when that place is on no
+/// screen now); an unpinned one is placed by its page.
 pub fn arrange(window: &WebviewWindow) {
     if is_pinned(window.app_handle()) {
         window_bounds::set_resizable(window, true, MIN_SIZE);

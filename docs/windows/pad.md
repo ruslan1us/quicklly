@@ -21,7 +21,8 @@ be pinned to stay open, movable and resizable. User-facing keys are in the root 
 - `pad::show` creates the window on first use (560×380 logical pixels times the scale, hidden),
   and on every show arranges it: a pinned Pad goes back to its saved bounds; an unpinned one gets
   the default size and the corner from **Pad position**, 16 pixels from the edges of the active
-  monitor's work area.
+  monitor's work area. A pinned Pad whose saved place is on no current monitor keeps its saved
+  size and goes to that corner instead.
 - The page shows the window itself once the theme, the date format, the draft and the pin state
   are loaded and any pending edit is taken.
 - Focus loss hides an unpinned Pad. <kbd>Esc</kbd> saves the draft and hides. The window is never

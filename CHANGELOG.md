@@ -21,6 +21,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   program or any other file no longer runs it.
 - An inline edit in the reader that can't be saved, for example because the file changed in
   another editor meanwhile, stays open with its text and shows why, instead of losing it.
+- A pinned Pad or reader no longer opens off-screen after a monitor is disconnected or the
+  monitors are rearranged: it keeps its size and opens in its default place instead.
 
 ## [0.8.2] - 2026-10-14
 

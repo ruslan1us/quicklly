@@ -23,7 +23,8 @@ changes as they happen and reopens on the same file. User-facing keys are in the
   (`open_note` from a search result or the reminders), through `show_popup`.
 - On start the page loads the pin state and sort order, opens the pinned file if any, takes a
   pending target note, then shows itself: a pinned reader at its saved bounds, an unpinned one
-  centred by `reveal()`.
+  centred by `reveal()`. When the saved place is on no current monitor, a pinned reader gets
+  only its saved size and stays where the new window was created, as with nothing saved.
 - An unpinned reader closes when it loses focus (only once visible). <kbd>Esc</kbd> or
   <kbd>Ctrl</kbd>+<kbd>C</kbd> closes it. Closing destroys the window and with it the undo history.
 - The view reloads on `focus` and on `notes-changed`, unless a note is being edited.

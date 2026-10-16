@@ -107,7 +107,9 @@ and zoomed to the scale setting.
   window, then the one under the mouse, then the primary one. The input window and popups are
   centred on it; the Pad goes to the corner from the settings; the reminders go to the bottom-right
   corner. Pinned Pad and reader windows restore their saved bounds
-  ([`window_bounds.rs`](../src-tauri/src/window_bounds.rs)).
+  ([`window_bounds.rs`](../src-tauri/src/window_bounds.rs)), but only the size when the top
+  32 pixels of the saved rectangle are on no current monitor (a monitor was disconnected or
+  rearranged); the window then gets the place it would get with nothing saved.
 - **Permissions.** Every window label is listed in
   [`capabilities/default.json`](../src-tauri/capabilities/default.json), which grants the core
   window permissions the pages use (show, hide, close, focus, size, centre, drag). Application

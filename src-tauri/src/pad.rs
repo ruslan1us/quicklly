@@ -135,14 +135,18 @@ pub fn is_pinned(app: &AppHandle) -> bool {
     app.state::<Pinned>().0.load(Ordering::Relaxed)
 }
 
-/// A pinned Pad goes back where it was left; an unpinned one gets its default size and place.
+/// A pinned Pad goes back where it was left, or keeps its size and goes to the default place
+/// when that is on no screen now; an unpinned one gets its default size and place.
 fn arrange(window: &WebviewWindow) {
     let app = window.app_handle();
-    if is_pinned(app) && window_bounds::restore(window, BOUNDS_KEY) {
+    let pinned = is_pinned(app);
+    if pinned && window_bounds::restore(window, BOUNDS_KEY) {
         return;
     }
-    let zoom = settings::scale(app);
-    let _ = window.set_size(LogicalSize::new(WIDTH * zoom, HEIGHT * zoom));
+    if !pinned {
+        let zoom = settings::scale(app);
+        let _ = window.set_size(LogicalSize::new(WIDTH * zoom, HEIGHT * zoom));
+    }
     place(window);
 }
 
