@@ -20,6 +20,7 @@ conventions.
 | TypeScript | `strict`, `noUnusedLocals`, `noUnusedParameters`; `npm run build` runs `tsc` before `vite build` |
 | Dependencies | `@tauri-apps/api` (IPC, events, window), `@tauri-apps/plugin-opener` |
 | Raw imports | `?raw` (typed by `vite/client`): the changelog window imports `CHANGELOG.md`, tests import pages |
+| Platform | `define` puts the build's `process.platform` in for `__PLATFORM__` (declared in `src/vite-env.d.ts`), read by [`platform.ts`](../src/shared/platform.ts); each system builds its own pages |
 
 Each window folder holds `index.html`, one TypeScript entry and, for most windows, one stylesheet.
 The page links `../../shared/themes.css` and its own stylesheet. See
@@ -40,6 +41,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 
 | Module | Responsibility | Used by |
 | --- | --- | --- |
+| [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isMac`, `isLinux` | Pages that differ by system |
 | [`theme.ts`](../src/shared/theme.ts) | Loads the appearance (`get_appearance`) and follows `appearance-changed`: sets `data-theme`, the `--opacity` variable and the exported `zoom` | Every page |
 | [`popup.ts`](../src/shared/popup.ts) | `fitToContent(maxHeight)` sizes a popup to its `main` element at the base width (640 logical pixels × zoom); `reveal()` centres, shows and focuses it | Reader, reminders, done, settings, help, changelog |
 | [`dates.ts`](../src/shared/dates.ts) | Date format, `toStored`/`toDisplay`, `/date` detection, `splitDoneDate`, `DONE_DAYS` (the done journal's period), `dateNodes` highlighting, `deleteDatesWhole`, `followDateFormat` | Input, Pad, reader, reminders, done, help |

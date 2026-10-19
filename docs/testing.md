@@ -25,6 +25,11 @@ stand-in that supports the two commands the application uses on the focused text
 `insertText` replaces the selection with the value, `delete` removes the selection; both leave the
 caret after the change and dispatch an `input` event, like a browser.
 
+The pages are tested as built for Windows on every system: [`vitest.config.ts`](../vitest.config.ts)
+sets `__PLATFORM__` (see [Frontend](frontend.md#build-set-up)) to `win32`, so a test gives the
+same result on the Windows, macOS and Linux runners. A test of macOS or Linux behaviour calls
+`onPlatform` before it loads the page; `unstubGlobals` puts Windows back for the next test.
+
 ### Helpers
 
 | Helper | Purpose |
@@ -33,6 +38,7 @@ caret after the change and dispatch an `input` event, like a browser.
 | `argsOf(calls, cmd)` | The arguments of each call of a command |
 | `loadPage(html, load)` | Puts the `<body>` of a page's `index.html` (imported with `?raw`) into the document, resets modules, imports a fresh copy of the page script and waits for it to settle; spies on listeners added to `document` and `window` |
 | `closePage()` | Removes those listeners and empties the body, so the next test starts clean |
+| `onPlatform(platform)` | Stubs `__PLATFORM__` with `darwin` or `linux` for the rest of the test; pages and modules loaded after it see that system |
 | `textField(value)` | A focused textarea with the caret at the end, for testing shared modules alone |
 | `type(field, text)` | Types through `execCommand("insertText")`, as the keyboard would |
 | `press(target, key, init)`, `keydown(key, init)` | Dispatch a cancellable `keydown`; the returned event shows whether it was handled |
@@ -46,6 +52,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 
 | File | Covers |
 | --- | --- |
+| `platform.test.ts` | Windows by default on any machine, macOS and Linux when stubbed, back to Windows after the test |
 | `links.test.ts` | Link recognition, trailing punctuation and brackets, `shortLink`, `splitLinks` |
 | `dates.test.ts` | Formatting and parsing in every format, leap years, `toStored`/`toDisplay` round trips, `/date` detection, `commandDate`, `splitDoneDate`, whole-date deletion |
 | `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, held, text wins, errors), `releaseImages` |

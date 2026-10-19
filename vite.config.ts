@@ -27,6 +27,11 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // The pages are built on the system they are bundled for, so they know it from the build
+  // (src/shared/platform.ts).
+  define: {
+    __PLATFORM__: JSON.stringify(process.platform),
+  },
   // The pages live in src/windows/<name>/index.html and are served and built from src/,
   // so the app opens them as windows/<name>/index.html.
   root: "src",

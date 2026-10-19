@@ -39,6 +39,12 @@ export function mockTauri(replies: Record<string, Reply> = {}) {
 export const argsOf = (calls: Call[], cmd: string) =>
   calls.filter((call) => call.cmd === cmd).map((call) => call.args);
 
+/**
+ * Makes the pages (and `platform.ts`) loaded from now on run as on macOS ("darwin") or Linux
+ * instead of Windows, until the test ends.
+ */
+export const onPlatform = (platform: "darwin" | "linux") => vi.stubGlobal("__PLATFORM__", platform);
+
 /** A focused text field on the page with `value` in it and the caret at its end. */
 export function textField(value = "") {
   const field = document.createElement("textarea");
