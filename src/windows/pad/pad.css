@@ -2,7 +2,7 @@
 @import "../../shared/calendar.css";
 
 :root {
-  font-family: "Cascadia Mono", Consolas, monospace;
+  font-family: var(--mono);
   font-size: 14px;
   line-height: 22px;
 }
@@ -95,6 +95,12 @@ header {
   color: transparent;
   caret-color: transparent;
   user-select: text;
+}
+
+/* The same for a WebKit without `scrollbar-width`. On Windows it changes nothing: the scrollbar
+   is already hidden. */
+#text::-webkit-scrollbar {
+  display: none;
 }
 
 #text::placeholder {

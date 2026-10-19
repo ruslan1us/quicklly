@@ -40,9 +40,38 @@
   --surface: color-mix(in srgb, var(--bg) var(--opacity, 100%), transparent);
 }
 
+/* The monospace font of every window: the Windows fonts first, then those of macOS
+   (ui-monospace is SF Mono) and of Linux distributions. */
+:root {
+  --mono:
+    "Cascadia Mono", Consolas, ui-monospace, Menlo, "DejaVu Sans Mono", "Noto Sans Mono",
+    "Liberation Mono", monospace;
+}
+
 /* Thin scrollbars in the theme's colours everywhere, rather than the Windows ones.
    (A plain `*` rule, so any element can still turn its scrollbar off, like the Pad.) */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--dim) transparent;
+}
+
+/* The same for a WebKit without `scrollbar-color` (older macOS and Linux versions), which only
+   knows the ::-webkit-scrollbar pseudo-elements. WebView2 supports `scrollbar-color`, so on
+   Windows these rules never apply (Chromium would also ignore them once the standard properties
+   are set, but this keeps it certain). */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: var(--dim);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }

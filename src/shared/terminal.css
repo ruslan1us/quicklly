@@ -1,6 +1,6 @@
 /* Terminal-style popup windows (see src/windows/); colours come from themes.css. */
 :root {
-  font-family: "Cascadia Mono", Consolas, monospace;
+  font-family: var(--mono);
   font-size: 14px;
   line-height: 1.6;
 }

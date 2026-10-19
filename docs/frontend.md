@@ -50,18 +50,26 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 | [`images.ts`](../src/shared/images.ts) | Label ↔ Markdown conversion (`toMarkdown`, `fromMarkdown`), `imagePaths`, highlighting nodes, `pasteImages` (adds each pasted image to the window's held set), `releaseImages` (lets go of the held images when the text starts over, see [ADR 0018](decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md)) | Input, Pad, reader, reminders, done |
 | [`links.ts`](../src/shared/links.ts) | Link recognition (`http(s)://…` or a bare domain with a known top-level domain), sentence-punctuation trimming, `shortLink`, `linkNodes` | Input, Pad, reader, reminders, done |
 | [`blockCaret.ts`](../src/shared/blockCaret.ts) | Terminal-style block caret over a textarea whose native caret is hidden, positioned with a mirror element that holds the whole text (so it wraps like the textarea); at the end of a line it goes just after the last character, and never past the edge of the text | Input, Pad, reader editor |
-| [`themes.css`](../src/shared/themes.css) | Theme colour variables, `--surface`, thin themed scrollbars | Every page |
+| [`themes.css`](../src/shared/themes.css) | Theme colour variables, `--surface`, the `--mono` font stack, thin themed scrollbars | Every page |
 | [`terminal.css`](../src/shared/terminal.css) | Popup base: font, body-scrolling layout, header, rows, error, footer | Popups |
 
 ## Styling conventions
 
-- **Terminal style.** Monospace font (`Cascadia Mono`, then `Consolas`), a header
+- **Terminal style.** Monospace font (`--mono` in `themes.css`: `Cascadia Mono`, then `Consolas`,
+  then fallbacks for macOS and Linux, which have neither), a header
   `Quicklly · <window> · <context>`, a `❯` pointer on the selected row, and a footer that lists
   the keys separated by ` · `. Short confirmations ("Copied 2 links") appear in front of the
   footer for two seconds.
 - **Themes.** `themes.css` defines `--bg`, `--fg`, `--dim`, `--accent`, `--caret`, `--error` for
   `default`, `defaultPlus` and `light`, selected with `<html data-theme>`. Pages use only these
   variables.
+- **Scrollbars.** `themes.css` makes every scrollbar thin, with a `--dim` thumb on a transparent
+  track, through the standard `scrollbar-width` and `scrollbar-color`. A WebKit that lacks
+  `scrollbar-color` (older macOS and Linux versions) gets the same look from `::-webkit-scrollbar`
+  rules inside `@supports not (scrollbar-color: auto)`, so they never apply in WebView2 and Windows
+  is unaffected. The Pad's textarea hides its scrollbar both ways (`scrollbar-width: none` and
+  `::-webkit-scrollbar { display: none }`): a scrollbar would narrow its lines, and its highlighting
+  backdrop and caret would drift off the text.
 - **Transparency.** Rust gives every window an acrylic blur. The page background is `--surface`,
   `color-mix(in srgb, var(--bg) var(--opacity), transparent)`, where `--opacity` is
   `100 % − transparency`.
