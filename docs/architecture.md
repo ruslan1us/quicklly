@@ -145,6 +145,13 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
   switching back to the Space where the window was. Windows has no such option, and on Linux the
   flag would stick the windows to every workspace, so it is off there. The windows still can't
   show over another app's full-screen Space.
+- **No minimising or full screen on macOS.** Tauri gives a macOS app the default menu bar menu,
+  whose Edit menu makes ⌘C, ⌘V, ⌘X, ⌘A and ⌘Z work in the text fields, but whose Window and View
+  menus would also minimise the window with the keys into the Dock (⌘M), where a menu-bar app has
+  no icon to bring it back from, or put it in full screen (⌃⌘F). `no_minimize_or_full_screen` in
+  [`lib.rs`](../src-tauri/src/lib.rs) therefore makes every window not minimisable and gives it
+  the `FullScreenNone` collection behaviour, right after it is built (the input window at set-up).
+  On Windows and Linux it does nothing: the windows stay as they were there.
 - **Permissions.** Every window label is listed in
   [`capabilities/default.json`](../src-tauri/capabilities/default.json), which grants the core
   window permissions the pages use (show, hide, close, focus, size, centre, drag). Application

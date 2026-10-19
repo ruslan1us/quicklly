@@ -256,6 +256,7 @@ fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
     match result {
         Ok(window) => {
             let _ = window.set_zoom(zoom);
+            no_minimize_or_full_screen(&window);
             if label == READER_WINDOW {
                 reader_window::arrange(&window);
             }
@@ -272,6 +273,30 @@ const POPUP_WIDTH: f64 = 640.0;
 /// it was. Only there: Windows has no such option and Linux would stick the windows to every
 /// workspace.
 pub(crate) const ON_EVERY_SPACE: bool = cfg!(target_os = "macos");
+
+/// Keeps a window from being minimised or put in full screen on macOS, where the menu bar's
+/// Minimize (⌘M) and Enter Full Screen (⌃⌘F) act on the window with the keys: a menu-bar app has
+/// no Dock icon to bring a minimised window back from, and a frameless popup has no use for a
+/// Space of its own. Windows and Linux keep their own behaviour.
+#[cfg(target_os = "macos")]
+pub(crate) fn no_minimize_or_full_screen(window: &WebviewWindow) {
+    let _ = window.set_minimizable(false);
+    let handle = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        if let Ok(ns_window) = handle.ns_window() {
+            // SAFETY: the pointer is the window's NSWindow, which `handle` keeps alive, and it is
+            // used on the main thread.
+            let ns_window = unsafe { &*ns_window.cast::<objc2_app_kit::NSWindow>() };
+            ns_window.setCollectionBehavior(
+                ns_window.collectionBehavior()
+                    | objc2_app_kit::NSWindowCollectionBehavior::FullScreenNone,
+            );
+        }
+    });
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn no_minimize_or_full_screen(_window: &WebviewWindow) {}
 
 /// The blurred desktop behind every window, which shows through as much as the
 /// transparency setting lets the background through.
@@ -656,6 +681,7 @@ pub fn run() {
                 let _ = input.set_effects(blur_behind());
                 #[cfg(target_os = "macos")]
                 let _ = input.set_visible_on_all_workspaces(ON_EVERY_SPACE);
+                no_minimize_or_full_screen(&input);
             }
             apply_scale(app.handle());
             reminders::start(app.handle());
