@@ -54,11 +54,12 @@ flowchart TB
   and [ADR 0007](decisions/0007-cli-handled-in-a-fresh-process-before-tauri-starts.md).
 - **Plugins**, in registration order: `single-instance` (must be first), `deep-link`, `opener`,
   `store`, `dialog`, `autostart`, `updater`, `global-shortcut`.
-- **Set-up** (`.setup`): in debug builds the `quicklly://` scheme is registered for the dev binary
-  (installers register it for release builds); then the tray is built, the saved hotkey is
-  registered, the updater thread starts, the Pad and reader pin states are loaded, the acrylic
-  effect is applied to the input window, the scale setting is applied, the daily-round thread
-  starts, and the notes folder starts being watched.
+- **Set-up** (`.setup`): the `quicklly://` scheme is registered for the running binary in Windows
+  debug builds (installers register it for release builds) and in every Linux build (see
+  [CLI and links](cli-and-links.md#registration-of-the-scheme)); then the tray is built, the
+  saved hotkey is registered, the updater thread starts, the Pad and reader pin states are loaded,
+  the acrylic effect is applied to the input window, the scale setting is applied, the daily-round
+  thread starts, and the notes folder starts being watched.
 - **The app lives in the tray.** No window is visible at start. Closing a window never quits the
   application; only the tray's **Quit** or `/exit` does (`app.exit(0)`).
 

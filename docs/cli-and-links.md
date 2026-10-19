@@ -72,10 +72,20 @@ opens a console window whenever it is started normally.
 
 The `quicklly` scheme is declared under `plugins.deep-link.desktop.schemes` in
 [`tauri.conf.json`](../src-tauri/tauri.conf.json). The NSIS and MSI installers register it for the
-installed executable. A debug build registers it for itself at start (`register_all` under
-`#[cfg(debug_assertions)]`), which points links at the development binary until the next install
-or debug run. Windows passes the link as the executable's single argument, which `note_request`
-handles before anything else starts.
+installed executable. A debug build on Windows registers it for itself at start (`register_all`
+under `#[cfg(any(all(debug_assertions, windows), target_os = "linux"))]`), which points links at
+the development binary until the next install or debug run. Windows passes the link as the
+executable's single argument, which `note_request` handles before anything else starts.
+
+On Linux every build calls `register_all` at start. The deb and rpm `.desktop` files declare the
+scheme but start the executable without the link (`Exec` has no `%u`), and an AppImage registers
+nothing. The plugin writes `~/.local/share/applications/quicklly-handler.desktop` with
+`Exec="<executable or $APPIMAGE>" %u` and makes it the default handler through
+`update-desktop-database` and `xdg-mime` (from `xdg-utils`). A moved AppImage gets links again
+after its next start. The link then arrives as the single argument, as on Windows.
+
+On macOS the scheme is registered by the installed `.app`: the bundler writes it into the bundle's
+`Info.plist`, and the plugin's `register_all` is unsupported there, so it is not called.
 
 ## Interaction with a running instance
 

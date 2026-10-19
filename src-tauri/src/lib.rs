@@ -522,8 +522,11 @@ pub fn run() {
         .manage(reminders::FocusOnShow::default())
         .manage(watcher::Watcher::default())
         .setup(|app| {
-            // Installers register `quicklly://` links; a dev build registers itself.
-            #[cfg(debug_assertions)]
+            // Windows installers register `quicklly://` links; a dev build registers itself.
+            // On Linux the app always registers itself: an AppImage registers nothing, and the
+            // bundled `.desktop` file starts the app without the link. On macOS the bundle's
+            // Info.plist declares the scheme and the plugin can't register it.
+            #[cfg(any(all(debug_assertions, windows), target_os = "linux"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 if let Err(e) = app.deep_link().register_all() {
