@@ -278,9 +278,11 @@ LaunchServices sends the running app a reopen event instead (`RunEvent::Reopen`)
 ## Tray and hotkey
 
 The tray ([`lib.rs`](../src-tauri/src/lib.rs) `setup_tray`) shows the input window on a left
-click and offers **New note**, **Open notes folder**, **Settings…** and **Quit**. The global
-shortcut plugin has a single handler for the single registered shortcut; on press it opens the
-input window or the Pad according to the **Hotkey opens** setting. Hotkey parsing and labels are in
+click and offers **New note**, **Open notes folder**, **Settings…** and **Quit**. Its icon is the
+app icon; on macOS it is used as a template image (`icon_as_template`), which the menu bar draws
+from the icon's shape alone, in the bar's own light or dark colour. The global shortcut plugin
+has a single handler for the single registered shortcut; on press it opens the input window or the
+Pad according to the **Hotkey opens** setting. Hotkey parsing and labels are in
 [`hotkey.rs`](../src-tauri/src/hotkey.rs); registration and changes are in
 [`settings.rs`](../src-tauri/src/settings.rs). A hotkey that cannot be registered at start is
 logged and the tray keeps working; a new hotkey that cannot be registered is rejected and the old
