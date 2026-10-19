@@ -596,8 +596,8 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             // Windows installers register `quicklly://` links; a dev build registers itself.
-            // On Linux the app always registers itself: an AppImage registers nothing, and the
-            // bundled `.desktop` file starts the app without the link. On macOS the bundle's
+            // On Linux the app always registers itself: an AppImage registers nothing (deb and
+            // rpm declare the scheme in their `.desktop` file). On macOS the bundle's
             // Info.plist declares the scheme and the plugin can't register it.
             #[cfg(any(all(debug_assertions, windows), target_os = "linux"))]
             {

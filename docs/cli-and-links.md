@@ -80,12 +80,15 @@ under `#[cfg(any(all(debug_assertions, windows), target_os = "linux"))]`), which
 the development binary until the next install or debug run. Windows passes the link as the
 executable's single argument, which `note_request` handles before anything else starts.
 
-On Linux every build calls `register_all` at start. The deb and rpm `.desktop` files declare the
-scheme but start the executable without the link (`Exec` has no `%u`), and an AppImage registers
-nothing. The plugin writes `~/.local/share/applications/quicklly-handler.desktop` with
+On Linux every build calls `register_all` at start, because an AppImage registers nothing. The
+plugin writes `~/.local/share/applications/quicklly-handler.desktop` with
 `Exec="<executable or $APPIMAGE>" %u` and makes it the default handler through
-`update-desktop-database` and `xdg-mime` (from `xdg-utils`). A moved AppImage gets links again
-after its next start. The link then arrives as the single argument, as on Windows.
+`update-desktop-database` (from `desktop-file-utils`) and `xdg-mime` (from `xdg-utils`); the deb
+and rpm packages depend on both. A moved AppImage gets links again after its next start. The deb
+and rpm `.desktop` files also declare the scheme, and their template
+([`src-tauri/linux/quicklly.desktop`](../src-tauri/linux/quicklly.desktop), the bundler's own with
+`%u` added to `Exec`) passes the link on, so links work after installing a package even before
+the app's first start. The link then arrives as the single argument, as on Windows.
 
 On macOS the scheme is registered by the installed `.app`: the bundler writes it into the bundle's
 `Info.plist`, and the plugin's `register_all` is unsupported there, so it is not called. A

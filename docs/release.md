@@ -82,6 +82,32 @@ Both installers register the `quicklly://` scheme. The installers themselves are
 code-signed, so Windows SmartScreen warns on first run; this is a known limitation documented in
 the README's [Installation](../README.md#installation) section.
 
+## Bundle settings
+
+The bundle settings shared by every platform (icons, updater artifacts) are in
+[`tauri.conf.json`](../src-tauri/tauri.conf.json). Settings for one platform go in a platform file
+next to it, which the Tauri CLI and `tauri-build` merge over the base file as a
+[JSON Merge Patch](https://datatracker.ietf.org/doc/html/rfc7396) only when building for that
+platform: a Windows build never reads them. In a merge patch an object is merged key by key, but
+an array or a string replaces the base value.
+
+[`tauri.linux.conf.json`](../src-tauri/tauri.linux.conf.json) holds the Linux packages' settings:
+
+| Key | Value | Purpose |
+| --- | --- | --- |
+| `bundle.targets` | `appimage`, `deb`, `rpm` | The three Linux formats (the same set as `"all"` on Linux, named explicitly) |
+| `bundle.category` | `Utility` | `Categories=Utility;` in the `.desktop` file |
+| `bundle.shortDescription`, `bundle.longDescription` | Text without "for Windows" | Package summary and description, and the `.desktop` `Comment`. Without them the bundler uses the `description` from [`Cargo.toml`](../src-tauri/Cargo.toml), "Hotkey mini-notepad for Windows", which the Windows installers also use, so that one stays as it is |
+| `bundle.linux.deb.depends`, `bundle.linux.rpm.depends` | `xdg-utils`, `desktop-file-utils` | `xdg-mime` and `update-desktop-database` for the [registration of `quicklly://`](cli-and-links.md#registration-of-the-scheme) at start, `xdg-open` for opening the notes folder and images |
+| `bundle.linux.deb.desktopTemplate`, `bundle.linux.rpm.desktopTemplate` | [`linux/quicklly.desktop`](../src-tauri/linux/quicklly.desktop) | The bundler's default `.desktop` template with `%u` added to `Exec`, so the packaged launcher passes a `quicklly://` link on. The AppImage is built from the deb's files and gets the same `.desktop` file |
+
+The CLI adds the rest of the package dependencies itself: WebKitGTK and GTK, and, because the
+`tauri` crate has the `tray-icon` feature, the appindicator library the tray loads at run time
+(`libayatana-appindicator3-1` for deb, `libayatana-appindicator3.so.1()(64bit)` for rpm; without
+it the tray panics at start). It finds that library on the build machine with `pkg-config`, so the
+build machine needs `libayatana-appindicator3-dev`, as CI installs. Adding it again in `depends`
+would list it twice.
+
 ## macOS bundle
 
 The macOS settings are in [`tauri.macos.conf.json`](../src-tauri/tauri.macos.conf.json), which

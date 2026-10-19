@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["appimage", "deb", "rpm"],
+    "category": "Utility",
+    "shortDescription": "Hotkey mini-notepad",
+    "longDescription": "Press a global hotkey anywhere, type a thought and press Enter: Quicklly appends it with the time to today's Markdown file and gets out of the way. Notes are plain .md files in a folder you choose.",
+    "linux": {
+      "deb": {
+        "depends": ["xdg-utils", "desktop-file-utils"],
+        "desktopTemplate": "linux/quicklly.desktop"
+      },
+      "rpm": {
+        "depends": ["xdg-utils", "desktop-file-utils"],
+        "desktopTemplate": "linux/quicklly.desktop"
+      }
+    }
+  }
+}
