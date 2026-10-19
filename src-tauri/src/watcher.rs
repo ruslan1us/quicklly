@@ -103,25 +103,36 @@ mod tests {
         dir
     }
 
+    /// `base` with `names` joined to it, one path component each.
+    fn path_in(base: &Path, names: &[&str]) -> PathBuf {
+        names
+            .iter()
+            .fold(base.to_path_buf(), |path, name| path.join(name))
+    }
+
     #[test]
     fn counts_changes_to_notes_files_only() {
-        let dir = Path::new(r"C:\Notes");
-        let counts = |path: &str| is_notes_change(dir, &dir.join(path));
-        assert!(counts("inbox.md"));
-        assert!(counts("2026-10-14.md"));
-        assert!(counts(r"work\quicklly.md"));
-        assert!(counts(r"archive\work\quicklly.md"));
+        let root = std::env::temp_dir();
+        let dir = root.join("Notes");
+        let counts = |names: &[&str]| is_notes_change(&dir, &path_in(&dir, names));
+        assert!(counts(&["inbox.md"]));
+        assert!(counts(&["2026-10-14.md"]));
+        assert!(counts(&["work", "quicklly.md"]));
+        assert!(counts(&["archive", "work", "quicklly.md"]));
         // A tag folder may be called images below the top level.
-        assert!(counts(r"work\images\x.md"));
-        assert!(!counts("inbox.md.tmp"));
-        assert!(!counts(r"work\quicklly.md.tmp"));
-        assert!(!counts(r"images\2026-10-14_09-00-00.png"));
-        assert!(!counts(r"Images\notes.md"));
-        assert!(!counts(r".obsidian\workspace.json"));
-        assert!(!counts(r".trash\old.md"));
-        assert!(!counts("work"));
-        assert!(!counts("notes.txt"));
-        assert!(!is_notes_change(dir, Path::new(r"C:\Other\inbox.md")));
+        assert!(counts(&["work", "images", "x.md"]));
+        assert!(!counts(&["inbox.md.tmp"]));
+        assert!(!counts(&["work", "quicklly.md.tmp"]));
+        assert!(!counts(&["images", "2026-10-14_09-00-00.png"]));
+        assert!(!counts(&["Images", "notes.md"]));
+        assert!(!counts(&[".obsidian", "workspace.json"]));
+        assert!(!counts(&[".trash", "old.md"]));
+        assert!(!counts(&["work"]));
+        assert!(!counts(&["notes.txt"]));
+        assert!(!is_notes_change(
+            &dir,
+            &path_in(&root, &["Other", "inbox.md"])
+        ));
     }
 
     #[test]
