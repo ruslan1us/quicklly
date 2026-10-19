@@ -93,7 +93,8 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
   before any file is touched), the selection of unused images (`unused`) and of unsaved pasted
   ones (`unsaved`), moving several images one by one (`trash_each`, given a stand-in for
   `trash::delete`), and the choice of Recycle Bin entries to restore (`to_restore`) on hand-built
-  `TrashItem` values.
+  `TrashItem` values. That last test is compiled only where `to_restore` is, not on macOS (see
+  [backend](backend.md)).
 - **Exact file content.** File tests assert the whole resulting text, including blank lines and
   line endings.
 

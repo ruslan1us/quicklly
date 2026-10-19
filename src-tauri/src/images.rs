@@ -3,6 +3,7 @@ use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
 use chrono::NaiveDateTime;
+#[cfg(not(target_os = "macos"))]
 use trash::TrashItem;
 
 use crate::archive::ARCHIVE_DIR;
@@ -296,6 +297,7 @@ fn plain_path(path: &str) -> String {
 
 /// Of the items in the Recycle Bin, the ones that bring back the images that were at `paths`:
 /// for each, the one moved there from that path last. Images no longer in it are left out.
+#[cfg(not(target_os = "macos"))]
 fn to_restore(bin: &[TrashItem], paths: &[PathBuf]) -> Vec<TrashItem> {
     paths
         .iter()
@@ -311,6 +313,7 @@ fn to_restore(bin: &[TrashItem], paths: &[PathBuf]) -> Vec<TrashItem> {
 /// Brings the images that were at `paths` back from the Recycle Bin, where [`trash_unused`]
 /// moved them, to undo a change in the reader. Returns how many of them couldn't be brought
 /// back: no longer in the Recycle Bin, or another file in their place.
+#[cfg(not(target_os = "macos"))]
 pub fn restore(paths: &[PathBuf]) -> usize {
     if paths.is_empty() {
         return 0;
@@ -324,6 +327,13 @@ pub fn restore(paths: &[PathBuf]) -> usize {
         .filter(Result::is_ok)
         .count();
     paths.len() - restored
+}
+
+/// On macOS the Trash can't be listed (`trash` has no `os_limited` there), so the images that
+/// were at `paths` stay in the Trash: returns that none of them could be brought back.
+#[cfg(target_os = "macos")]
+pub fn restore(paths: &[PathBuf]) -> usize {
+    paths.len()
 }
 
 #[cfg(test)]
@@ -689,6 +699,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(target_os = "macos"))]
     fn in_bin(id: &str, path: &str, time_deleted: i64) -> TrashItem {
         let path = Path::new(path);
         TrashItem {
@@ -700,6 +711,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "macos"))]
     fn finds_the_images_to_bring_back_in_the_recycle_bin() {
         let bin = [
             in_bin("old", "notes/images/a.png", 1),

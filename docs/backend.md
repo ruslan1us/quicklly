@@ -114,7 +114,11 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   Each image is tried in turn (`trash_each`): one that can't be moved is logged and stays, the
   others still go, and only the ones moved are returned.
   `restore(paths)` brings each back by finding the latest Recycle Bin entry with that original
-  path, and returns how many could not be restored.
+  path, and returns how many could not be restored. On macOS the Trash can't be listed (`trash`
+  has `os_limited::list` and `restore_all` only on Windows and freedesktop systems), so `to_restore`
+  and this `restore` are `cfg(not(target_os = "macos"))`, and the macOS `restore` brings nothing
+  back and returns `paths.len()`: undo still brings the note back, the reader says how many images
+  it couldn't bring back, and they stay in the Trash.
 - `trash_unsaved(dir, paths, kept)` moves to the Recycle Bin the images a window let go of
   without saving them (see [ADR 0018](decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md)).
   Only paths of the form `images/<name>` count (`pasted_name`: no further folder, no `\`, `:` or

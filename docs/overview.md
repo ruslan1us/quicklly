@@ -65,8 +65,8 @@ or dates.
   Linux, while on Wayland applications cannot register global hotkeys, so a command that the user
   binds in the desktop environment (or the `GlobalShortcuts` portal) would replace it; a tray
   through AppIndicator; fallback monospace fonts; layout checks in WebKit. Restoring images from
-  the Recycle Bin uses `trash::os_limited`, which is not available on macOS and would need a
-  platform guard.
+  the Recycle Bin uses `trash::os_limited`, which is not available on macOS, so there undo leaves
+  a note's images in the Trash.
 - **Backlog ideas**, not scheduled: capturing context with a note (active window, browser URL),
   writing into an Obsidian vault's daily note, voice input, LLM-assisted triage of the inbox, Git
   sync.
