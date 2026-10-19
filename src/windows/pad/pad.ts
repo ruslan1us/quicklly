@@ -20,6 +20,7 @@ import {
   toMarkdown,
 } from "../../shared/images";
 import { linkNodes } from "../../shared/links";
+import { primary } from "../../shared/platform";
 import { TAG_NAME, tagSuggest } from "../../shared/tagSuggest";
 import { followTheme } from "../../shared/theme";
 
@@ -429,7 +430,8 @@ text.addEventListener("keydown", (e) => {
   // ↑ ↓ choose and Esc closes the list.
   if (suggestions.keydown(e)) return;
   const plain = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey;
-  if (e.key === "Enter" && e.ctrlKey) {
+  // The app's own shortcuts take ⌘ instead of Ctrl on macOS.
+  if (e.key === "Enter" && primary(e)) {
     e.preventDefault();
     void saveNote();
   } else if (e.key === "Enter" && plain) {
@@ -443,7 +445,7 @@ text.addEventListener("keydown", (e) => {
     e.preventDefault();
     // An unpinned Pad hides first, so the two windows never show at once.
     void (pinned ? Promise.resolve() : hide()).then(() => invoke("open_input"));
-  } else if (e.ctrlKey && e.code === "KeyP") {
+  } else if (primary(e) && e.code === "KeyP") {
     e.preventDefault();
     void togglePin();
   } else if (

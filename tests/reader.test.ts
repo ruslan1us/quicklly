@@ -1,6 +1,16 @@
 import { type MockInstance, afterEach, beforeEach, expect, test, vi } from "vitest";
 import html from "../src/windows/reader/index.html?raw";
-import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle, type } from "./helpers";
+import {
+  type Call,
+  argsOf,
+  closePage,
+  loadPage,
+  mockTauri,
+  onPlatform,
+  press,
+  settle,
+  type,
+} from "./helpers";
 
 // The reader, with its real page and code; only the Rust side is pretended.
 const FILES = [
@@ -460,4 +470,51 @@ test("Ctrl+Z with nothing to undo says so", async () => {
   await undo();
   expect(argsOf(calls, "undo_change")).toEqual([]);
   expect(text("#help")).toMatch(/^Nothing to undo · ↑↓ select · Enter open/);
+});
+
+test("on macOS ⌘Z undoes and ⌘P pins, not Ctrl; Ctrl+C still closes", async () => {
+  closePage();
+  onPlatform("darwin");
+  await open();
+  await deleteFirst();
+  press(document, "z", { code: "KeyZ", ctrlKey: true });
+  await settle();
+  expect(argsOf(calls, "undo_change")).toEqual([]);
+  press(document, "z", { code: "KeyZ", metaKey: true });
+  await settle();
+  expect(argsOf(calls, "undo_change")).toHaveLength(1);
+  press(document, "p", { code: "KeyP", ctrlKey: true });
+  await settle();
+  expect(argsOf(calls, "set_reader_pin")).toEqual([]);
+  press(document, "p", { code: "KeyP", metaKey: true });
+  await settle();
+  expect(argsOf(calls, "set_reader_pin")).toEqual([{ pinned: true, file: "2026-10-13.md" }]);
+  press(document, "c", { code: "KeyC", ctrlKey: true });
+  expect(calls.some((call) => call.cmd === "plugin:window|close")).toBe(true);
+});
+
+test("on macOS ⌫ deletes like Del, a file and a note", async () => {
+  closePage();
+  onPlatform("darwin");
+  await open();
+  press(document, "Backspace");
+  press(document, "Backspace");
+  await settle();
+  expect(argsOf(calls, "delete_note_file")).toEqual([{ name: "2026-10-13.md" }]);
+  await openToday();
+  press(document, "Backspace");
+  press(document, "Backspace");
+  await settle();
+  expect(argsOf(calls, "delete_note")).toEqual([{ name: "2026-10-13.md", note: NOTES[1] }]);
+});
+
+test("elsewhere ⌫ deletes nothing", async () => {
+  press(document, "Backspace");
+  press(document, "Backspace");
+  await openToday();
+  press(document, "Backspace");
+  press(document, "Backspace");
+  await settle();
+  expect(argsOf(calls, "delete_note_file")).toEqual([]);
+  expect(argsOf(calls, "delete_note")).toEqual([]);
 });

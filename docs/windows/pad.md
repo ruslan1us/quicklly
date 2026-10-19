@@ -39,6 +39,9 @@ be pinned to stay open, movable and resizable. User-facing keys are in the root 
 | <kbd>←</kbd> in an empty Pad (not editing) | Back to the input window; an unpinned Pad hides first | `open_input` |
 | <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> without selection | Cancel an edit, save the draft, hide | `set_pad_draft` |
 
+On macOS <kbd>Ctrl</kbd>+<kbd>Enter</kbd> and <kbd>Ctrl</kbd>+<kbd>P</kbd> are ⌘↩ and ⌘P;
+<kbd>Ctrl</kbd>+<kbd>C</kbd> still closes (see [Frontend](../frontend.md#editing-conventions)).
+
 List items are lines starting with optional indentation and `- [ ] `, `- [x] `, `- `, `* ` or
 `1. `; a checkbox item continues as `- [ ] `, a numbered one with the next number.
 

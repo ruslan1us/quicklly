@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import html from "../src/windows/input/index.html?raw";
-import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle, type } from "./helpers";
+import {
+  type Call,
+  argsOf,
+  closePage,
+  loadPage,
+  mockTauri,
+  onPlatform,
+  press,
+  settle,
+  type,
+} from "./helpers";
 
 // The input window, with its real page and code; only the Rust side is pretended.
 let calls: Call[];
@@ -299,4 +309,20 @@ test("Ctrl+E keeps the note and shows why when the Pad draft can't be read", asy
   expect(note.value).toBe("call mom");
   expect(document.querySelector("#message")!.textContent).toBe(error);
   expect(calls.some((call) => call.cmd === "plugin:window|show")).toBe(true);
+});
+
+test("on macOS ⌘E moves the note into the Pad, not Ctrl+E; Ctrl+C still closes", async () => {
+  closePage();
+  onPlatform("darwin");
+  await open();
+  type(note, "call mom");
+  press(note, "e", { ctrlKey: true, code: "KeyE" });
+  await settle();
+  expect(argsOf(calls, "expand_to_pad")).toEqual([]);
+  press(note, "e", { metaKey: true, code: "KeyE" });
+  await settle();
+  expect(argsOf(calls, "expand_to_pad")).toEqual([{ text: "call mom" }]);
+  press(note, "c", { ctrlKey: true, code: "KeyC" });
+  await settle();
+  expect(hidden()).toBe(true);
 });

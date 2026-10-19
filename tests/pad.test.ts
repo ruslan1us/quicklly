@@ -1,7 +1,17 @@
 import { emit } from "@tauri-apps/api/event";
 import { afterEach, expect, test, vi } from "vitest";
 import html from "../src/windows/pad/index.html?raw";
-import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle, type } from "./helpers";
+import {
+  type Call,
+  argsOf,
+  closePage,
+  loadPage,
+  mockTauri,
+  onPlatform,
+  press,
+  settle,
+  type,
+} from "./helpers";
 
 // The Pad, with its real page and code; only the Rust side is pretended, the draft file too.
 let calls: Call[];
@@ -137,4 +147,20 @@ test("tags are highlighted whole, in any script, as the notes files understand t
   const tags = Array.from(document.querySelectorAll("#backdrop .tag"), (tag) => tag.textContent);
   expect(tags).toEqual(["#हिंदी", "#work/quicklly-2", "#Ünï_x"]);
   await settle();
+});
+
+test("on macOS ⌘Enter saves and ⌘P pins, not Ctrl", async () => {
+  onPlatform("darwin");
+  await open();
+  type(text, "call mom");
+  press(text, "Enter", { ctrlKey: true });
+  press(text, "p", { ctrlKey: true, code: "KeyP" });
+  await settle();
+  expect(argsOf(calls, "save_note")).toEqual([]);
+  expect(argsOf(calls, "set_pad_pinned")).toEqual([]);
+  press(text, "Enter", { metaKey: true });
+  press(text, "p", { metaKey: true, code: "KeyP" });
+  await settle();
+  expect(argsOf(calls, "save_note")).toEqual([{ text: "call mom" }]);
+  expect(argsOf(calls, "set_pad_pinned")).toEqual([{ pinned: true }]);
 });

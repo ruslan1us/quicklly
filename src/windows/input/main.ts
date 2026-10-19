@@ -24,6 +24,7 @@ import {
   toMarkdown,
 } from "../../shared/images";
 import { linkNodes, shortLink, splitLinks } from "../../shared/links";
+import { primary } from "../../shared/platform";
 import { BASE_WIDTH } from "../../shared/popup";
 import { tagSuggest } from "../../shared/tagSuggest";
 import { followTheme, zoom } from "../../shared/theme";
@@ -517,8 +518,8 @@ input.addEventListener("keydown", (e) => {
   ) {
     e.preventDefault();
     void hide();
-  } else if (e.ctrlKey && e.code === "KeyE" && !searching()) {
-    // Ctrl+E moves what was typed into the Pad, to go on writing there.
+  } else if (primary(e) && e.code === "KeyE" && !searching()) {
+    // Ctrl+E (⌘E on macOS) moves what was typed into the Pad, to go on writing there.
     e.preventDefault();
     void expandToPad();
   } else if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {

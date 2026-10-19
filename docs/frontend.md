@@ -41,7 +41,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 
 | Module | Responsibility | Used by |
 | --- | --- | --- |
-| [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isMac`, `isLinux` | Pages that differ by system |
+| [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isMac`, `isLinux`; `primary(e)`, the modifier of the app's own shortcuts (⌘ on macOS, <kbd>Ctrl</kbd> elsewhere) | Input, Pad, reader |
 | [`theme.ts`](../src/shared/theme.ts) | Loads the appearance (`get_appearance`) and follows `appearance-changed`: sets `data-theme`, the `--opacity` variable and the exported `zoom` | Every page |
 | [`popup.ts`](../src/shared/popup.ts) | `fitToContent(maxHeight)` sizes a popup to its `main` element at the base width (640 logical pixels × zoom); `reveal()` centres, shows and focuses it | Reader, reminders, done, settings, help, changelog |
 | [`dates.ts`](../src/shared/dates.ts) | Date format, `toStored`/`toDisplay`, `/date` detection, `splitDoneDate`, `DONE_DAYS` (the done journal's period), `dateNodes` highlighting, `deleteDatesWhole`, `followDateFormat` | Input, Pad, reader, reminders, done, help |
@@ -99,6 +99,12 @@ The page links `../../shared/themes.css` and its own stylesheet. See
   compare `key`.
 - **Closing.** <kbd>Esc</kbd> closes or hides every window; <kbd>Ctrl</kbd>+<kbd>C</kbd> does the
   same when there is no text selection to copy.
+- **⌘ on macOS.** The app's own <kbd>Ctrl</kbd> shortcuts (<kbd>Ctrl</kbd>+<kbd>E</kbd> in the
+  input window, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> in the Pad, <kbd>Ctrl</kbd>+<kbd>P</kbd>,
+  <kbd>Ctrl</kbd>+<kbd>Z</kbd> in the reader list) check `primary(e)` from `platform.ts`, so on
+  macOS they take ⌘ instead, as Mac users expect. <kbd>Ctrl</kbd>+<kbd>C</kbd> still closes there:
+  ⌘C copies. Mac keyboards have no forward <kbd>Delete</kbd>, so the reader list takes
+  <kbd>⌫</kbd> for <kbd>Del</kbd> there.
 - **Focus stays in the text.** Clickable list items (tag suggestions, calendar days, search
   results) act on `mousedown` with `preventDefault`, so the textarea keeps the focus.
 - **Hidden windows refresh on focus.** The input window and the Pad are hidden, not destroyed, so

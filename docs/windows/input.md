@@ -48,7 +48,8 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
 A command is recognised only when the whole trimmed note equals it; `/config later` is saved as a
 note. Commands that open another window hide the input window first (`switchTo`), so the two never
 show together. <kbd>Ctrl</kbd>+<kbd>E</kbd> hides it the same way but clears the note only once
-`expand_to_pad` succeeded.
+`expand_to_pad` succeeded. On macOS it is ⌘E; <kbd>Ctrl</kbd>+<kbd>C</kbd> closes there too (see
+[Frontend](../frontend.md#editing-conventions)).
 
 ## Behaviour
 

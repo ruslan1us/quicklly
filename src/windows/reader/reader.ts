@@ -13,6 +13,7 @@ import {
 } from "../../shared/dates";
 import { type Images, fromMarkdown, imagePaths, markdownNodes, toMarkdown } from "../../shared/images";
 import { findLinks, linkNodes, shortLink } from "../../shared/links";
+import { isMac, primary } from "../../shared/platform";
 import { appWindow, fitToContent, reveal } from "../../shared/popup";
 import { followTheme } from "../../shared/theme";
 
@@ -683,6 +684,9 @@ function moveNote(step: number) {
   render();
 }
 
+/** Del, or on macOS also ⌫: Mac keyboards have no forward Delete key. */
+const isDelete = (e: KeyboardEvent) => e.key === "Delete" || (isMac && e.key === "Backspace");
+
 document.addEventListener("keydown", (e) => {
   if (editing) {
     if (e.isComposing) return;
@@ -703,12 +707,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   e.preventDefault();
-  if (e.ctrlKey && e.code === "KeyP") {
+  // The app's own shortcuts take ⌘ instead of Ctrl on macOS.
+  if (primary(e) && e.code === "KeyP") {
     void togglePin();
     return;
   }
   // By physical key, so any keyboard layout works; in the editor it undoes typing instead.
-  if (e.ctrlKey && e.code === "KeyZ") {
+  if (primary(e) && e.code === "KeyZ") {
     void undo();
     return;
   }
@@ -719,7 +724,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (confirmingDelete) {
     confirmingDelete = false;
-    if (e.key !== "Delete") render();
+    if (!isDelete(e)) render();
     else if (view === "files") void deleteFile();
     else void deleteNote();
     return;
@@ -736,7 +741,7 @@ document.addEventListener("keydown", (e) => {
       openSelectedFile();
     } else if (e.key === "Tab") {
       void toggleSort();
-    } else if (e.key === "Delete" && files[selectedFile]) {
+    } else if (isDelete(e) && files[selectedFile]) {
       confirmingDelete = true;
       render();
     } else if (files.length > 0 && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
@@ -761,7 +766,7 @@ document.addEventListener("keydown", (e) => {
     void copyLinks();
   } else if (e.code === "KeyO" && !e.ctrlKey && !e.altKey && !e.metaKey) {
     void openImages();
-  } else if (e.key === "Delete" && items[selectedItem]?.kind === "note") {
+  } else if (isDelete(e) && items[selectedItem]?.kind === "note") {
     confirmingDelete = true;
     render();
   }
