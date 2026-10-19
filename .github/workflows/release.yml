@@ -143,6 +143,9 @@ jobs:
     name: Build the Linux packages
     # Listed with the Windows job too, for its release notes.
     needs: [release, macos]
+    # Waits for the macOS job but runs even if it failed, so a failed macOS build doesn't skip
+    # Linux too; it still needs the Windows job, which created the draft.
+    if: ${{ !cancelled() && needs.release.result == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

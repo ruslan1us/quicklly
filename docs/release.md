@@ -60,7 +60,7 @@ See [ADR 0016](decisions/0016-changelog-as-the-source-of-release-notes.md).
 | Workflow | Trigger | Runner | Steps |
 | --- | --- | --- | --- |
 | [`ci.yml`](../.github/workflows/ci.yml) | Push to any branch, pull requests | Matrix: `windows-latest`, `macos-latest`, `ubuntu-24.04` (`fail-fast: false`) | On Ubuntu, `apt-get install` the Tauri Linux libraries (`libwebkit2gtk-4.1-dev`, `libdbus-1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`); then `npm ci`, `npm run build`, `npm test`, `cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked`; a newer run cancels an older one on the same ref |
-| [`release.yml`](../.github/workflows/release.yml) | Push of a tag `v*` | Three jobs one after another: `windows-latest`, then `macos-latest` (`needs: release`), then `ubuntu-24.04` (`needs: [release, macos]`) | Windows: verify that the tag equals the version in all three files, extract the changelog section, and `tauri-apps/tauri-action` builds the installers and drafts the release. macOS: a universal build (`--target universal-apple-darwin`, Rust targets `aarch64-apple-darwin` and `x86_64-apple-darwin`). Linux: `apt-get install` the libraries CI installs plus `xdg-utils`, then the AppImage, deb and rpm. Each later job attaches its files to the same draft |
+| [`release.yml`](../.github/workflows/release.yml) | Push of a tag `v*` | Three jobs one after another: `windows-latest`, then `macos-latest` (`needs: release`), then `ubuntu-24.04` (`needs: [release, macos]`, and runs even if the macOS job failed) | Windows: verify that the tag equals the version in all three files, extract the changelog section, and `tauri-apps/tauri-action` builds the installers and drafts the release. macOS: a universal build (`--target universal-apple-darwin`, Rust targets `aarch64-apple-darwin` and `x86_64-apple-darwin`). Linux: `apt-get install` the libraries CI installs plus `xdg-utils`, then the AppImage, deb and rpm. Each later job attaches its files to the same draft |
 | [`bundle-trial.yml`](../.github/workflows/bundle-trial.yml) | Push to the `port` branch, or by hand | `macos-latest` and `ubuntu-24.04` | Temporary: `tauri build --no-sign` (no code or updater signatures, no secrets) of the universal macOS app and the Linux packages, uploaded as workflow artifacts to try before the first release with them. It exists only on the `port` branch and is removed before the merge into `main` |
 
 Every tauri-action step runs with `releaseDraft: true` and the same `tagName`, and receives the
@@ -74,8 +74,10 @@ The Windows job creates the draft. The later jobs find it by its tag and upload 
 leaves the name and body of an existing draft as they are. Each tauri-action run also downloads
 the draft's `latest.json`, adds the entries for its own platform and uploads it again, which is why
 the jobs run one after another rather than in parallel: two runs at once could each upload a file
-without the other's entries. A later job failing leaves a draft without that platform; re-run
-the failed jobs before publishing.
+without the other's entries. The Linux job waits for the macOS job but runs even if it failed
+(`if: ${{ !cancelled() && needs.release.result == 'success' }}`), so one failed build doesn't skip
+the other. A later job failing leaves a draft without that platform; re-run the failed jobs
+before publishing, and a re-run adds its entries to the draft's `latest.json` as usual.
 
 The release notes come from `CHANGELOG.md` once, in the Windows job: they become the body of the
 draft and the `notes` of `latest.json`. The job passes them to the later jobs as its `notes`
