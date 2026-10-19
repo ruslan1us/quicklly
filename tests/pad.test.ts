@@ -149,6 +149,19 @@ test("tags are highlighted whole, in any script, as the notes files understand t
   await settle();
 });
 
+test("the Enter that ends an input method's composition is left to it", async () => {
+  await open();
+  type(text, "- とうきょう");
+  for (const composing of [{ isComposing: true }, { keyCode: 229 }]) {
+    // Neither a new list item nor a saved note.
+    expect(press(text, "Enter", composing).defaultPrevented).toBe(false);
+    expect(press(text, "Enter", { ctrlKey: true, ...composing }).defaultPrevented).toBe(false);
+  }
+  await settle();
+  expect(text.value).toBe("- とうきょう");
+  expect(argsOf(calls, "save_note")).toEqual([]);
+});
+
 test("the hints name the keys as the system does", async () => {
   const help = () => document.querySelector("#help")!.textContent;
   /** The help of an empty Pad, the pin's tooltip and the help once there is text. */

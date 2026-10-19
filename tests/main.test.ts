@@ -66,6 +66,18 @@ test("Shift+Enter starts a new line instead", async () => {
   expect(argsOf(calls, "save_note")).toEqual([]);
 });
 
+test("the Enter that ends an input method's composition is left to it", async () => {
+  type(note, "とうきょう");
+  expect(press(note, "Enter", { isComposing: true }).defaultPrevented).toBe(false);
+  // Sent after the composition has ended, as some webviews do.
+  expect(press(note, "Enter", { keyCode: 229 }).defaultPrevented).toBe(false);
+  await settle();
+  expect(argsOf(calls, "save_note")).toEqual([]);
+  press(note, "Enter");
+  await settle();
+  expect(argsOf(calls, "save_note")).toEqual([{ text: "とうきょう" }]);
+});
+
 test("Enter turns /date and a date into the date first, saved as YYYY-MM-DD", async () => {
   type(note, "call mom /date 15/10/2026");
   press(note, "Enter");

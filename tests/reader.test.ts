@@ -368,6 +368,16 @@ test("Ctrl+Z undoes an edit", async () => {
   expect(text("#help")).toMatch(/^Undone: edit · /);
 });
 
+test("the Enter that ends an input method's composition doesn't save the edit", async () => {
+  await openToday();
+  const editor = editSelected();
+  expect(press(editor, "Enter", { isComposing: true }).defaultPrevented).toBe(false);
+  expect(press(editor, "Enter", { keyCode: 229 }).defaultPrevented).toBe(false);
+  await settle();
+  expect(argsOf(calls, "edit_note")).toEqual([]);
+  expect(document.querySelector(".editor")).not.toBeNull();
+});
+
 test("a saved edit ends the editor and shows the note as reloaded", async () => {
   await openToday();
   const editor = editSelected();

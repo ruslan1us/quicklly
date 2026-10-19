@@ -51,6 +51,9 @@ show together. <kbd>Ctrl</kbd>+<kbd>E</kbd> hides it the same way but clears the
 `expand_to_pad` succeeded. On macOS it is ⌘E; <kbd>Ctrl</kbd>+<kbd>C</kbd> closes there too (see
 [Frontend](../frontend.md#editing-conventions)).
 
+Keys typed while an input method composes, the Enter that ends the composition too, are left to
+it, here as in the Pad and the reader editor (see [Frontend](../frontend.md#editing-conventions)).
+
 ## Behaviour
 
 - **Sizing.** The textarea's height is measured on an invisible mirror with a zero-width space

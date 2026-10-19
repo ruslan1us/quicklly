@@ -690,7 +690,9 @@ const isDelete = (e: KeyboardEvent) => e.key === "Delete" || (isMac && e.key ===
 
 document.addEventListener("keydown", (e) => {
   if (editing) {
-    if (e.isComposing) return;
+    // Keys that work an input method (Japanese, Chinese…) are its own, the Enter that ends a
+    // composition too: some webviews send that one after the composition, as key code 229.
+    if (e.isComposing || e.keyCode === 229) return;
     // While the calendar is shown, the arrows, PageUp/PageDown, Enter and Esc work it instead.
     if (editorDates.keydown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {

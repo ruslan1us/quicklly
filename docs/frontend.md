@@ -97,6 +97,11 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 - **Keys by physical code for letters.** Letter shortcuts (`C`, `O`, `S`, `W`, <kbd>Ctrl</kbd>+`C`,
   `P`, `Z`, `E`) compare `KeyboardEvent.code`, so they work on any keyboard layout. Navigation keys
   compare `key`.
+- **Input methods.** The text fields of the input window, the Pad and the reader editor leave
+  every key to an input method (Japanese, Chinese…) while it composes: their `keydown` handlers
+  return first on `isComposing` or key code 229. The Enter that ends a composition can come with
+  `isComposing` false but key code 229 (WebKit sends it that way), and without the key code check
+  it would save the half-typed note.
 - **Closing.** <kbd>Esc</kbd> closes or hides every window; <kbd>Ctrl</kbd>+<kbd>C</kbd> does the
   same when there is no text selection to copy.
 - **⌘ on macOS.** The app's own <kbd>Ctrl</kbd> shortcuts (<kbd>Ctrl</kbd>+<kbd>E</kbd> in the
