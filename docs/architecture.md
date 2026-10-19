@@ -187,8 +187,10 @@ previous application:
   and `reveal_window`, through which the pages show themselves once they are ready (a popup's
   `reveal()`, the Pad, a pinned reader), so a window always shows even when the app hid while it
   was being set up. The reminders that come up by themselves unhide the app without activating
-  it, so they don't take the keyboard. On Windows and Linux `come_forward` does nothing, and
-  `reveal_window` only shows and focuses the window.
+  it and are ordered in without becoming the key window (`orderFrontRegardless`), so they don't
+  take the keyboard, neither from another app nor from a Quicklly window being typed in. On
+  Windows and Linux `come_forward` does nothing, and `reveal_window` only shows and focuses the
+  window.
 
 ## IPC commands
 

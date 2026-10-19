@@ -137,7 +137,8 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
   each switch lands in the new window.
 - A pinned Pad on another Space comes along; the hotkey while a full-screen app is in front
   switches to the desktop (known limitation).
-- The reminders at start don't take the focus; no Dock icon or menu bar flash at start, also at
+- The reminders at start don't take the focus, nor when they come up (at midnight) while the
+  input window or the Pad is being typed in; no Dock icon or menu bar flash at start, also at
   login, and the app in front keeps the keys; no ⌘-Tab entry; opening the app in
   Finder while it runs shows the input window; the menu-bar icon (the app icon in colour) shows
   on a light and a dark bar.

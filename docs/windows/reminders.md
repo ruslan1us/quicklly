@@ -33,7 +33,9 @@ snoozed or opened in the reader. User-facing keys are in the root README,
   gives it the keyboard. On macOS, where Quicklly hides itself when its last window goes (see
   [Focus on macOS](../architecture.md#focus-on-macos)), `reveal_reminders` first unhides the app:
   with `come_forward` when the window takes the focus, and without activating it
-  (`unhideWithoutActivation`) when it doesn't.
+  (`unhideWithoutActivation`) when it doesn't. A window shown without focus is then ordered in
+  with `orderFrontRegardless`, as showing it would make it the key window inside Quicklly, so an
+  input window or a Pad being typed in would lose the keys and hide.
 - It does not close on focus loss. It closes on <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>, and by
   itself when the last note leaves the list it is showing.
 

@@ -148,23 +148,32 @@ pub fn reveal_reminders(window: WebviewWindow) {
         let _ = window.show();
         let _ = window.set_focus();
     } else {
-        show_app_unfocused();
-        let _ = window.show();
+        show_unfocused(&window);
     }
 }
 
-/// Unhides Quicklly on macOS, without taking the focus, so that the reminders show while another
-/// app is in use; `crate::come_forward` would activate it. The windows of a hidden app don't
-/// show, and Quicklly hides whenever its last window does (see `give_focus_back`).
+/// Shows the reminders on macOS without taking the focus. It unhides Quicklly without activating
+/// it, so that they show while another app is in use; `crate::come_forward` would activate it. The
+/// windows of a hidden app don't show, and Quicklly hides whenever its last window does (see
+/// `give_focus_back`). Then it orders the window in without making it the key window, as showing
+/// it would, so the input window or the Pad being typed in keeps the keys.
 #[cfg(target_os = "macos")]
-fn show_app_unfocused() {
+fn show_unfocused(window: &WebviewWindow) {
     if let Some(mtm) = objc2::MainThreadMarker::new() {
         objc2_app_kit::NSApplication::sharedApplication(mtm).unhideWithoutActivation();
+        if let Ok(ns_window) = window.ns_window() {
+            // SAFETY: the pointer is the window's NSWindow, which `window` keeps alive, and it is
+            // used on the main thread.
+            let ns_window = unsafe { &*ns_window.cast::<objc2_app_kit::NSWindow>() };
+            ns_window.orderFrontRegardless();
+        }
     }
 }
 
 #[cfg(not(target_os = "macos"))]
-fn show_app_unfocused() {}
+fn show_unfocused(window: &WebviewWindow) {
+    let _ = window.show();
+}
 
 /// Keeps the reminders window in its corner after it was resized to its content.
 #[tauri::command]
