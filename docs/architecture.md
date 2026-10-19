@@ -69,6 +69,14 @@ and addressed from Rust with `page(name)` in [`lib.rs`](../src-tauri/src/lib.rs)
 frameless, always on top, absent from the taskbar, transparent with an acrylic blur behind them,
 and zoomed to the scale setting.
 
+Transparent windows need macOS's private API: on macOS, Tauri's `transparent()` builder method
+exists only with the `macos-private-api` feature of the `tauri` crate, so without it the app does
+not compile there. The feature is on in [`Cargo.toml`](../src-tauri/Cargo.toml) together with
+`app.macOSPrivateApi: true` in [`tauri.conf.json`](../src-tauri/tauri.conf.json); the two must
+agree (the Tauri build script checks this, and the Tauri CLI rewrites the feature to match the
+config), so the flag lives in the base config, not a macOS-only one. On Windows and Linux both are
+no-ops. The private API keeps an app out of Apple's App Store, which Quicklly does not use.
+
 | Label | Page | Created | When dismissed | Opened by |
 | --- | --- | --- | --- | --- |
 | `main` | `input` | At start from `tauri.conf.json`, hidden, unfocused | Hidden (focus loss, <kbd>Esc</kbd>, Alt+F4) | Hotkey, tray click, tray **New note**, second launch, `open_input` |
