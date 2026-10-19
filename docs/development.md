@@ -35,7 +35,8 @@ the same data folder (`%APPDATA%\com.quicklly.app`), the same settings and the s
 ## Checks before every commit
 
 All of the following must pass; CI ([`ci.yml`](../.github/workflows/ci.yml)) runs the same on
-`windows-latest` for every push to `main` and every pull request (clippy and test with `--locked`):
+Windows, macOS and Linux (`windows-latest`, `macos-latest`, `ubuntu-24.04`) for every push to a
+branch and every pull request (clippy and test with `--locked`):
 
 ```sh
 npm run build
@@ -45,6 +46,9 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
 ```
+
+Code behind `cfg(target_os = "macos")` or `cfg(target_os = "linux")` is compiled only on those
+runners, so push the branch and wait for CI before merging such a change.
 
 ## Conventions
 

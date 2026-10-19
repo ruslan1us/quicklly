@@ -4,8 +4,8 @@ Quicklly has two automated test suites: Vitest tests for the frontend, which run
 pages in a simulated DOM with the Rust side replaced by a mock, and Rust unit tests for the note
 format, file operations and parsing. Neither suite starts the application, touches the user's
 notes or settings, or uses the real Recycle Bin. Behaviour that depends on native windows, focus,
-the hotkey or the installer is verified by hand. Both suites run in CI on every push and pull
-request.
+the hotkey or the installer is verified by hand. Both suites run in CI on Windows, macOS and
+Linux for every push to a branch and every pull request.
 
 ## Frontend tests
 

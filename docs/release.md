@@ -56,7 +56,7 @@ See [ADR 0016](decisions/0016-changelog-as-the-source-of-release-notes.md).
 
 | Workflow | Trigger | Runner | Steps |
 | --- | --- | --- | --- |
-| [`ci.yml`](../.github/workflows/ci.yml) | Push to `main`, pull requests | `windows-latest` | `npm ci`, `npm run build`, `npm test`, `cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked`; a newer run cancels an older one on the same ref |
+| [`ci.yml`](../.github/workflows/ci.yml) | Push to any branch, pull requests | Matrix: `windows-latest`, `macos-latest`, `ubuntu-24.04` (`fail-fast: false`) | On Ubuntu, `apt-get install` the Tauri Linux libraries (`libwebkit2gtk-4.1-dev`, `libdbus-1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`); then `npm ci`, `npm run build`, `npm test`, `cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked`; a newer run cancels an older one on the same ref |
 | [`release.yml`](../.github/workflows/release.yml) | Push of a tag `v*` | `windows-latest` | Verify that the tag equals the version in all three files; extract the changelog section; `tauri-apps/tauri-action` builds and drafts the release |
 
 The release step runs with `releaseDraft: true` and `updaterJsonPreferNsis: true`, and receives
