@@ -69,8 +69,8 @@ opens the file in append mode. The full format is in [Data format](data-format.m
   or after `from`, latest day first, without the done date in the text. Archived files are named
   `archive/…`.
 - Changes to existing notes go through `edit_note`; see [below](#changes-to-existing-notes).
-- `trash_file` moves a notes file to the Recycle Bin and then removes the folders it was in while
-  they are empty.
+- `trash_file` moves a notes file to the Recycle Bin (with `images::to_recycle_bin`) and then
+  removes the folders it was in while they are empty.
 
 ### `archive`
 
@@ -128,6 +128,12 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   draft (`pad::draft`, which fails rather than reads as empty when the file can't be read) to
   `kept` and only logs failures. Like `trash_unused`, it goes on after an image that can't be
   moved.
+- `to_recycle_bin(path)` is the one place a file goes to the Recycle Bin: `trash_unused`,
+  `trash_unsaved` and `reader::trash_file` all use it. Elsewhere it is `trash::delete`. On macOS it
+  uses a `trash::TrashContext` with `DeleteMethod::NsFileManager` (`trashItemAtURL`) instead of the
+  crate's default of telling Finder to delete through `osascript`, which asks for the Automation
+  permission to control Finder, plays the trash sound and is slower. The cost: on some macOS
+  versions the Trash offers no "Put Back" for these files; they can still be dragged out of it.
 
 ### `settings`
 
@@ -241,7 +247,7 @@ harmless, and no attempt is made to tell those writes apart. See
 | Downloaded update | `updater::save_download`: write `<file>.bin.tmp`, then rename over the file | The next start installs whatever is stored, and the signature is checked only when downloading, so a cut-short installer must never be there. |
 | Pasted image | `create_new` under a unique name | Never overwrites an existing image. |
 | Pad draft | `fs::write` | Disposable working copy, rewritten every few hundred milliseconds while typing. |
-| Deleting notes files and images | `trash::delete` (Recycle Bin) | Recoverable outside the application; see [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |
+| Deleting notes files and images | `images::to_recycle_bin` (Recycle Bin, Trash on macOS) | Recoverable outside the application; see [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |
 
 ### Changes to existing notes
 

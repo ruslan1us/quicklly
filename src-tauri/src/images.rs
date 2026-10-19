@@ -261,9 +261,20 @@ pub fn trash_unsaved(dir: &Path, paths: &[String], kept: &[String]) -> io::Resul
     Ok(())
 }
 
-/// Moves a file to the Recycle Bin.
-fn to_recycle_bin(path: &Path) -> io::Result<()> {
+/// Moves a file (a notes file or an image) to the Recycle Bin.
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn to_recycle_bin(path: &Path) -> io::Result<()> {
     trash::delete(path).map_err(io::Error::other)
+}
+
+/// Moves a file (a notes file or an image) to the Trash through `NSFileManager`, not `trash`'s
+/// default of asking Finder, which needs the Automation permission and plays the trash sound.
+#[cfg(target_os = "macos")]
+pub(crate) fn to_recycle_bin(path: &Path) -> io::Result<()> {
+    use trash::macos::{DeleteMethod, TrashContextExtMacos};
+    let mut trash = trash::TrashContext::new();
+    trash.set_delete_method(DeleteMethod::NsFileManager);
+    trash.delete(path).map_err(io::Error::other)
 }
 
 /// Moves each of `images` away with `delete` (to the Recycle Bin), going on after one that

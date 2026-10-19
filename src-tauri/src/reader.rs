@@ -403,7 +403,7 @@ pub fn read_file(dir: &Path, name: &str) -> io::Result<Vec<Item>> {
 /// restored; only notes files can be deleted. The folders it was in go too once empty.
 pub fn trash_file(dir: &Path, name: &str) -> io::Result<()> {
     let path = notes_file(dir, name)?;
-    trash::delete(&path).map_err(io::Error::other)?;
+    images::to_recycle_bin(&path)?;
     for folder in path.ancestors().skip(1).take(name.matches('/').count()) {
         // Fails, and so stops, at a folder with something still in it.
         if fs::remove_dir(folder).is_err() {
