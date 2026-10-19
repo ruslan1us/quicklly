@@ -54,7 +54,8 @@ flowchart TB
   and [ADR 0007](decisions/0007-cli-handled-in-a-fresh-process-before-tauri-starts.md).
 - **Plugins**, in registration order: `single-instance` (must be first), `deep-link`, `opener`,
   `store`, `dialog`, `autostart`, `updater`, `global-shortcut`.
-- **Set-up** (`.setup`): the `quicklly://` scheme is registered for the running binary in Windows
+- **Set-up** (`.setup`): on macOS the activation policy becomes `Accessory` (see below); the
+  `quicklly://` scheme is registered for the running binary in Windows
   debug builds (installers register it for release builds) and in every Linux build (see
   [CLI and links](cli-and-links.md#registration-of-the-scheme)); then the tray is built, the
   saved hotkey is registered, the updater thread starts, the Pad and reader pin states are loaded,
@@ -62,6 +63,11 @@ flowchart TB
   thread starts, and the notes folder starts being watched.
 - **The app lives in the tray.** No window is visible at start. Closing a window never quits the
   application; only the tray's **Quit** or `/exit` does (`app.exit(0)`).
+- **A menu-bar app on macOS.** `skipTaskbar` does nothing there, so set-up sets the activation
+  policy to `Accessory`: no Dock icon and no entry in ⌘-Tab, only the icon in the menu bar.
+- **Run events.** `run()` builds the app and runs it with `on_run_event`, which does nothing on
+  Windows and Linux; on macOS it handles `RunEvent::Reopen` (see
+  [Single instance](#single-instance)).
 
 ## Windows
 
@@ -228,6 +234,10 @@ Persistent settings live in `settings.json` through `tauri-plugin-store`; see
 `tauri-plugin-single-instance` is registered first. A second launch without a note request exits
 inside the plugin and the running instance shows its input window. A launch with a note request
 never reaches the plugin: the CLI path saves and exits earlier.
+
+On macOS, opening the app in Finder, Launchpad or Spotlight while it runs starts no second process:
+LaunchServices sends the running app a reopen event instead (`RunEvent::Reopen`), and
+`on_run_event` shows the input window, as a second launch does on Windows.
 
 ## Tray and hotkey
 

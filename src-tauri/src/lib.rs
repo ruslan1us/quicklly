@@ -522,6 +522,10 @@ pub fn run() {
         .manage(reminders::FocusOnShow::default())
         .manage(watcher::Watcher::default())
         .setup(|app| {
+            // A menu-bar app: no Dock icon and not in ⌘-Tab, as Quicklly is not in the taskbar
+            // on Windows.
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             // Windows installers register `quicklly://` links; a dev build registers itself.
             // On Linux the app always registers itself: an AppImage registers nothing, and the
             // bundled `.desktop` file starts the app without the link. On macOS the bundle's
@@ -650,6 +654,19 @@ pub fn run() {
             settings::set_archive_after,
             settings::get_archive_days,
         ])
-        .run(context)
-        .expect("error while running tauri application");
+        .build(context)
+        .expect("error while running tauri application")
+        .run(on_run_event);
 }
+
+/// Opening Quicklly in Finder while it runs starts no second process on macOS: the running app
+/// is told to reopen instead, and shows its input window, as a second launch does elsewhere.
+#[cfg(target_os = "macos")]
+fn on_run_event(app: &AppHandle, event: tauri::RunEvent) {
+    if let tauri::RunEvent::Reopen { .. } = event {
+        show_input(app);
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn on_run_event(_app: &AppHandle, _event: tauri::RunEvent) {}
