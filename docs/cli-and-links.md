@@ -45,7 +45,8 @@ of starting the application.
    below).
 2. Reads the notes folder and the mode directly from `%APPDATA%\<identifier>\settings.json`
    (`settings::notes_settings_in`), because the store plugin is not running. A missing or unreadable
-   file means the defaults: `Documents\Quicklly` and daily files.
+   file means the defaults: `Documents\Quicklly` (`settings::default_notes_dir`, as in the app)
+   and daily files.
 3. Calls `notes::append_note` with the local time, so tags, nested folders, headings and
    normalisation are identical to the input window.
 4. Prints `Saved to <file>` (the notes file relative to the notes folder, with `/`) on standard

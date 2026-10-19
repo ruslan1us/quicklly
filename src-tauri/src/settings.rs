@@ -146,13 +146,15 @@ pub struct Appearance {
     scale: u32,
 }
 
-fn default_notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
-    Ok(default_notes_dir_in(&app.path().document_dir()?))
+/// The default notes folder: `Quicklly` in the Documents folder, or in the home folder where
+/// there is none (Linux without `XDG_DOCUMENTS_DIR`). Works before Tauri starts (see `cli`).
+pub fn default_notes_dir() -> Option<PathBuf> {
+    default_notes_dir_in(dirs::document_dir(), dirs::home_dir())
 }
 
-/// The default notes folder, `Quicklly` in the Documents folder `documents`.
-pub fn default_notes_dir_in(documents: &Path) -> PathBuf {
-    documents.join("Quicklly")
+/// The default notes folder, `Quicklly` in the Documents folder `documents`, else in `home`.
+fn default_notes_dir_in(documents: Option<PathBuf>, home: Option<PathBuf>) -> Option<PathBuf> {
+    Some(documents.or(home)?.join("Quicklly"))
 }
 
 fn custom_notes_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -180,11 +182,11 @@ pub fn notes_settings_in(file: &Path) -> (Option<PathBuf>, Mode) {
     (dir, mode)
 }
 
-/// Folder where notes are written: the one chosen in settings, or `Documents\Quicklly`.
+/// Folder where notes are written: the one chosen in settings, or the default one.
 pub fn notes_dir(app: &AppHandle) -> tauri::Result<PathBuf> {
     match custom_notes_dir(app) {
         Some(dir) => Ok(dir),
-        None => default_notes_dir(app),
+        None => default_notes_dir().ok_or(tauri::Error::UnknownPath),
     }
 }
 
@@ -494,6 +496,21 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<SettingsView, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_notes_folder_is_in_documents_else_in_home() {
+        let documents = PathBuf::from("docs");
+        let home = PathBuf::from("home");
+        assert_eq!(
+            default_notes_dir_in(Some(documents.clone()), Some(home.clone())),
+            Some(documents.join("Quicklly"))
+        );
+        assert_eq!(
+            default_notes_dir_in(None, Some(home.clone())),
+            Some(home.join("Quicklly"))
+        );
+        assert_eq!(default_notes_dir_in(None, None), None);
+    }
 
     #[test]
     fn date_formats_are_stored_as_the_frontend_writes_them() {

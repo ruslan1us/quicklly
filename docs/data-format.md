@@ -12,7 +12,10 @@ The user-facing description is in the root README, [Where notes are stored](../R
 ## The notes folder
 
 The notes folder is `Documents\Quicklly` unless another folder is chosen in the settings
-(`settings::notes_dir`). It and its subfolders are created on the first write.
+(`settings::notes_dir`). Where there is no Documents folder (Linux without `XDG_DOCUMENTS_DIR`
+in `~/.config/user-dirs.dirs`), the default is `Quicklly` in the home folder, `~/Quicklly`
+(`settings::default_notes_dir`, shared with the command line).
+The folder and its subfolders are created on the first write.
 
 ```text
 Quicklly/                      notes folder
@@ -258,7 +261,7 @@ deleted by others; both read the same.
 
 | Key | Values | Default | Set by |
 | --- | --- | --- | --- |
-| `notesDir` | Absolute path; absent or empty for the default | `Documents\Quicklly` | `pick_notes_dir`, `reset_notes_dir` |
+| `notesDir` | Absolute path; absent or empty for the default | `Documents\Quicklly` (`~/Quicklly` without a Documents folder) | `pick_notes_dir`, `reset_notes_dir` |
 | `mode` | `"daily"`, `"inbox"` | `"daily"` | `set_mode` |
 | `hotkey` | Global-shortcut string, for example `"control+alt+KeyN"`; absent for the default | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | `set_hotkey`, `reset_hotkey` |
 | `hotkeyOpens` | `"input"`, `"pad"` | `"input"` | `set_hotkey_target` |

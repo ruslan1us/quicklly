@@ -35,9 +35,7 @@ fn save_note(identifier: &str, text: &str) -> Result<String, String> {
         settings::notes_settings_in(&data_dir.join(identifier).join(settings::STORE_FILE));
     let dir = match dir {
         Some(dir) => dir,
-        None => settings::default_notes_dir_in(
-            &dirs::document_dir().ok_or("Couldn't find the Documents folder")?,
-        ),
+        None => settings::default_notes_dir().ok_or("Couldn't find the home folder")?,
     };
     let path = notes::append_note(&dir, mode, chrono::Local::now().naive_local(), text)
         .map_err(|e| format!("Failed to save note in {}: {e}", dir.display()))?
