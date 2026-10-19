@@ -188,7 +188,12 @@ settings. It drops the current watcher (which stops it), creates the notes folde
 and watches it recursively with `notify-debouncer-mini`, keeping the new watcher in managed state.
 When the debouncer reports a batch of paths (each quiet for 300 ms) and any of them is a notes
 file (`is_notes_change`: a `.md` file under the folder, the archive and tag folders included, not
-in the top-level `images/` or a dot-folder; `*.md.tmp` never counts), it calls `notes_changed`. A
+in the top-level `images/` or a dot-folder; `*.md.tmp` never counts), it calls `notes_changed`.
+"Under the folder" means under the path as set or under its canonical form (`fs::canonicalize`,
+taken once when the watch starts): FSEvents on macOS reports paths with symlinks resolved
+(`/private/var/…` for `/var/…`, or the real folder behind a symlinked one), while Windows and
+inotify report them under the path as given. On Windows the canonical form is a `\\?\` path, which
+reported paths never start with, so only the path as set matches there. A
 folder that cannot be watched, or a watch error later, is logged with `eprintln!`. The app's own
 writes are seen as well and give a second `notes-changed`; the windows reload twice, which is
 harmless, and no attempt is made to tell those writes apart. See

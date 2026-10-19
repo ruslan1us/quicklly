@@ -4,7 +4,7 @@
 //! `notes-changed`, as the app's own changes do; those are seen here too, which only makes the
 //! windows reload once more.
 
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -51,12 +51,16 @@ fn watch(
     changed: impl Fn() + Send + 'static,
 ) -> notify::Result<Debouncer<RecommendedWatcher>> {
     std::fs::create_dir_all(dir)?;
-    let watched = dir.to_path_buf();
+    // FSEvents (macOS) reports paths with symlinks resolved, `/private/var/...` for `/var/...`;
+    // Windows and inotify report them under the folder as given. A change counts under either.
+    // On Windows the resolved form is a `\\?\` path, which reported paths never start with.
+    let mut folders = vec![dir.to_path_buf()];
+    folders.extend(dir.canonicalize().ok());
     let mut debouncer = new_debouncer(DEBOUNCE, move |result: DebounceEventResult| match result {
         Ok(events) => {
             if events
                 .iter()
-                .any(|event| is_notes_change(&watched, &event.path))
+                .any(|event| is_notes_change(&folders, &event.path))
             {
                 changed();
             }
@@ -67,12 +71,13 @@ fn watch(
     Ok(debouncer)
 }
 
-/// Whether a change at `path` in the notes folder `dir` is one to a notes file: a Markdown file
-/// anywhere in it, tag folders and the archive included, but not in the images folder or a
-/// dot-folder (like Obsidian's `.obsidian` and `.trash`). The app's temporary `*.md.tmp` files
-/// don't count; renaming one over a notes file does, as a change to that file.
-fn is_notes_change(dir: &Path, path: &Path) -> bool {
-    let Ok(relative) = path.strip_prefix(dir) else {
+/// Whether a change at `path` in the notes folder, given as its `folders` (the path as set and
+/// as resolved), is one to a notes file: a Markdown file anywhere in it, tag folders and the
+/// archive included, but not in the images folder or a dot-folder (like Obsidian's `.obsidian`
+/// and `.trash`). The app's temporary `*.md.tmp` files don't count; renaming one over a notes
+/// file does, as a change to that file.
+fn is_notes_change(folders: &[PathBuf], path: &Path) -> bool {
+    let Some(relative) = folders.iter().find_map(|dir| path.strip_prefix(dir).ok()) else {
         return false;
     };
     let mut names = Vec::new();
@@ -93,7 +98,6 @@ fn is_notes_change(dir: &Path, path: &Path) -> bool {
 mod tests {
     use super::*;
     use std::fs;
-    use std::path::PathBuf;
     use std::sync::mpsc;
 
     fn temp_dir(name: &str) -> PathBuf {
@@ -114,7 +118,8 @@ mod tests {
     fn counts_changes_to_notes_files_only() {
         let root = std::env::temp_dir();
         let dir = root.join("Notes");
-        let counts = |names: &[&str]| is_notes_change(&dir, &path_in(&dir, names));
+        let folders = [dir.clone()];
+        let counts = |names: &[&str]| is_notes_change(&folders, &path_in(&dir, names));
         assert!(counts(&["inbox.md"]));
         assert!(counts(&["2026-10-14.md"]));
         assert!(counts(&["work", "quicklly.md"]));
@@ -130,9 +135,20 @@ mod tests {
         assert!(!counts(&["work"]));
         assert!(!counts(&["notes.txt"]));
         assert!(!is_notes_change(
-            &dir,
+            &folders,
             &path_in(&root, &["Other", "inbox.md"])
         ));
+    }
+
+    #[test]
+    fn counts_changes_under_either_form_of_the_folder() {
+        let root = std::env::temp_dir();
+        let folders = [root.join("Linked notes"), root.join("Notes")];
+        let counts = |path: PathBuf| is_notes_change(&folders, &path);
+        assert!(counts(path_in(&folders[0], &["inbox.md"])));
+        assert!(counts(path_in(&folders[1], &["work", "quicklly.md"])));
+        assert!(!counts(path_in(&folders[1], &["images", "notes.md"])));
+        assert!(!counts(path_in(&root, &["Other", "inbox.md"])));
     }
 
     #[test]
