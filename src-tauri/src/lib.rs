@@ -55,6 +55,8 @@ fn save_links(app: &AppHandle, urls: Vec<tauri::Url>) {
             }
         }
     }
+    // macOS made Quicklly the active app to open the link.
+    give_focus_back(app);
 }
 
 /// Saves an image pasted into the input window or the Pad in the notes folder's `images/`, and
@@ -121,7 +123,33 @@ pub(crate) fn notes_changed(app: &AppHandle) {
     let _ = app.emit_to(DONE_WINDOW, "notes-changed", ());
 }
 
+/// Brings Quicklly forward before one of its windows shows with the focus. On macOS it unhides
+/// the app, which `give_focus_back` may have hidden: the windows of a hidden app don't show.
+#[cfg(target_os = "macos")]
+pub(crate) fn come_forward(app: &AppHandle) {
+    let _ = app.show();
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn come_forward(_app: &AppHandle) {}
+
+/// Hands the keys back to the app in use before, once none of Quicklly's windows is on screen.
+/// Windows does that by itself when a window hides; macOS leaves Quicklly the active app with no
+/// window, until the app hides itself. Not while a popup is still being set up hidden, as it is
+/// about to show: popups are closed when they are done, while the input window and the Pad live
+/// hidden.
+#[cfg(target_os = "macos")]
+fn give_focus_back(app: &AppHandle) {
+    let showing = app.webview_windows().into_iter().any(|(label, window)| {
+        (label != MAIN_WINDOW && label != pad::PAD_WINDOW) || window.is_visible().unwrap_or(false)
+    });
+    if !showing {
+        let _ = app.hide();
+    }
+}
+
 fn show_input(app: &AppHandle) {
+    come_forward(app);
     if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
         monitor::center_on_active(&window);
         let _ = window.show();
@@ -165,6 +193,7 @@ pub(crate) fn page(name: &str) -> WebviewUrl {
 /// Shows a terminal-style popup window, creating it on first use so it costs nothing until
 /// opened. The page sizes the window to its content and then shows it, so it never flickers.
 fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
+    come_forward(app);
     if let Some(window) = app.get_webview_window(label) {
         let _ = window.unminimize();
         let _ = window.show();
@@ -599,6 +628,11 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            // A window that hid or closed may have been the last one on screen.
+            #[cfg(target_os = "macos")]
+            if matches!(event, WindowEvent::Focused(false) | WindowEvent::Destroyed) {
+                give_focus_back(window.app_handle());
+            }
             if window.label() == READER_WINDOW {
                 let pinned = reader_window::is_pinned(window.app_handle());
                 match event {

@@ -12,7 +12,7 @@ for errors, file writes and undo.
 
 | Module | Responsibility |
 | --- | --- |
-| [`lib.rs`](../src-tauri/src/lib.rs) | Entry point `run()`: CLI short-circuit, plugins, managed state, set-up, window-event rules, tray, the command list. Note commands that combine modules (save, edit, delete, undo, search, done journal), popup creation (`show_popup`), scale and blur effect helpers (Acrylic, vibrancy on macOS), `notes_changed`, `in_background` for the commands that scan the notes folder. |
+| [`lib.rs`](../src-tauri/src/lib.rs) | Entry point `run()`: CLI short-circuit, plugins, managed state, set-up, window-event rules, tray, the command list. Note commands that combine modules (save, edit, delete, undo, search, done journal), popup creation (`show_popup`), focus on macOS (`come_forward`, `give_focus_back`), scale and blur effect helpers (Acrylic, vibrancy on macOS), `notes_changed`, `in_background` for the commands that scan the notes folder. |
 | [`notes.rs`](../src-tauri/src/notes.rs) | Writing new notes: normalisation (`note_lines`, `format_note`), tag detection (`first_tag`), target file choice, headings, append (`append_note`). The `Mode` enum (daily or inbox). |
 | [`reader.rs`](../src-tauri/src/reader.rs) | Reading and changing existing notes: listing files as a tree, parsing, search, due and done queries, done marks, snooze, edit, delete, undo, file deletion, path validation, line-ending-preserving atomic rewrites. |
 | [`archive.rs`](../src-tauri/src/archive.rs) | Moving done notes to `archive/<same path>` after the configured number of days. |
@@ -23,7 +23,7 @@ for errors, file writes and undo.
 | [`reader_window.rs`](../src-tauri/src/reader_window.rs) | The reader window's pin state, pinned file, saved bounds and sort order. |
 | [`window_bounds.rs`](../src-tauri/src/window_bounds.rs) | Saving and restoring a pinned window's position and size; minimum size and resizability. |
 | [`monitor.rs`](../src-tauri/src/monitor.rs) | The monitor to open on (foreground window, then mouse, then primary) and centring on it. Uses `GetForegroundWindow` and `GetWindowRect` on Windows. |
-| [`reminders.rs`](../src-tauri/src/reminders.rs) | The daily-round thread (archive, then reminders), the reminders window and its commands. |
+| [`reminders.rs`](../src-tauri/src/reminders.rs) | The daily-round thread (archive, then reminders), the reminders window and its commands. On macOS, unhiding the app without activating it for reminders that show by themselves, the only direct AppKit call (`objc2-app-kit`, a macOS-only dependency). |
 | [`updater.rs`](../src-tauri/src/updater.rs) | Background update checks, download to the cache, install at the next start or on `/update`. |
 | [`cli.rs`](../src-tauri/src/cli.rs) | `quicklly add …` and `quicklly://add?text=…`: request parsing, saving without Tauri, console output. |
 | [`watcher.rs`](../src-tauri/src/watcher.rs) | Watching the notes folder recursively (`notify-debouncer-mini`, 300 ms) and emitting `notes-changed` when a notes file changes on disk; which paths count (`is_notes_change`). |

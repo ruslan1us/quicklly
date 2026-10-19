@@ -56,6 +56,7 @@ pub fn start(app: &AppHandle) {
 fn show(app: &AppHandle, focus: bool) {
     if let Some(window) = app.get_webview_window(REMINDERS_WINDOW) {
         if focus {
+            crate::come_forward(app);
             let _ = window.show();
             let _ = window.set_focus();
         } else {
@@ -131,15 +132,32 @@ pub fn reveal_reminders(window: WebviewWindow) {
     if let Some(monitor) = monitor::active(window.app_handle()) {
         place(&window, &monitor);
     }
-    let _ = window.show();
     let focus = window
         .state::<FocusOnShow>()
         .0
         .swap(false, Ordering::Relaxed);
     if focus {
+        crate::come_forward(window.app_handle());
+        let _ = window.show();
         let _ = window.set_focus();
+    } else {
+        show_app_unfocused();
+        let _ = window.show();
     }
 }
+
+/// Unhides Quicklly on macOS, without taking the focus, so that the reminders show while another
+/// app is in use; `crate::come_forward` would activate it. The windows of a hidden app don't
+/// show, and Quicklly hides whenever its last window does (see `give_focus_back`).
+#[cfg(target_os = "macos")]
+fn show_app_unfocused() {
+    if let Some(mtm) = objc2::MainThreadMarker::new() {
+        objc2_app_kit::NSApplication::sharedApplication(mtm).unhideWithoutActivation();
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn show_app_unfocused() {}
 
 /// Keeps the reminders window in its corner after it was resized to its content.
 #[tauri::command]

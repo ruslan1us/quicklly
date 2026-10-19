@@ -100,6 +100,7 @@ fn place(window: &WebviewWindow) {
 /// Shows the Pad, creating it on first use. The page shows a new window once it has loaded
 /// the draft, so it never flickers.
 pub fn show(app: &AppHandle) {
+    crate::come_forward(app);
     if let Some(window) = app.get_webview_window(PAD_WINDOW) {
         arrange(&window);
         let _ = window.show();
@@ -225,6 +226,8 @@ pub async fn open_pad(app: AppHandle) {
 /// Async on purpose: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 pub async fn expand_to_pad(app: AppHandle, text: String) -> Result<(), String> {
+    // The input window, hidden by now, comes back if this fails.
+    crate::come_forward(&app);
     append_to_draft(&draft_path(&app).ok_or("No app data folder")?, &text)?;
     if app.get_webview_window(PAD_WINDOW).is_some() {
         let _ = app.emit_to(PAD_WINDOW, "pad-draft-changed", ());

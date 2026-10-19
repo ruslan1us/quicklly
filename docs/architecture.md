@@ -142,6 +142,30 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
   window permissions the pages use (show, hide, close, focus, size, centre, drag). Application
   commands need no capability entry.
 
+### Focus on macOS
+
+On Windows, hiding Quicklly's last window gives the keyboard back to the application in use
+before. macOS leaves Quicklly the active application with no window, so typing goes nowhere until
+the user clicks somewhere. Quicklly therefore hides itself (`app.hide()`), and macOS activates the
+previous application:
+
+- **When.** `give_focus_back` in [`lib.rs`](../src-tauri/src/lib.rs) runs on every
+  `Focused(false)` and `Destroyed` window event, and after a [link](cli-and-links.md#links-on-macos)
+  is saved. It hides the app when no window is visible and no popup exists. Popups are closed when
+  they are done, so one that exists hidden is still being set up and about to show (the reminders
+  open the reader and close themselves, for example); the input window and the Pad live hidden
+  and count only when visible. A visible pinned Pad or reader keeps Quicklly from hiding, since
+  hiding the app would hide them too.
+- **Coming back.** The windows of a hidden app don't show, and `set_focus` does nothing for them.
+  Every Rust path that shows a window with the focus therefore calls `come_forward` first, which
+  unhides the app (`app.show()`, which activates it): `show_input`, `show_popup`, `pad::show`,
+  `expand_to_pad` (whose failure brings the input window back), and the reminders when asked
+  for. The reminders that come up by themselves unhide the app without activating it, so they
+  don't take the keyboard. On Windows and Linux `come_forward` does nothing.
+- **Hand-overs.** When the input window or the Pad hands over to another window, it hides first,
+  so Quicklly hides and comes forward again a moment later: the previous application may flash
+  as active in between.
+
 ## IPC commands
 
 Commands are registered in `generate_handler!` in [`lib.rs`](../src-tauri/src/lib.rs). Argument
