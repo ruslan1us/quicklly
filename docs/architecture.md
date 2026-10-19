@@ -51,13 +51,17 @@ flowchart TB
 - **Command line first.** Before the Tauri builder is created, `run()` checks the arguments with
   `cli::note_request`. A `quicklly add …` or `quicklly://add?…` invocation saves the note in that
   process and exits with its status code; Tauri never starts. See [CLI and links](cli-and-links.md)
-  and [ADR 0007](decisions/0007-cli-handled-in-a-fresh-process-before-tauri-starts.md).
+  and [ADR 0007](decisions/0007-cli-handled-in-a-fresh-process-before-tauri-starts.md). macOS
+  never starts a process for a link: it hands the link to the running app, which saves it
+  ([ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md)).
 - **Plugins**, in registration order: `single-instance` (must be first), `deep-link`, `opener`,
   `store`, `dialog`, `autostart`, `updater`, `global-shortcut`.
 - **Set-up** (`.setup`): on macOS the activation policy becomes `Accessory` (see below); the
   `quicklly://` scheme is registered for the running binary in Windows
   debug builds (installers register it for release builds) and in every Linux build (see
-  [CLI and links](cli-and-links.md#registration-of-the-scheme)); then the tray is built, the
+  [CLI and links](cli-and-links.md#registration-of-the-scheme)); on macOS the app starts listening
+  for opened `quicklly://` links and saves the one it was started with, if any
+  ([Links on macOS](cli-and-links.md#links-on-macos)); then the tray is built, the
   saved hotkey is registered, the updater thread starts, the Pad and reader pin states are loaded,
   the acrylic effect is applied to the input window, the scale setting is applied, the daily-round
   thread starts, and the notes folder starts being watched.
@@ -193,7 +197,7 @@ create or may create a window, or read every notes file (see [below](#threads-of
 
 | Event | Payload | Target | Emitted when | Listener |
 | --- | --- | --- | --- | --- |
-| `notes-changed` | none | `reader`, `reminders`, `done` | A command changed a notes file; the archive moved notes; a new day while the reminders are open; the folder watcher saw a notes file change (the CLI, another editor, and a second time for the app's own writes) | Reader reloads unless editing; reminders and done reload |
+| `notes-changed` | none | `reader`, `reminders`, `done` | A command changed a notes file; a `quicklly://` link was saved on macOS; the archive moved notes; a new day while the reminders are open; the folder watcher saw a notes file change (the CLI, another editor, and a second time for the app's own writes) | Reader reloads unless editing; reminders and done reload |
 | `appearance-changed` | `{ theme, transparency, scale }` | all | Theme, transparency or scale changed | `followTheme` in [`theme.ts`](../src/shared/theme.ts) |
 | `date-format-changed` | format string | all | Date format changed | `followDateFormat` in [`dates.ts`](../src/shared/dates.ts) |
 | `update-available` | version or `null` | all | A release was downloaded; `null` when automatic updates are turned off | Input window hint |

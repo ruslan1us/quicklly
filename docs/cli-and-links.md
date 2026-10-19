@@ -5,12 +5,14 @@ terminals, and `quicklly://add?text=<text>` links from browsers, the Run dialog,
 Stream Deck. Both save the note exactly as <kbd>Enter</kbd> in the input window would, through the
 same `notes::append_note`, and neither opens a window. The note is saved by the process that the
 invocation starts, before Tauri is initialised, whether or not the application is already running.
-The user-facing description is in the root README,
+The exception is a link on macOS, which the running application saves (see
+[Links on macOS](#links-on-macos)). The user-facing description is in the root README,
 [From scripts and links](../README.md#from-scripts-and-links).
 
 Implementation: [`src-tauri/src/cli.rs`](../src-tauri/src/cli.rs), called at the top of `run()` in
 [`lib.rs`](../src-tauri/src/lib.rs). See also
-[ADR 0007](decisions/0007-cli-handled-in-a-fresh-process-before-tauri-starts.md).
+[ADR 0007](decisions/0007-cli-handled-in-a-fresh-process-before-tauri-starts.md) and, for links on
+macOS, [ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md).
 
 ## Requests
 
@@ -86,12 +88,37 @@ nothing. The plugin writes `~/.local/share/applications/quicklly-handler.desktop
 after its next start. The link then arrives as the single argument, as on Windows.
 
 On macOS the scheme is registered by the installed `.app`: the bundler writes it into the bundle's
-`Info.plist`, and the plugin's `register_all` is unsupported there, so it is not called.
+`Info.plist`, and the plugin's `register_all` is unsupported there, so it is not called. A
+development build run with `tauri dev` is not a bundle, so links go to an installed Quicklly, if
+any, not to it.
+
+## Links on macOS
+
+macOS starts no process for a link: it delivers the URL to the running application as an Apple
+Event, starting the application first if it isn't running. The link never appears in the
+arguments, so `note_request` never sees it. Instead, set-up in [`lib.rs`](../src-tauri/src/lib.rs)
+listens with the deep-link plugin's `on_open_url` (the plugin turns `RunEvent::Opened` into the
+`deep-link://new-url` event) and also takes `get_current()`, the URLs of a link that started the
+application before the listener was registered. `save_links` passes each URL to
+`cli::link_text`, so the [link rules](#link-rules) are the same, and saves the text with the
+`save_note` command of the input window, which emits `notes-changed`.
+
+Differences from the other platforms:
+
+- The caller gets no output and no exit code; a failure is only logged on standard error. A blank
+  link saves nothing.
+- The note is saved with the running application's settings.
+- A link that starts Quicklly leaves it running in the menu bar.
+
+The `quicklly add …` command line works on macOS as everywhere: running the executable inside the
+bundle from a terminal starts a new process, which saves the note and exits, and the shell waits
+for it (no console attaching is needed).
 
 ## Interaction with a running instance
 
-The request is never forwarded to a running instance. The new process writes the file and exits
-before the single-instance plugin is registered. Consequences:
+Except for links on macOS (see above), the request is never forwarded to a running instance. The
+new process writes the file and exits before the single-instance plugin is registered.
+Consequences:
 
 - Saving works the same whether the application is running, not running, or not yet started after
   sign-in.

@@ -1,8 +1,10 @@
 //! Notes saved from outside the app: `quicklly.exe add <text>` from scripts, and
-//! `quicklly://add?text=<text>` links, which Windows hands to the exe as its argument.
+//! `quicklly://add?text=<text>` links, which Windows and Linux hand to the exe as its argument.
 //!
 //! The process started for it saves the note itself, with the settings read straight from the
-//! settings file, prints where it went and quits, whether or not the app is running.
+//! settings file, prints where it went and quits, whether or not the app is running. macOS
+//! starts no process for a link: it hands the link to the running app, which saves it with
+//! `link_text` (see `save_links` in `lib.rs`).
 
 use std::io::Write;
 use std::path::Path;
@@ -81,7 +83,7 @@ pub fn note_request(args: &[String]) -> Option<String> {
 
 /// The decoded `text` of a `quicklly://add?text=…` link (`+` is a space, as in a form), empty
 /// without one.
-fn link_text(link: &str) -> Option<String> {
+pub(crate) fn link_text(link: &str) -> Option<String> {
     let url = Url::parse(link).ok()?;
     let is_add = url.scheme() == "quicklly"
         && url

@@ -43,6 +43,20 @@ fn save_note(app: AppHandle, text: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Saves the notes of `quicklly://add?text=…` links, which macOS hands to the running app, as
+/// the link path of the CLI does elsewhere; other links are ignored. Whoever opened the link gets
+/// no answer, so a failure is only logged.
+#[cfg(target_os = "macos")]
+fn save_links(app: &AppHandle, urls: Vec<tauri::Url>) {
+    for url in urls {
+        if let Some(text) = cli::link_text(url.as_str()) {
+            if let Err(e) = save_note(app.clone(), text) {
+                eprintln!("Failed to save the note of a quicklly:// link: {e}");
+            }
+        }
+    }
+}
+
 /// Saves an image pasted into the input window or the Pad in the notes folder's `images/`, and
 /// returns its path relative to the notes folder for the note to link to.
 ///
@@ -484,7 +498,8 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
 pub fn run() {
     let context = tauri::generate_context!();
     // A note from a script or a `quicklly://` link is saved by the process it starts, which
-    // then quits without starting the app (or reaching the running one).
+    // then quits without starting the app (or reaching the running one). On macOS a link starts
+    // no process: the running app gets it (see `save_links`).
     let args: Vec<String> = std::env::args().collect();
     if let Some(text) = cli::note_request(&args) {
         std::process::exit(cli::save(&context.config().identifier, &text));
@@ -535,6 +550,18 @@ pub fn run() {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 if let Err(e) = app.deep_link().register_all() {
                     eprintln!("Failed to register quicklly:// links: {e}");
+                }
+            }
+            // macOS hands links to the running app, starting it if needed, and never to a new
+            // process, so the app saves them itself; a link that started it came before this.
+            #[cfg(target_os = "macos")]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let handle = app.handle().clone();
+                app.deep_link()
+                    .on_open_url(move |event| save_links(&handle, event.urls()));
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    save_links(app.handle(), urls);
                 }
             }
             setup_tray(app)?;
