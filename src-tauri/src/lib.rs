@@ -132,7 +132,29 @@ pub(crate) fn come_forward(app: &AppHandle) {
     let _ = app.show();
 }
 
-#[cfg(not(target_os = "macos"))]
+/// On X11 the window manager gives the focus only to a window used later than the focused app.
+/// GDK stamps the windows it maps or presents with the time of the last input it saw, and the
+/// hotkey, the tray and a second launch reach Quicklly outside GTK, so that time is set to now:
+/// stamping any of Quicklly's realized windows sets it for the whole display. On Wayland nothing
+/// is done.
+#[cfg(target_os = "linux")]
+pub(crate) fn come_forward(app: &AppHandle) {
+    let handle = app.clone();
+    // GTK only on the main thread; a show sent from another thread queues up behind this.
+    let _ = app.run_on_main_thread(move || {
+        use gtk::prelude::*;
+        let x11 = handle
+            .webview_windows()
+            .into_values()
+            .find_map(|window| window.gtk_window().ok()?.window())
+            .and_then(|window| window.downcast::<gdkx11::X11Window>().ok());
+        if let Some(window) = x11 {
+            window.set_user_time(gdkx11::functions::x11_get_server_time(&window));
+        }
+    });
+}
+
+#[cfg(windows)]
 pub(crate) fn come_forward(_app: &AppHandle) {}
 
 /// Shows the calling window with the focus once its page is ready: a popup through `reveal()`,

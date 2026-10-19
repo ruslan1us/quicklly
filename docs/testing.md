@@ -161,6 +161,9 @@ comes first: it decides whether the Wayland hotkey works at all.
 - The desktop shortcut that runs `quicklly`: the input window (or the Pad, per **Hotkey opens**)
   is focused and takes the typing; the same for `/config` and the reader from search. On X11 the
   hotkey registers and can be changed; on Wayland the Hotkey row names the command.
+- On X11 (GNOME on Xorg and KDE X11): press the hotkey and type a note, then type in another
+  app, then press the hotkey again: the window takes the typing. The same for the Pad, tray
+  **New note** and tray **Settings…**.
 - Tray: shown on GNOME with the AppIndicator extension and missing without it; menu items; Quit.
 - Look: transparency without blur, the three themes, scale 100/150/200 %, Pad text and highlighting
   aligned on long wrapped lines, the block caret, fonts, scrollbars, emoji.

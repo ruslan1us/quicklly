@@ -189,8 +189,23 @@ previous application:
   was being set up. The reminders that come up by themselves unhide the app without activating
   it and are ordered in without becoming the key window (`orderFrontRegardless`), so they don't
   take the keyboard, neither from another app nor from a Quicklly window being typed in. On
-  Windows and Linux `come_forward` does nothing, and `reveal_window` only shows and focuses the
-  window.
+  Windows `come_forward` does nothing and on Linux it serves X11 (see
+  [Focus on X11](#focus-on-x11)); there `reveal_window` only shows and focuses the window.
+
+### Focus on X11
+
+X11 window managers (mutter on GNOME on Xorg, KWin at its default level) give the focus to a
+window only if its user time, the time of the last input in it, is later than the focused
+window's. GTK stamps every window it maps or presents with the last input it saw itself, and the
+hotkey (read on the global shortcut plugin's own X11 connection), the tray and a second launch
+reach Quicklly outside GTK. Without more, a window shown after the user typed in another app
+would come up on top without the keys. So on Linux `come_forward`, which runs before every window
+shows with the focus, sets the display's user time to the X server's current time: on the main
+thread, it stamps the first realized window of the app with `gdk_x11_window_set_user_time` and
+`gdk_x11_get_server_time` (through the `gtk` and `gdkx11` crates, Linux-only dependencies at the
+versions Tauri already uses), which also moves the display's user time, so the window then shown
+or created carries it. From another thread the stamp is queued on the main thread ahead of the
+show. On Wayland the window is no X11 window and nothing is done.
 
 ## IPC commands
 

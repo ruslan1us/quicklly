@@ -23,7 +23,9 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
   of the executable (on macOS, opening the app in Finder while it runs; on Wayland, where it is
   the hotkey, only when **Hotkey opens** is the quick line), and `open_input` from
   the reader or the Pad. On macOS it first unhides the app (`come_forward`, see
-  [Focus on macOS](../architecture.md#focus-on-macos)).
+  [Focus on macOS](../architecture.md#focus-on-macos)); on X11 `come_forward` stamps the windows
+  with the current time, so the window manager lets the window take the focus (see
+  [Focus on X11](../architecture.md#focus-on-x11)).
 - Focus loss hides the window from Rust without clearing it, so a click elsewhere keeps the draft
   for the next show. <kbd>Esc</kbd>, a saved note or a command clears the field, leaves search mode
   and hides. Alt+F4 hides instead of closing.
