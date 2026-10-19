@@ -7,7 +7,7 @@
     "longDescription": "Press a global hotkey anywhere, type a thought and press Enter: Quicklly appends it with the time to today's Markdown file and gets out of the way. Notes are plain .md files in a folder you choose.",
     "linux": {
       "deb": {
-        "depends": ["xdg-utils", "desktop-file-utils"],
+        "depends": ["xdg-utils", "desktop-file-utils", "libc6 (>= 2.39)"],
         "desktopTemplate": "linux/quicklly.desktop"
       },
       "rpm": {

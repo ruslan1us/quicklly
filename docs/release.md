@@ -52,8 +52,11 @@ See [ADR 0016](decisions/0016-changelog-as-the-source-of-release-notes.md).
 6. Wait for the release workflow (about half an hour: the Windows, macOS and Linux jobs run one
    after another), check the draft release and its assets, and that `latest.json` has the
    `windows-x86_64`, `darwin-aarch64`, `darwin-x86_64` and `linux-x86_64` entries, and publish it
-   (**Edit → Publish release**). Installed copies pick it up within hours, or at once with
-   `/update`.
+   (**Edit → Publish release**). Publish only when all three jobs are green: a later job looks for
+   the release as a draft, so after an early publish it creates a second draft (or fails) for its
+   own files, with a `latest.json` that has no Windows entries, and the published release never
+   gets the macOS or Linux files. Once it is published, installed copies pick it up within hours,
+   or at once with `/update`.
 
 ## Workflows
 
@@ -112,8 +115,11 @@ installer) with `windows-x86_64-nsis` and `-msi`; `darwin-aarch64`, `darwin-x86_
 an rpm install from the rpm.
 
 The macOS app needs macOS 13.1 or later (`minimumSystemVersion`). The Linux files are built on
-Ubuntu 24.04, so the AppImage needs glibc 2.39 or later (Ubuntu 24.04, Debian 13, Fedora 40 and
-newer).
+Ubuntu 24.04, so all three, the AppImage, the deb and the rpm, need glibc 2.39 or later (Ubuntu
+24.04, Debian 13, Fedora 40 and newer). The deb says so in its dependencies (`libc6 (>= 2.39)`),
+so apt refuses it on an older system; the rpm can't (the bundler writes each rpm dependency as a
+bare name, without a version), so on an older system it installs and then fails at start with
+`GLIBC_2.39 not found`.
 
 Both Windows installers register the `quicklly://` scheme. They are not code-signed, so Windows
 SmartScreen warns on first run; this is a known limitation documented in the README's
@@ -135,7 +141,7 @@ an array or a string replaces the base value.
 | `bundle.targets` | `appimage`, `deb`, `rpm` | The three Linux formats (the same set as `"all"` on Linux, named explicitly) |
 | `bundle.category` | `Utility` | `Categories=Utility;` in the `.desktop` file |
 | `bundle.shortDescription`, `bundle.longDescription` | A one-line summary and a paragraph | Package summary and description, and the `.desktop` `Comment`. Without them the bundler uses the `description` from [`Cargo.toml`](../src-tauri/Cargo.toml), "Hotkey mini-notepad", which the Windows installers also use in their metadata |
-| `bundle.linux.deb.depends`, `bundle.linux.rpm.depends` | `xdg-utils`, `desktop-file-utils` | `xdg-mime` and `update-desktop-database` for the [registration of `quicklly://`](cli-and-links.md#registration-of-the-scheme) at start, `xdg-open` for opening the notes folder and images |
+| `bundle.linux.deb.depends`, `bundle.linux.rpm.depends` | `xdg-utils`, `desktop-file-utils`; the deb also `libc6 (>= 2.39)` | `xdg-mime` and `update-desktop-database` for the [registration of `quicklly://`](cli-and-links.md#registration-of-the-scheme) at start, `xdg-open` for opening the notes folder and images; `libc6 (>= 2.39)` is the glibc of the build machine (see [Artifacts](#artifacts)), which the bundler copies into the deb's `Depends` as written |
 | `bundle.linux.deb.desktopTemplate`, `bundle.linux.rpm.desktopTemplate` | [`linux/quicklly.desktop`](../src-tauri/linux/quicklly.desktop) | The bundler's default `.desktop` template with `%u` added to `Exec`, so the packaged launcher passes a `quicklly://` link on. The AppImage is built from the deb's files and gets the same `.desktop` file |
 
 The CLI adds the rest of the package dependencies itself: WebKitGTK and GTK, and, because the
