@@ -22,7 +22,7 @@ Each row defines a label, how its value is shown, and optionally `cycle` (←/�
 
 | Row | ←/→ | Enter | Del | Side effect in Rust |
 | --- | --- | --- | --- | --- |
-| Hotkey | | Record a new hotkey (`set_hotkey`) | `reset_hotkey` | Unregister the old shortcut, register the new one; on failure re-register the old one and return an error |
+| Hotkey | | Record a new hotkey (`set_hotkey`); nothing on Wayland | `reset_hotkey`; nothing on Wayland | Unregister the old shortcut, register the new one; on failure re-register the old one and return an error |
 | Hotkey opens | `set_hotkey_target` | Same as → | Quick line | |
 | Pad position | `set_pad_position` | Same as → | Top right | |
 | Notes folder | | Folder picker (`pick_notes_dir`) | `reset_notes_dir` | |
@@ -53,6 +53,12 @@ Each row defines a label, how its value is shown, and optionally `cycle` (←/�
   example `Ctrl+Alt+KeyN`, and parsed by `hotkey::parse`. <kbd>Esc</kbd> without modifiers, a click
   or leaving the window cancels. Any key the global-shortcut plugin accepts is allowed, with or
   without modifiers; there is no restriction to "safe" combinations.
+- **Hotkey on Wayland.** Applications can't take a global hotkey there, so the app registers none
+  and the user binds the command `quicklly` in the desktop's keyboard settings
+  ([ADR 0020](../decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md)). The settings
+  view says so in `hotkeyInDesktop` (`settings::hotkey_in_desktop`, true when `WAYLAND_DISPLAY` is
+  set, on Linux only); the Hotkey row then reads `Set in system settings: run quicklly`, and
+  <kbd>Enter</kbd> and <kbd>Del</kbd> do nothing on it. Elsewhere the flag is always false.
 - **Folder picker.** `pick_notes_dir` is async and opens a blocking folder dialog parented to the
   settings window, starting in the current folder. Cancelling keeps the current folder. Changing
   the folder does not move existing notes.

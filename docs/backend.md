@@ -145,6 +145,13 @@ re-zoom windows, archive, start or stop update checks, emit events) and return t
 folder and mode straight from `settings.json` for the CLI, which runs without the store plugin.
 Enum values are serialised with the exact strings the frontend uses; tests pin them.
 
+`hotkey_in_desktop()` is true on Linux when `WAYLAND_DISPLAY` is set, and false on every other
+system. Applications can't take a global hotkey on Wayland (the plugin's X11 grab never fires
+there), so `register_hotkey` registers nothing, a hotkey change is only saved, the settings view
+tells the page, and a second launch, which the desktop's own shortcut for `quicklly` starts,
+opens what **Hotkey opens** names. See
+[ADR 0020](decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md).
+
 ### `pad` and `reader_window`
 
 Both keep a pin flag in managed state (an `AtomicBool`, loaded at start) so that the window-event

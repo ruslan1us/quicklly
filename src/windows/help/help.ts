@@ -1,7 +1,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { DONE_DAYS } from "../../shared/dates";
-import { nameThings } from "../../shared/platform";
+import { isLinux, nameThings } from "../../shared/platform";
 import { appWindow, fitToContent, reveal } from "../../shared/popup";
 import { followTheme } from "../../shared/theme";
 
@@ -14,6 +14,8 @@ const doneDays = document.querySelectorAll<HTMLElement>(".done-days");
 
 // Keys and things as this system calls them: ⌘P on macOS, the Trash outside Windows.
 nameThings();
+// Apps can't take a hotkey on Wayland; the desktop's own shortcut runs `quicklly` instead.
+document.querySelector<HTMLElement>("#desktop-hotkey")!.hidden = !isLinux;
 
 /** Beyond this the help scrolls instead of the window growing. */
 const MAX_HEIGHT = 560;

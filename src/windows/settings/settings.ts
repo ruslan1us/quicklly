@@ -10,6 +10,8 @@ interface Settings {
   mode: "daily" | "inbox";
   hotkey: string;
   hotkeyIsDefault: boolean;
+  /** On Wayland: the app takes no hotkey, a shortcut in the desktop's settings runs `quicklly`. */
+  hotkeyInDesktop: boolean;
   theme: Theme;
   autostart: boolean;
   autoUpdate: boolean;
@@ -39,6 +41,8 @@ const help = document.querySelector<HTMLElement>("#help")!;
 
 const HELP = `↑↓ select · ←→ change · Enter edit · ${names.del} reset · Esc close`;
 const RECORDING_HELP = "Press a key or combination · Esc cancel";
+/** The Hotkey row on Wayland, where a shortcut in the desktop's settings runs the app. */
+const IN_DESKTOP = "Set in system settings: run quicklly";
 const MODIFIER_CODES = new Set([
   "ControlLeft",
   "ControlRight",
@@ -112,12 +116,14 @@ const archiveAfterIndex = (s: Settings) =>
 const rows: Row[] = [
   {
     label: "Hotkey",
-    value: (s) => recording ?? s.hotkey,
+    // Nothing to record or reset when the desktop's own shortcut is the hotkey.
+    value: (s) => (s.hotkeyInDesktop ? IN_DESKTOP : (recording ?? s.hotkey)),
     edit: () => {
+      if (settings?.hotkeyInDesktop) return;
       recording = "Press a key or combination…";
       render();
     },
-    reset: () => void run("reset_hotkey"),
+    reset: () => settings?.hotkeyInDesktop || void run("reset_hotkey"),
   },
   {
     label: "Hotkey opens",

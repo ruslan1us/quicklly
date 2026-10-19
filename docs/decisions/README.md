@@ -28,6 +28,7 @@ old record's status becomes "Superseded by NNNN".
 | [0017](0017-watch-the-notes-folder-for-changes.md) | Watch the notes folder for changes | 2026-10-14 | Accepted |
 | [0018](0018-pasted-images-let-go-of-when-the-text-starts-over.md) | Pasted images that are never saved are let go of when the text starts over | 2026-10-14 | Accepted; amends 0006 |
 | [0019](0019-links-saved-by-the-running-app-on-macos.md) | Links saved by the running app on macOS | 2026-10-19 | Accepted; amends 0007 |
+| [0020](0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md) | Global hotkey on Wayland via a desktop shortcut | 2026-10-19 | Accepted |
 
 ## Adding a record
 

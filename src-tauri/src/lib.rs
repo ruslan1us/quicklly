@@ -157,6 +157,14 @@ fn show_input(app: &AppHandle) {
     }
 }
 
+/// Opens what **Hotkey opens** names: the input window or the Pad.
+fn on_hotkey(app: &AppHandle) {
+    match settings::hotkey_target(app) {
+        settings::HotkeyTarget::Input => show_input(app),
+        settings::HotkeyTarget::Pad => pad::show(app),
+    }
+}
+
 fn open_notes_folder(app: &AppHandle) {
     let result = settings::notes_dir(app)
         .map_err(|e| e.to_string())
@@ -560,9 +568,14 @@ pub fn run() {
     }
     tauri::Builder::default()
         // Must be registered first: a second launch exits here and opens the input
-        // window of the already running instance instead.
+        // window of the already running instance instead. On Wayland, where the desktop runs
+        // `quicklly` for the hotkey, it opens what the hotkey would.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            show_input(app);
+            if settings::hotkey_in_desktop() {
+                on_hotkey(app);
+            } else {
+                show_input(app);
+            }
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
@@ -575,10 +588,7 @@ pub fn run() {
                 // The only registered shortcut is the new-note hotkey.
                 .with_handler(|app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
-                        match settings::hotkey_target(app) {
-                            settings::HotkeyTarget::Input => show_input(app),
-                            settings::HotkeyTarget::Pad => pad::show(app),
-                        }
+                        on_hotkey(app);
                     }
                 })
                 .build(),

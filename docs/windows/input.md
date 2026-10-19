@@ -20,7 +20,8 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
 
 - `show_input` centres the window on the active monitor, shows and focuses it. It runs on the
   hotkey (when **Hotkey opens** is the quick line), a tray click, tray **New note**, a second launch
-  of the executable (on macOS, opening the app in Finder while it runs), and `open_input` from
+  of the executable (on macOS, opening the app in Finder while it runs; on Wayland, where it is
+  the hotkey, only when **Hotkey opens** is the quick line), and `open_input` from
   the reader or the Pad. On macOS it first unhides the app (`come_forward`, see
   [Focus on macOS](../architecture.md#focus-on-macos)).
 - Focus loss hides the window from Rust without clearing it, so a click elsewhere keeps the draft

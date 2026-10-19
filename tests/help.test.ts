@@ -57,6 +57,8 @@ test("the done journal's period is the one it lists", async () => {
 
 const keys = () => Array.from(document.querySelectorAll("dt"), (dt) => dt.textContent!);
 const text = () => document.querySelector("main")!.textContent!.replace(/\s+/g, " ");
+/** The intro's words on setting the hotkey on Wayland, shown only on Linux. */
+const desktopHotkey = () => document.querySelector<HTMLElement>("#desktop-hotkey")!;
 
 test("keys and things are named as on Windows", async () => {
   await open(7);
@@ -67,6 +69,7 @@ test("keys and things are named as on Windows", async () => {
   expect(text()).toContain("indent (Shift+Tab: outdent)");
   expect(text()).toContain("move a file to the Recycle Bin");
   expect(text()).toContain('quicklly.exe add "buy milk #todo"');
+  expect(desktopHotkey().hidden).toBe(true);
 });
 
 test("on macOS the shortcuts take ⌘, ⌃C closes, ⌫ deletes, files go to the Trash", async () => {
@@ -78,12 +81,18 @@ test("on macOS the shortcuts take ⌘, ⌃C closes, ⌫ deletes, files go to the
   expect(text()).toContain("indent (⇧Tab: outdent)");
   expect(text()).toContain("move a file to the Trash");
   expect(text()).toContain('quicklly add "buy milk #todo"');
+  expect(desktopHotkey().hidden).toBe(true);
 });
 
-test("on Linux files go to the Trash, the keys are named as on Windows", async () => {
+test("on Linux: the Trash, the keys as on Windows, the hotkey on Wayland", async () => {
   onPlatform("linux");
   await open(7);
   expect(keys()).toEqual(expect.arrayContaining(["Ctrl+E", "Esc, Ctrl+C", "Del", "Ctrl+Z"]));
   expect(text()).toContain("move a file to the Trash");
   expect(text()).toContain('quicklly add "buy milk #todo"');
+  expect(desktopHotkey().hidden).toBe(false);
+  expect(desktopHotkey().textContent!.replace(/\s+/g, " ").trim()).toBe(
+    "On Wayland the hotkey is a shortcut you add in your desktop's keyboard settings that runs " +
+      "quicklly.",
+  );
 });

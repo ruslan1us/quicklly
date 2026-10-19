@@ -63,8 +63,8 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused (not on the Enter that ends an input method's composition), Ctrl+Z in its cases; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere; the hints naming the keys and the Recycle Bin or Trash |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
 | `done.test.ts` | The period asked for, grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
-| `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period, keys and the Recycle Bin or Trash named for Windows, macOS and Linux |
-| `settings.test.ts` | The autostart row, the footer and the held modifiers while recording a hotkey, named for Windows, macOS and Linux |
+| `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period, keys and the Recycle Bin or Trash named for Windows, macOS and Linux, the hotkey on Wayland mentioned only on Linux |
+| `settings.test.ts` | The autostart row, the footer and the held modifiers while recording a hotkey, named for Windows, macOS and Linux; on Wayland the Hotkey row naming the command to bind, with nothing to record or reset |
 
 Not covered by automated tests: the Pad beyond its pasted images and its keys, the settings beyond
 their names for each system, the changelog page,

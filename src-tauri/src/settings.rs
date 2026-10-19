@@ -126,6 +126,7 @@ pub struct SettingsView {
     mode: Mode,
     hotkey: String,
     hotkey_is_default: bool,
+    hotkey_in_desktop: bool,
     theme: Theme,
     hotkey_target: HotkeyTarget,
     pad_position: PadPosition,
@@ -271,8 +272,20 @@ pub fn hotkey(app: &AppHandle) -> Shortcut {
         .unwrap_or_else(hotkey::default)
 }
 
-/// Registers the saved hotkey at startup.
+/// Whether the hotkey is left to the desktop. On a Wayland session no application can take a
+/// global hotkey: the global shortcut plugin grabs keys through X11, which there sees them only
+/// while an X11 window has focus. So nothing is registered, the user binds the command `quicklly`
+/// in the desktop's keyboard settings, and a second launch opens what the hotkey would. A Wayland
+/// compositor tells the programs it runs where it is in `WAYLAND_DISPLAY`.
+pub fn hotkey_in_desktop() -> bool {
+    cfg!(target_os = "linux") && std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
+/// Registers the saved hotkey at startup (not on Wayland, see `hotkey_in_desktop`).
 pub fn register_hotkey(app: &AppHandle) {
+    if hotkey_in_desktop() {
+        return;
+    }
     let shortcut = hotkey(app);
     // A hotkey that can't be registered must not stop the app: the tray still works.
     if let Err(e) = app.global_shortcut().register(shortcut) {
@@ -283,14 +296,17 @@ pub fn register_hotkey(app: &AppHandle) {
     }
 }
 
-/// Switches to a new hotkey, keeping the old one if the new one can't be registered.
+/// Switches to a new hotkey, keeping the old one if the new one can't be registered. On Wayland
+/// it is only saved (see `hotkey_in_desktop`).
 fn change_hotkey(app: &AppHandle, new: Shortcut) -> Result<(), String> {
-    let old = hotkey(app);
-    let shortcuts = app.global_shortcut();
-    let _ = shortcuts.unregister(old);
-    if let Err(e) = shortcuts.register(new) {
-        let _ = shortcuts.register(old);
-        return Err(format!("Couldn't set {}: {e}", hotkey::label(&new)));
+    if !hotkey_in_desktop() {
+        let old = hotkey(app);
+        let shortcuts = app.global_shortcut();
+        let _ = shortcuts.unregister(old);
+        if let Err(e) = shortcuts.register(new) {
+            let _ = shortcuts.register(old);
+            return Err(format!("Couldn't set {}: {e}", hotkey::label(&new)));
+        }
     }
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
     if new == hotkey::default() {
@@ -341,6 +357,7 @@ fn view(app: &AppHandle) -> Result<SettingsView, String> {
         mode: mode(app),
         hotkey: hotkey::label(&hotkey),
         hotkey_is_default: hotkey == hotkey::default(),
+        hotkey_in_desktop: hotkey_in_desktop(),
         theme: theme(app),
         hotkey_target: hotkey_target(app),
         pad_position: pad_position(app),

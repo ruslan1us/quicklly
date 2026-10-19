@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import html from "../src/windows/settings/index.html?raw";
-import { closePage, loadPage, mockTauri, onPlatform, press } from "./helpers";
+import { closePage, loadPage, mockTauri, onPlatform, press, settle } from "./helpers";
 
 // The settings, with their real page and code; only the Rust side is pretended.
 const SETTINGS = {
@@ -9,6 +9,7 @@ const SETTINGS = {
   mode: "daily",
   hotkey: "Ctrl+Alt+N",
   hotkeyIsDefault: true,
+  hotkeyInDesktop: false,
   theme: "default",
   autostart: false,
   autoUpdate: true,
@@ -23,13 +24,15 @@ const SETTINGS = {
 const rows = () => Array.from(document.querySelectorAll("#rows li"), (li) => li.textContent);
 const help = () => document.querySelector("#help")!.textContent;
 
-async function open() {
-  mockTauri({
+/** Opens the settings showing `settings`; returns the commands the page sends. */
+async function open(settings = SETTINGS) {
+  const calls = mockTauri({
     get_appearance: { theme: "default", transparency: 0, scale: 100 },
-    get_settings: SETTINGS,
+    get_settings: settings,
   });
   await loadPage(html, () => import("../src/windows/settings/settings.ts"));
   await vi.waitFor(() => expect(rows()).not.toEqual([]));
+  return calls;
 }
 
 /** Starts recording the hotkey (the first row) and holds Ctrl, Alt, Shift and the Super key. */
@@ -49,6 +52,7 @@ afterEach(closePage);
 
 test("on Windows: Start with Windows, Del to reset, the Win key", async () => {
   await open();
+  expect(rows()[0]).toBe("❯HotkeyCtrl+Alt+N");
   expect(rows()).toContain("Start with Windows‹ Off ›");
   expect(help()).toBe("↑↓ select · ←→ change · Enter edit · Del reset · Esc close");
   expect(holdModifiers()).toBe("❯HotkeyCtrl+Alt+Shift+Win+…");
@@ -68,4 +72,17 @@ test("on Linux: Start at login, Del to reset, the Super key", async () => {
   expect(rows()).toContain("Start at login‹ Off ›");
   expect(help()).toBe("↑↓ select · ←→ change · Enter edit · Del reset · Esc close");
   expect(holdModifiers()).toBe("❯HotkeyCtrl+Alt+Shift+Super+…");
+});
+
+test("on Wayland the hotkey is set in the system settings, not recorded or reset", async () => {
+  onPlatform("linux");
+  const calls = await open({ ...SETTINGS, hotkeyInDesktop: true });
+  const hotkeyRow = "❯HotkeySet in system settings: run quicklly";
+  expect(rows()[0]).toBe(hotkeyRow);
+  expect(holdModifiers()).toBe(hotkeyRow);
+  expect(help()).toBe("↑↓ select · ←→ change · Enter edit · Del reset · Esc close");
+  press(document, "Delete");
+  await settle();
+  expect(calls.map((call) => call.cmd)).not.toContain("reset_hotkey");
+  expect(calls.map((call) => call.cmd)).not.toContain("set_hotkey");
 });

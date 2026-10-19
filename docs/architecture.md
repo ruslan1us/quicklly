@@ -93,7 +93,7 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
 | Label | Page | Created | When dismissed | Opened by |
 | --- | --- | --- | --- | --- |
 | `main` | `input` | At start from `tauri.conf.json`, hidden, unfocused | Hidden (focus loss, <kbd>Esc</kbd>, Alt+F4) | Hotkey, tray click, tray **New note**, second launch, `open_input` |
-| `pad` | `pad` | Lazily by `pad::show` | Hidden; a pinned Pad stays on focus loss | Hotkey (when set to Pad), `open_pad`, `expand_to_pad`, `edit_in_pad` |
+| `pad` | `pad` | Lazily by `pad::show` | Hidden; a pinned Pad stays on focus loss | Hotkey (when set to Pad; on Wayland also a second launch), `open_pad`, `expand_to_pad`, `edit_in_pad` |
 | `reader` | `reader` | Lazily by `show_popup` | Closed (destroyed); on focus loss only when unpinned and visible | `open_reader`, `open_note` |
 | `settings` | `settings` | Lazily by `show_popup` | Closed | `/config`, tray **Settings…** |
 | `help` | `help` | Lazily by `show_popup` | Closed | `/help` |
@@ -268,8 +268,11 @@ Persistent settings live in `settings.json` through `tauri-plugin-store`; see
 ## Single instance
 
 `tauri-plugin-single-instance` is registered first. A second launch without a note request exits
-inside the plugin and the running instance shows its input window. A launch with a note request
-never reaches the plugin: the CLI path saves and exits earlier.
+inside the plugin and the running instance shows its input window (on Linux the plugin reaches it
+over D-Bus). On Wayland, where a desktop shortcut that runs `quicklly` stands in for the hotkey
+(see [Tray and hotkey](#tray-and-hotkey)), the running instance opens what **Hotkey opens** names
+instead, as the hotkey does. A launch with a note request never reaches the plugin: the CLI path
+saves and exits earlier.
 
 On macOS, opening the app in Finder, Launchpad or Spotlight while it runs starts no second process:
 LaunchServices sends the running app a reopen event instead (`RunEvent::Reopen`), and
@@ -287,6 +290,13 @@ Pad according to the **Hotkey opens** setting. Hotkey parsing and labels are in
 [`settings.rs`](../src-tauri/src/settings.rs). A hotkey that cannot be registered at start is
 logged and the tray keeps working; a new hotkey that cannot be registered is rejected and the old
 one is registered again.
+
+On a Wayland session (Linux with `WAYLAND_DISPLAY` set) applications can't take a global hotkey:
+the plugin grabs keys through X11, which there sees them only while an X11 window has focus. The
+app registers no hotkey there and the user binds the command `quicklly` in the desktop's keyboard
+settings; the second launch it starts is the hotkey (see [Single instance](#single-instance)). The
+settings window says so in the Hotkey row instead of recording one. See
+[ADR 0020](decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md).
 
 ## Updates
 
