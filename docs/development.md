@@ -31,6 +31,7 @@ See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for detail
 
 A development build and an installed release share the identifier `com.quicklly.app`, so they use
 the same data folder (`%APPDATA%\com.quicklly.app`), the same settings and the same notes folder.
+On macOS the same holds for `com.quicklly.desktop`; see [Data format](data-format.md#application-files).
 
 ## Checks before every commit
 

@@ -82,6 +82,30 @@ Both installers register the `quicklly://` scheme. The installers themselves are
 code-signed, so Windows SmartScreen warns on first run; this is a known limitation documented in
 the README's [Installation](../README.md#installation) section.
 
+## macOS bundle
+
+The macOS settings are in [`tauri.macos.conf.json`](../src-tauri/tauri.macos.conf.json), which
+Tauri merges over `tauri.conf.json` (JSON Merge Patch) only when building for macOS; Windows
+builds don't read it. The release workflow doesn't build macOS yet.
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| `identifier` | `com.quicklly.desktop` | The shared identifier ends in `.app`, so Finder would show the data and cache folders named after it (`~/Library/Application Support/com.quicklly.app`) as broken applications. Windows keeps `com.quicklly.app`: it names the `%APPDATA%` folder of every installed copy. |
+| `bundle.targets` | `app`, `dmg` | The DMG installs the app; with `createUpdaterArtifacts` the bundle is also packed as `Quicklly.app.tar.gz` with a `.sig` for the updater. |
+| `bundle.macOS.minimumSystemVersion` | `13.1` | The pages rely on the system WebKit: `color-mix()` needs Safari 16.2, which came with macOS 13.1. |
+| `bundle.macOS.signingIdentity` | `-` | Ad-hoc signing: there is no Apple Developer ID and no notarization, so Gatekeeper blocks the first start until **Open Anyway** in System Settings → Privacy & Security. Updates are verified by the updater's own signature. |
+
+[`Info.plist`](../src-tauri/Info.plist) next to the config is merged into the bundle's
+`Info.plist` by the bundler:
+
+- `LSUIElement`: Quicklly is a menu-bar app from the moment it starts, with no Dock icon, menu bar
+  or ⌘-Tab entry. It applies to the bundled app only; `npm run tauri dev` runs without a bundle.
+- `NSDocumentsFolderUsageDescription`: the text of the prompt for access to `~/Documents`, where
+  the default notes folder is.
+
+The `quicklly://` scheme (`CFBundleURLTypes`) is not in this file: the bundler writes it from
+`plugins.deep-link.desktop.schemes`.
+
 ## Signed updates
 
 - The updater plugin's public key and the endpoint

@@ -242,15 +242,24 @@ the exception: they are matched in full, while the results show them short.
 
 ## Application files
 
-Outside the notes folder the application keeps these files in its data folder,
-`%APPDATA%\com.quicklly.app` (the identifier from `tauri.conf.json`):
+Outside the notes folder the application keeps these files in its data folder, named after the
+identifier:
+
+| Platform | Identifier | Data folder | Cache folder |
+| --- | --- | --- | --- |
+| Windows | `com.quicklly.app` (`tauri.conf.json`) | `%APPDATA%\com.quicklly.app` | `%LOCALAPPDATA%\com.quicklly.app` |
+| macOS | `com.quicklly.desktop` (`tauri.macos.conf.json`) | `~/Library/Application Support/com.quicklly.desktop` | `~/Library/Caches/com.quicklly.desktop` |
+
+macOS has its own identifier because one ending in `.app` makes Finder show these folders as
+broken applications; see [Release](release.md#macos-bundle). The default notes folder is
+`~/Documents/Quicklly` there.
 
 | File | Content |
 | --- | --- |
 | `settings.json` | Settings, written by `tauri-plugin-store` |
 | `pad-draft.md` | The Pad's unsaved draft, in stored form; deleted when the draft is empty |
 
-Downloaded updates wait in the app cache directory as `update-<version>.bin` until installed,
+Downloaded updates wait in the cache folder as `update-<version>.bin` until installed,
 written first as `update-<version>.bin.tmp` and renamed into place. The next update check removes
 any `update-<version>.bin` other than the one for the latest release.
 
