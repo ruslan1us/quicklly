@@ -139,7 +139,8 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
   switches to the desktop (known limitation).
 - The reminders at start don't take the focus; no Dock icon or menu bar flash at start, also at
   login, and the app in front keeps the keys; no ⌘-Tab entry; opening the app in
-  Finder while it runs shows the input window; the menu-bar icon follows the light or dark bar.
+  Finder while it runs shows the input window; the menu-bar icon (the app icon in colour) shows
+  on a light and a dark bar.
 - ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields.
 - ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad.
 - ⌫ ⌫ in the reader moves a file to the Trash; ⌘Z brings a deleted note back, and the footer says

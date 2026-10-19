@@ -300,9 +300,11 @@ LaunchServices sends the running app a reopen event instead (`RunEvent::Reopen`)
 
 The tray ([`lib.rs`](../src-tauri/src/lib.rs) `setup_tray`) shows the input window on a left
 click (on Linux, where the tray is an AppIndicator, every click opens the menu) and offers
-**New note**, **Open notes folder**, **Settings…** and **Quit**. Its icon is the app icon; on
-macOS it is used as a template image (`icon_as_template`), which the menu bar draws from the
-icon's shape alone, in the bar's own light or dark colour. The global shortcut plugin has a
+**New note**, **Open notes folder**, **Settings…** and **Quit**. Its icon is the app icon, in
+colour on the macOS menu bar too. A template image would follow the bar's light or dark colour, but
+the menu bar draws one from its alpha alone, and the opaque app icon would come out as a solid
+square: that needs a monochrome `icons/tray-template.png` (to come), used on macOS with
+`icon_as_template(true)`. The global shortcut plugin has a
 single handler for the single registered shortcut; on press it opens the input window or the
 Pad according to the **Hotkey opens** setting. Hotkey parsing and labels are in
 [`hotkey.rs`](../src-tauri/src/hotkey.rs); registration and changes are in

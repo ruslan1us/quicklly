@@ -575,12 +575,6 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
     if let Some(icon) = app.default_window_icon() {
         tray = tray.icon(icon.clone());
     }
-    // The macOS menu bar draws a template icon in its own colour, light or dark like the bar,
-    // from the icon's shape (its alpha) alone.
-    #[cfg(target_os = "macos")]
-    {
-        tray = tray.icon_as_template(true);
-    }
     tray.build(app)?;
     Ok(())
 }
