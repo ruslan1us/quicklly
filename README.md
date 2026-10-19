@@ -30,8 +30,9 @@ image, or it can't update itself.
 
 The app is not notarized by Apple, so macOS blocks the first start ("Apple could not verify…"):
 click **Done**, open **System Settings → Privacy & Security**, scroll down and click
-**Open Anyway** next to Quicklly, then confirm. (Right-click → **Open** no longer gets past this
-on macOS 15 and later.) Or remove the quarantine flag in Terminal:
+**Open Anyway** next to Quicklly (it stays there for about an hour after the blocked start), then
+confirm. (Right-click → **Open** no longer gets past this on macOS 15 and later.) Or remove the
+quarantine flag in Terminal:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Quicklly.app
@@ -40,7 +41,7 @@ xattr -dr com.apple.quarantine /Applications/Quicklly.app
 Quicklly lives in the menu bar: it has no Dock icon and no entry in ⌘-Tab. Opening it again from
 Finder, Launchpad or Spotlight shows the input window. At the first start macOS asks whether
 Quicklly may access your Documents folder, where the notes go: allow it. As the app isn't signed
-with an Apple developer certificate, macOS may ask again after an update.
+with an Apple developer certificate, macOS may ask again after each update.
 
 On macOS:
 
@@ -50,6 +51,8 @@ On macOS:
   window, since <kbd>⌘</kbd>+<kbd>C</kbd> copies, and <kbd>⌫</kbd> deletes in the reader, as Mac
   keyboards have no <kbd>Del</kbd>. The default hotkey is <kbd>⌃</kbd>+<kbd>⌥</kbd>+<kbd>N</kbd>.
 - The windows can't show over an app in full screen: the hotkey switches to the desktop first.
+- macOS 15.0 and 15.1 refuse a hotkey whose only modifiers are <kbd>⌥</kbd> or <kbd>⌥</kbd>+<kbd>⇧</kbd>
+  (the app shows the error): add <kbd>⌃</kbd> or <kbd>⌘</kbd>.
 - <kbd>⌘</kbd>+<kbd>Z</kbd> in the reader brings a deleted note back, but not its images: they
   stay in the Trash, from where you can drag them back into the `images` folder.
 - To save notes from Terminal (see [From scripts and links](#from-scripts-and-links)), put the
@@ -58,6 +61,9 @@ On macOS:
   ```sh
   sudo ln -s /Applications/Quicklly.app/Contents/MacOS/quicklly /usr/local/bin/quicklly
   ```
+
+  The first `quicklly add` from Terminal makes macOS ask whether Terminal (not Quicklly) may
+  access your Documents folder: allow it.
 
 ### Linux
 
@@ -69,7 +75,9 @@ Three formats, all for x86-64, built on Ubuntu 24.04, so they need glibc 2.39 or
   a folder you can write to. It isn't on your `PATH`: use its full path, or link it into
   `~/.local/bin` as `quicklly`.
 - **deb** (Debian, Ubuntu): `sudo apt install ./Quicklly_x.y.z_amd64.deb`.
-- **rpm** (Fedora, openSUSE): `sudo dnf install ./Quicklly-x.y.z-1.x86_64.rpm`.
+- **rpm** (Fedora, openSUSE Tumbleweed): `sudo dnf install ./Quicklly-x.y.z-1.x86_64.rpm`, or
+  `sudo zypper install ./Quicklly-x.y.z-1.x86_64.rpm` on openSUSE. openSUSE Leap 15.6 has
+  glibc 2.38, too old.
 
 The deb and rpm install `quicklly` on your `PATH`. They don't update at start, since installing a
 package asks for your password: a new version is announced in the input window, and `/update`
@@ -77,9 +85,9 @@ installs it and asks for the password then.
 
 **Tray.** On GNOME the tray icon needs the AppIndicator extension. Ubuntu ships it turned on; on
 Fedora and other GNOME desktops install **AppIndicator and KStatusNotifierItem Support** (on Fedora
-`sudo dnf install gnome-shell-extension-appindicator`, then turn it on in **Extensions**). KDE,
-Xfce, Cinnamon and MATE show the icon as they are. A click on the icon opens its menu, which has
-**New note**.
+`sudo dnf install gnome-shell-extension-appindicator`, then log out and back in and turn it on in
+**Extensions**). KDE, Xfce, Cinnamon and MATE show the icon as they are. A click on the icon opens
+its menu, which has **New note**.
 
 **Hotkey.** In an X11 session the hotkey works as on Windows. On Wayland, applications can't take
 a global hotkey, so you bind one in your desktop to the command `quicklly` (for the AppImage, the
@@ -94,11 +102,13 @@ first press starts it in the tray; press again for the window.
 
 On Wayland the desktop decides where windows go, so the Pad and the reminders may not open in
 their corners, and a pinned Pad or reader keeps its size but neither its place nor staying on
-top. There is no blur behind the windows on Linux: the transparency setting shows the desktop as
-it is.
+top. The windows also show in the dash and in Alt+Tab while they are open. There is no blur
+behind the windows on Linux: the transparency setting shows the desktop as it is.
 
-**Pasting images** needs WebKitGTK 2.52 or later. The deb and rpm use your system's WebKitGTK
-(`libwebkit2gtk-4.1`), the AppImage the one it was built with.
+**Pasting images** needs WebKitGTK 2.54.1 or later. The deb and rpm use your system's WebKitGTK
+(`libwebkit2gtk-4.1`), the AppImage the one it was built with. Ubuntu 24.04 and 26.04 and
+Debian 13 ship 2.52, and so does the AppImage, so pasting screenshots doesn't work there for now;
+pasting text does.
 
 **A blank or black window**, mostly with NVIDIA graphics or on Wayland, is a known WebKitGTK
 problem. Start Quicklly from a terminal with one of these set, trying them in turn:
@@ -109,8 +119,10 @@ __NV_DISABLE_EXPLICIT_SYNC=1 quicklly
 WEBKIT_DISABLE_COMPOSITING_MODE=1 quicklly
 ```
 
-If one helps, set it for every start, for example in a file in `~/.config/environment.d/` (read at
-login by GNOME and KDE). If the AppImage misbehaves where the deb or rpm doesn't, use the package.
+If one helps, set it for every start in a `.conf` file in `~/.config/environment.d/`, read at
+login by GNOME and KDE: for example `quicklly.conf` with the line
+`WEBKIT_DISABLE_DMABUF_RENDERER=1`. If the AppImage misbehaves where the deb or rpm doesn't, use
+the package.
 
 ## Usage
 

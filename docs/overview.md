@@ -76,7 +76,8 @@ or dates.
   need: a non-activating panel (`NSPanel`) on macOS so the windows can show over full-screen apps;
   the `GlobalShortcuts` portal on Wayland, whose activation token would also help a desktop that
   refuses to focus the window; reading pasted images from the native clipboard where WebKitGTK
-  doesn't pass them to the page.
+  doesn't pass them to the page (before 2.54.1, which Ubuntu 24.04, Debian 13 and the AppImage
+  don't have yet).
 - **Backlog ideas**, not scheduled: capturing context with a note (active window, browser URL),
   writing into an Obsidian vault's daily note, voice input, LLM-assisted triage of the inbox, Git
   sync.

@@ -188,8 +188,8 @@ The `quicklly://` scheme (`CFBundleURLTypes`) is not in this file: the bundler w
   environment; without it, `npm run tauri build -- --no-bundle` builds the executable only.
 - Installed copies download and verify a newer release in the background and install it at the
   next start, or immediately on `/update`. A deb or rpm install waits for `/update`: the plugin
-  installs the package through `pkexec`, which asks for the root password, so it is never started
-  at login ([ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md)). The signature is
+  installs the package through `pkexec`, which asks for an administrator's password, so it is
+  never started at login ([ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md)). The signature is
   verified only when downloading, so the download is saved through a temporary file renamed into
   place: the stored file is complete or absent, never cut short. A download superseded by a later release before it was
   installed is removed at the next check; see [Architecture](architecture.md#updates) and

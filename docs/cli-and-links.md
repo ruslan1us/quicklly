@@ -116,7 +116,8 @@ Differences from the other platforms:
 
 The `quicklly add …` command line works on macOS as everywhere: running the executable inside the
 bundle from a terminal starts a new process, which saves the note and exits, and the shell waits
-for it (no console attaching is needed).
+for it (no console attaching is needed). The process counts as part of the terminal, so the first
+`quicklly add` from Terminal makes macOS ask for Terminal's access to Documents, not Quicklly's.
 
 ## Interaction with a running instance
 

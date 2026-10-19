@@ -64,12 +64,15 @@ The page links `../../shared/themes.css` and its own stylesheet. See
   `default`, `defaultPlus` and `light`, selected with `<html data-theme>`. Pages use only these
   variables.
 - **Scrollbars.** `themes.css` makes every scrollbar thin, with a `--dim` thumb on a transparent
-  track, through the standard `scrollbar-width` and `scrollbar-color`. A WebKit that lacks
-  `scrollbar-color` (older macOS and Linux versions) gets the same look from `::-webkit-scrollbar`
-  rules inside `@supports not (scrollbar-color: auto)`, so they never apply in WebView2 and Windows
-  is unaffected. The Pad's textarea hides its scrollbar both ways (`scrollbar-width: none` and
-  `::-webkit-scrollbar { display: none }`): a scrollbar would narrow its lines, and its highlighting
-  backdrop and caret would drift off the text.
+  track, through the standard `scrollbar-width` and `scrollbar-color`. For a WebKit that lacks
+  `scrollbar-color` there are `::-webkit-scrollbar` rules inside
+  `@supports not (scrollbar-color: auto)`, which never apply in WebView2, so Windows is unaffected.
+  They don't take effect in WebKitGTK and some WebKit versions either (a non-`auto`
+  `scrollbar-width` turns `::-webkit-scrollbar` styling off, and WebKitGTK doesn't paint
+  `scrollbar-color`): those get the system's scrollbars. The Pad's textarea hides its scrollbar
+  both ways (`scrollbar-width: none` and `::-webkit-scrollbar { display: none }`), which works
+  everywhere: a scrollbar would narrow its lines, and its highlighting backdrop and caret would
+  drift off the text.
 - **Transparency.** Rust gives every window an acrylic blur (a dark vibrancy on macOS). The page
   background is `--surface`, `color-mix(in srgb, var(--bg) var(--opacity), transparent)`, where
   `--opacity` is `100 % − transparency`.

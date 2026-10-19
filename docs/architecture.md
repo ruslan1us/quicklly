@@ -83,7 +83,8 @@ flowchart TB
 
 Each window is a page `src/windows/<name>/index.html`, built to `dist/windows/<name>/index.html`
 and addressed from Rust with `page(name)` in [`lib.rs`](../src-tauri/src/lib.rs). All windows are
-frameless, always on top, absent from the taskbar, transparent with a blur behind them, and
+frameless, always on top, absent from the taskbar (on Wayland, where `skipTaskbar` does nothing,
+they show in the dash and Alt+Tab while open), transparent with a blur behind them, and
 zoomed to the scale setting. The blur is `blur_behind()` in [`lib.rs`](../src-tauri/src/lib.rs):
 Acrylic on Windows; on macOS, where Acrylic doesn't exist, the `HudWindow` vibrancy (always dark),
 kept active while the window doesn't have the focus so that it doesn't turn grey. Linux has no
@@ -360,8 +361,8 @@ exits, and the installer starts the app again; on macOS (the `.app` bundle) and 
 AppImage file) the plugin replaces the app in place and returns, and `updater::install` restarts
 it with `AppHandle::restart`. A deb or rpm install (the bundle type is stamped into the binary,
 `tauri::utils::platform::bundle_type`) is installed only on `/update`, never at start: the plugin
-runs `pkexec dpkg -i` or `pkexec rpm -U`, which asks for the root password, and that prompt must
-not appear at login. Each check keeps only the download of the latest release and removes the
+runs `pkexec dpkg -i` or `pkexec rpm -U`, which asks for an administrator's password, and that
+prompt must not appear at login. Each check keeps only the download of the latest release and removes the
 others. See [Release](release.md),
 [ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md) and
 [ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md).

@@ -144,13 +144,15 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
   on a light and a dark bar.
 - ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields;
   ⌘M and ⌃⌘F do nothing in the input window, the Pad (pinned too), the reader and the popups.
-- ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad.
+- ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad, and of an image copied in Safari
+  (**Copy Image**).
+- <kbd>C</kbd> in the done journal copies the list.
 - ⌫ ⌫ in the reader moves a file to the Trash; ⌘Z brings a deleted note back, and the footer says
   its images couldn't be brought back.
 - `/update` restarts into the new version; the update at start too.
 - Start at login after logging out and in; the Documents prompt and its text at the first start.
 - `open "quicklly://add?text=x"` saves a note, also when Quicklly isn't running; `quicklly add` from
-  Terminal through the symlink from the README.
+  Terminal through the symlink from the README (macOS asks for Terminal's access to Documents).
 - The Gatekeeper walkthrough of the README on a fresh download.
 
 ### Linux
@@ -164,17 +166,21 @@ comes first: it decides whether the Wayland hotkey works at all.
 - On X11 (GNOME on Xorg and KDE X11): press the hotkey and type a note, then type in another
   app, then press the hotkey again: the window takes the typing. The same for the Pad, tray
   **New note** and tray **Settings…**.
+- <kbd>Enter</kbd> saves a note with IBus (GNOME's default), also with a CJK IBus engine in direct
+  mode.
 - Tray: shown on GNOME with the AppIndicator extension and missing without it; menu items; Quit.
-- Look: transparency without blur, the three themes, scale 100/150/200 %, Pad text and highlighting
-  aligned on long wrapped lines, the block caret, fonts, scrollbars, emoji.
+- Look: transparency without blur, the three themes, the Scale setting 80–150 % and display
+  scaling 100/200 %, Pad text and highlighting aligned on long wrapped lines, the block caret,
+  fonts, scrollbars (the system's), emoji.
 - Placement: where GNOME and KDE put the input window, the popups, the Pad and the reminders;
-  pinned windows; always on top on X11; taskbar entries.
+  pinned windows; always on top on X11; taskbar entries (none on X11; on Wayland the open windows
+  show in the dash and Alt+Tab).
 - Focus loss hides the input window and the Pad and closes an unpinned reader.
 - Reminders at start (or after changing the date) while typing in another app, on GNOME Wayland
   and KDE: whether they take the keyboard; either way the typing doesn't touch the notes, and a
   click into them makes the keys work.
-- Paste a screenshot (GNOME Screenshot, Spectacle) into the input window and the Pad; copy links in
-  the reader and the done list.
+- Paste a screenshot (GNOME Screenshot, Spectacle) into the input window and the Pad (needs
+  WebKitGTK 2.54.1; with 2.52 nothing is pasted); copy links in the reader and the done list.
 - Delete a note with an image, then Ctrl+Z brings both back from the Trash; delete a file; a notes
   folder on a second disk.
 - `quicklly add` from bash (deb or rpm) and from the AppImage; `xdg-open "quicklly://add?text=x"`

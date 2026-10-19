@@ -52,7 +52,8 @@ Each row defines a label, how its value is shown, and optionally `cycle` (←/�
   non-modifier key completes the combination, sent as modifiers plus `KeyboardEvent.code`, for
   example `Ctrl+Alt+KeyN`, and parsed by `hotkey::parse`. <kbd>Esc</kbd> without modifiers, a click
   or leaving the window cancels. Any key the global-shortcut plugin accepts is allowed, with or
-  without modifiers; there is no restriction to "safe" combinations.
+  without modifiers; there is no restriction to "safe" combinations. macOS 15.0 and 15.1 refuse hotkeys
+  whose only modifiers are ⌥ or ⌥⇧; that comes back as the usual registration error.
 - **Hotkey on Wayland.** Applications can't take a global hotkey there, so the app registers none
   and the user binds the command `quicklly` in the desktop's keyboard settings
   ([ADR 0020](../decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md)). The settings
