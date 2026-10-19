@@ -131,6 +131,12 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
   ([`window_bounds.rs`](../src-tauri/src/window_bounds.rs)), but only the size when the top
   32 pixels of the saved rectangle are on no current monitor (a monitor was disconnected or
   rearranged); the window then gets the place it would get with nothing saved.
+- **Spaces on macOS.** Every window is on all Spaces (`visible_on_all_workspaces`, through
+  `ON_EVERY_SPACE` in the builders and set on `main` at set-up), so a window shows on the Space in
+  use and a pinned Pad or reader comes along when the user switches Spaces, instead of macOS
+  switching back to the Space where the window was. Windows has no such option, and on Linux the
+  flag would stick the windows to every workspace, so it is off there. The windows still can't
+  show over another app's full-screen Space.
 - **Permissions.** Every window label is listed in
   [`capabilities/default.json`](../src-tauri/capabilities/default.json), which grants the core
   window permissions the pages use (show, hide, close, focus, size, centre, drag). Application

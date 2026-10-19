@@ -73,6 +73,7 @@ fn show(app: &AppHandle, focus: bool) {
         .focused(false)
         .decorations(false)
         .always_on_top(true)
+        .visible_on_all_workspaces(crate::ON_EVERY_SPACE)
         .skip_taskbar(true)
         .resizable(false)
         .transparent(true)

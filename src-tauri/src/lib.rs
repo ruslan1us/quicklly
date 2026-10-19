@@ -181,6 +181,7 @@ fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
         // A frameless popup like the input window; it is dragged by its header.
         .decorations(false)
         .always_on_top(true)
+        .visible_on_all_workspaces(ON_EVERY_SPACE)
         .skip_taskbar(true)
         .resizable(false)
         .transparent(true)
@@ -199,6 +200,12 @@ fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
 
 /// Width of the input window and the popups at normal size, in logical pixels.
 const POPUP_WIDTH: f64 = 640.0;
+
+/// Whether the windows are on every Space (desktop), on macOS: a window shows on the Space in
+/// use, and a pinned one comes along to the next, instead of macOS switching to the Space where
+/// it was. Only there: Windows has no such option and Linux would stick the windows to every
+/// workspace.
+pub(crate) const ON_EVERY_SPACE: bool = cfg!(target_os = "macos");
 
 /// The blurred desktop behind every window, which shows through as much as the
 /// transparency setting lets the background through.
@@ -583,6 +590,8 @@ pub fn run() {
             reader_window::load(app.handle());
             if let Some(input) = app.get_webview_window(MAIN_WINDOW) {
                 let _ = input.set_effects(blur_behind());
+                #[cfg(target_os = "macos")]
+                let _ = input.set_visible_on_all_workspaces(ON_EVERY_SPACE);
             }
             apply_scale(app.handle());
             reminders::start(app.handle());

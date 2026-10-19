@@ -114,6 +114,7 @@ pub fn show(app: &AppHandle) {
         .effects(crate::blur_behind())
         .decorations(false)
         .always_on_top(true)
+        .visible_on_all_workspaces(crate::ON_EVERY_SPACE)
         .skip_taskbar(true)
         .resizable(is_pinned(app))
         .build();
