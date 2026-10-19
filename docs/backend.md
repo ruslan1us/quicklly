@@ -12,7 +12,7 @@ for errors, file writes and undo.
 
 | Module | Responsibility |
 | --- | --- |
-| [`lib.rs`](../src-tauri/src/lib.rs) | Entry point `run()`: CLI short-circuit, plugins, managed state, set-up, window-event rules, tray, the command list. Note commands that combine modules (save, edit, delete, undo, search, done journal), popup creation (`show_popup`), focus on macOS (`come_forward`, `give_focus_back`), scale and blur effect helpers (Acrylic, vibrancy on macOS), `notes_changed`, `in_background` for the commands that scan the notes folder. |
+| [`lib.rs`](../src-tauri/src/lib.rs) | Entry point `run()`: CLI short-circuit, plugins, managed state, set-up, window-event rules, tray, the command list. Note commands that combine modules (save, edit, delete, undo, search, done journal), popup creation (`show_popup`), focus on macOS (`come_forward`, `give_focus_back`, `reveal_window`), scale and blur effect helpers (Acrylic, vibrancy on macOS), `notes_changed`, `in_background` for the commands that scan the notes folder. |
 | [`notes.rs`](../src-tauri/src/notes.rs) | Writing new notes: normalisation (`note_lines`, `format_note`), tag detection (`first_tag`), target file choice, headings, append (`append_note`). The `Mode` enum (daily or inbox). |
 | [`reader.rs`](../src-tauri/src/reader.rs) | Reading and changing existing notes: listing files as a tree, parsing, search, due and done queries, done marks, snooze, edit, delete, undo, file deletion, path validation, line-ending-preserving atomic rewrites. |
 | [`archive.rs`](../src-tauri/src/archive.rs) | Moving done notes to `archive/<same path>` after the configured number of days. |

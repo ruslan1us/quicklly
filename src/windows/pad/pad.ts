@@ -511,8 +511,7 @@ void Promise.all([
   // After the date format is known: the draft shows its dates in it.
   await loadDraft();
   await startEditing();
-  await appWindow.show();
-  await appWindow.setFocus();
+  await invoke("reveal_window");
   text.focus();
   refresh();
 });

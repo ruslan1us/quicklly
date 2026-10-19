@@ -416,8 +416,7 @@ async function expandToPad() {
   try {
     await invoke("expand_to_pad", { text });
   } catch (err) {
-    await appWindow.show();
-    await appWindow.setFocus();
+    await invoke("reveal_window");
     showError(err);
     return;
   }

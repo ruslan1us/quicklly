@@ -129,7 +129,7 @@ test("a draft that can't be read is shown as an error and never saved over", asy
   const status = document.querySelector("#status")!;
   expect(text.value).toBe("");
   expect(status.textContent).toBe(unreadable);
-  expect(calls.some((call) => call.cmd === "plugin:window|show")).toBe(true);
+  expect(calls.some((call) => call.cmd === "reveal_window")).toBe(true);
 
   // Neither typing (saved 300 ms after it stops) nor closing saves over it.
   type(text, "typed meanwhile");

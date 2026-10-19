@@ -132,8 +132,9 @@ On a real Mac, ideally macOS 14 and 15, from the DMG of a release build (`tauri 
 bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest builds on it.
 
 - The hotkey from another app: the input window has the keys at once; <kbd>Esc</kbd> and
-  <kbd>Enter</kbd> give the keyboard back to that app; input → reader → input without a visible
-  flash of the previous app.
+  <kbd>Enter</kbd> give the keyboard back to that app; input → reader → input, `/config`, `/help`,
+  → to the Pad and ← back, ⌘E without a visible flash of the previous app, and typing right after
+  each switch lands in the new window.
 - A pinned Pad on another Space comes along; the hotkey while a full-screen app is in front
   switches to the desktop (known limitation).
 - The reminders at start don't take the focus; no Dock icon, no ⌘-Tab entry; opening the app in

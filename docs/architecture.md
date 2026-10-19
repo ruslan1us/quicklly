@@ -114,8 +114,9 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
 - **Hidden first, then revealed by the page.** Windows are built with `visible(false)`. The page
   applies the theme, loads its data, sizes the window to its content and only then shows it, so it
   never flickers at the wrong size. Popups call `reveal()` from
-  [`popup.ts`](../src/shared/popup.ts) (centre on the active monitor, show, focus); the reminders
-  call `reveal_reminders`; the Pad and a pinned reader show themselves.
+  [`popup.ts`](../src/shared/popup.ts) (centre on the active monitor with `center_window`, then
+  show and focus with `reveal_window`); the reminders call `reveal_reminders`; the Pad and a pinned
+  reader call `reveal_window` themselves.
 - **Unfocused creation.** `show_popup` and the reminders build windows with `focused(false)`, and
   the `main` window is declared with `"focus": false`. A hidden window created with focus would
   take the keyboard from the application in use, notably at start.
@@ -154,20 +155,28 @@ previous application:
 
 - **When.** `give_focus_back` in [`lib.rs`](../src-tauri/src/lib.rs) runs on every
   `Focused(false)` and `Destroyed` window event, and after a [link](cli-and-links.md#links-on-macos)
-  is saved. It hides the app when no window is visible and no popup exists. Popups are closed when
-  they are done, so one that exists hidden is still being set up and about to show (the reminders
-  open the reader and close themselves, for example); the input window and the Pad live hidden
-  and count only when visible. A visible pinned Pad or reader keeps Quicklly from hiding, since
-  hiding the app would hide them too.
+  is saved. It decides 250 ms later (`HAND_OVER`), on the main thread, and hides the app when no
+  window is visible and no popup exists then. Popups are closed when they are done, so one that
+  exists hidden is still being set up and about to show (the reminders open the reader and close
+  themselves, for example); the input window and the Pad live hidden and count only when visible.
+  A visible pinned Pad or reader keeps Quicklly from hiding, since hiding the app would hide them
+  too.
+- **Hand-overs.** When the input window or the Pad hands over to another window (the reader,
+  settings, help, the Pad, the input window), it hides first and then asks for the other one.
+  The wait gives that window time to exist (a popup) or to show (the input window, a Pad that
+  existed), so the app stays active throughout and keys typed meanwhile stay in Quicklly. The
+  price: after the last window goes, the previous application gets the keyboard back 250 ms
+  later. A Pad opened for the first time takes longer to load than the wait, so Quicklly may still
+  hide and come forward again then, and the previous application flash as active.
 - **Coming back.** The windows of a hidden app don't show, and `set_focus` does nothing for them.
-  Every Rust path that shows a window with the focus therefore calls `come_forward` first, which
+  Every path that shows a window with the focus therefore calls `come_forward` first, which
   unhides the app (`app.show()`, which activates it): `show_input`, `show_popup`, `pad::show`,
-  `expand_to_pad` (whose failure brings the input window back), and the reminders when asked
-  for. The reminders that come up by themselves unhide the app without activating it, so they
-  don't take the keyboard. On Windows and Linux `come_forward` does nothing.
-- **Hand-overs.** When the input window or the Pad hands over to another window, it hides first,
-  so Quicklly hides and comes forward again a moment later: the previous application may flash
-  as active in between.
+  `expand_to_pad` (whose failure brings the input window back), the reminders when asked for,
+  and `reveal_window`, through which the pages show themselves once they are ready (a popup's
+  `reveal()`, the Pad, a pinned reader), so a window always shows even when the app hid while it
+  was being set up. The reminders that come up by themselves unhide the app without activating
+  it, so they don't take the keyboard. On Windows and Linux `come_forward` does nothing, and
+  `reveal_window` only shows and focuses the window.
 
 ## IPC commands
 
@@ -222,6 +231,7 @@ create or may create a window, or read every notes file (see [below](#threads-of
 | `get_pad_pinned`, `set_pad_pinned(pinned)` | pad | Pad | Pin state |
 | `get_reader_pin`, `set_reader_pin(pinned, file)`, `get_reader_sort`, `set_reader_sort(sort)` | reader_window | reader | Pin state, pinned file, sort order |
 | `center_window` | monitor | popups via `reveal()` | Centre the calling window on the active monitor |
+| `reveal_window` | lib | popups via `reveal()`, Pad, pinned reader | Show and focus the calling window; on macOS unhide the app first |
 | `get_update`, `install_update` *async* | updater | input | The waiting release; `/update` |
 | `get_appearance` | settings | every page | Theme, transparency, scale |
 | `get_date_format` | settings | pages that show dates | Date format |

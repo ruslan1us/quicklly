@@ -798,8 +798,7 @@ async function start() {
   await refresh();
   await openTarget();
   if (pinned) {
-    await appWindow.show();
-    await appWindow.setFocus();
+    await invoke("reveal_window");
   } else {
     await reveal();
   }

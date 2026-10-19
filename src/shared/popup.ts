@@ -42,10 +42,9 @@ function nextResize() {
 
 /**
  * Shows the window, which is created hidden so it can be sized to its content first, in the
- * middle of the screen in use.
+ * middle of the screen in use, with the focus.
  */
 export async function reveal() {
   await invoke("center_window");
-  await appWindow.show();
-  await appWindow.setFocus();
+  await invoke("reveal_window");
 }

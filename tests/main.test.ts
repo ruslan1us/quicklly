@@ -320,7 +320,7 @@ test("Ctrl+E keeps the note and shows why when the Pad draft can't be read", asy
   await settle();
   expect(note.value).toBe("call mom");
   expect(document.querySelector("#message")!.textContent).toBe(error);
-  expect(calls.some((call) => call.cmd === "plugin:window|show")).toBe(true);
+  expect(calls.some((call) => call.cmd === "reveal_window")).toBe(true);
 });
 
 test("on macOS ⌘E moves the note into the Pad, not Ctrl+E; Ctrl+C still closes", async () => {

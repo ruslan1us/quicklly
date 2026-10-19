@@ -20,7 +20,9 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use serde::{Deserialize, Serialize};
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectsBuilder};
-use tauri::{App, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri::{
+    App, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
+};
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_opener::OpenerExt;
 
@@ -133,19 +135,43 @@ pub(crate) fn come_forward(app: &AppHandle) {
 #[cfg(not(target_os = "macos"))]
 pub(crate) fn come_forward(_app: &AppHandle) {}
 
+/// Shows the calling window with the focus once its page is ready: a popup through `reveal()`,
+/// the Pad and a pinned reader by themselves. On macOS it first unhides the app, which
+/// `give_focus_back` may have hidden while the window was being set up.
+#[tauri::command]
+async fn reveal_window(window: WebviewWindow) {
+    come_forward(window.app_handle());
+    let _ = window.show();
+    let _ = window.set_focus();
+}
+
+/// How long `give_focus_back` waits before it decides: a window that hands over to another one
+/// hides before the other is asked for, which by then exists or shows.
+#[cfg(target_os = "macos")]
+const HAND_OVER: std::time::Duration = std::time::Duration::from_millis(250);
+
 /// Hands the keys back to the app in use before, once none of Quicklly's windows is on screen.
 /// Windows does that by itself when a window hides; macOS leaves Quicklly the active app with no
-/// window, until the app hides itself. Not while a popup is still being set up hidden, as it is
-/// about to show: popups are closed when they are done, while the input window and the Pad live
-/// hidden.
+/// window, until the app hides itself. Decided a moment later (`HAND_OVER`), on the main thread,
+/// so that switching from one window to another doesn't hide the app in between. Not while a
+/// popup is still being set up hidden, as it is about to show: popups are closed when they are
+/// done, while the input window and the Pad live hidden.
 #[cfg(target_os = "macos")]
 fn give_focus_back(app: &AppHandle) {
-    let showing = app.webview_windows().into_iter().any(|(label, window)| {
-        (label != MAIN_WINDOW && label != pad::PAD_WINDOW) || window.is_visible().unwrap_or(false)
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(HAND_OVER);
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            let showing = handle.webview_windows().into_iter().any(|(label, window)| {
+                (label != MAIN_WINDOW && label != pad::PAD_WINDOW)
+                    || window.is_visible().unwrap_or(false)
+            });
+            if !showing {
+                let _ = handle.hide();
+            }
+        });
     });
-    if !showing {
-        let _ = app.hide();
-    }
 }
 
 fn show_input(app: &AppHandle) {
@@ -709,6 +735,7 @@ pub fn run() {
             reader_window::get_reader_sort,
             reader_window::set_reader_sort,
             monitor::center_window,
+            reveal_window,
             reader_window::set_reader_pin,
             open_input,
             list_note_files,
