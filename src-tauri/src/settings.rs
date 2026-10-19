@@ -274,9 +274,10 @@ pub fn hotkey(app: &AppHandle) -> Shortcut {
 
 /// Whether the hotkey is left to the desktop. On a Wayland session no application can take a
 /// global hotkey: the global shortcut plugin grabs keys through X11, which there sees them only
-/// while an X11 window has focus. So nothing is registered, the user binds the command `quicklly`
-/// in the desktop's keyboard settings, and a second launch opens what the hotkey would. A Wayland
-/// compositor tells the programs it runs where it is in `WAYLAND_DISPLAY`.
+/// while an X11 window has focus. So the plugin isn't even started (calling it would panic), the
+/// user binds the command `quicklly` in the desktop's keyboard settings, and a second launch opens
+/// what the hotkey would. A Wayland compositor tells the programs it runs where it is in
+/// `WAYLAND_DISPLAY`.
 pub fn hotkey_in_desktop() -> bool {
     cfg!(target_os = "linux") && std::env::var_os("WAYLAND_DISPLAY").is_some()
 }

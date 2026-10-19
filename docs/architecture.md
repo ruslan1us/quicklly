@@ -56,7 +56,8 @@ flowchart TB
   never starts a process for a link: it hands the link to the running app, which saves it
   ([ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md)).
 - **Plugins**, in registration order: `single-instance` (must be first), `deep-link`, `opener`,
-  `store`, `dialog`, `autostart`, `updater`, `global-shortcut`.
+  `store`, `dialog`, `autostart`, `updater`, `global-shortcut` (not on Wayland, see
+  [Tray and hotkey](#tray-and-hotkey)).
 - **Set-up** (`.setup`): the `quicklly://` scheme is registered for the running binary in Windows
   debug builds (installers register it for release builds) and in every Linux build (see
   [CLI and links](cli-and-links.md#registration-of-the-scheme)); on macOS the app starts listening
@@ -338,7 +339,10 @@ one is registered again.
 
 On a Wayland session (Linux with `WAYLAND_DISPLAY` set) applications can't take a global hotkey:
 the plugin grabs keys through X11, which there sees them only while an X11 window has focus. The
-app registers no hotkey there and the user binds the command `quicklly` in the desktop's keyboard
+app doesn't start the global shortcut plugin there (it would only keep an X11 connection open,
+poll it 20 times a second and, on GNOME, start Xwayland), so nothing may call
+`global_shortcut()`: `register_hotkey` and `change_hotkey` check `hotkey_in_desktop()` first. The
+user binds the command `quicklly` in the desktop's keyboard
 settings; the second launch it starts is the hotkey (see [Single instance](#single-instance)). The
 settings window says so in the Hotkey row instead of recording one. See
 [ADR 0020](decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md).

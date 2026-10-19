@@ -636,7 +636,7 @@ pub fn run() {
     if let Some(text) = cli::note_request(&args) {
         std::process::exit(cli::save(&context.config().identifier, &text));
     }
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         // Must be registered first: a second launch exits here and opens the input
         // window of the already running instance instead. On Wayland, where the desktop runs
         // `quicklly` for the hotkey, it opens what the hotkey would.
@@ -652,8 +652,13 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    // Not on Wayland, where the hotkey is the desktop's (see `settings::hotkey_in_desktop`): the
+    // plugin would only keep an X11 connection open and poll it. Nothing calls it there.
+    let builder = if settings::hotkey_in_desktop() {
+        builder
+    } else {
+        builder.plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 // The only registered shortcut is the new-note hotkey.
                 .with_handler(|app, _shortcut, event| {
@@ -663,6 +668,8 @@ pub fn run() {
                 })
                 .build(),
         )
+    };
+    let app = builder
         .manage(PendingReaderTarget::default())
         .manage(updater::AvailableUpdate::default())
         .manage(pad::Pinned::default())
