@@ -63,7 +63,7 @@ flowchart TB
   for opened `quicklly://` links and saves the one it was started with, if any
   ([Links on macOS](cli-and-links.md#links-on-macos)); then the tray is built, the
   saved hotkey is registered, the updater thread starts, the Pad and reader pin states are loaded,
-  the acrylic effect is applied to the input window, the scale setting is applied, the daily-round
+  the blur effect is applied to the input window, the scale setting is applied, the daily-round
   thread starts, and the notes folder starts being watched.
 - **The app lives in the tray.** No window is visible at start. Closing a window never quits the
   application; only the tray's **Quit** or `/exit` does (`app.exit(0)`).
@@ -77,8 +77,10 @@ flowchart TB
 
 Each window is a page `src/windows/<name>/index.html`, built to `dist/windows/<name>/index.html`
 and addressed from Rust with `page(name)` in [`lib.rs`](../src-tauri/src/lib.rs). All windows are
-frameless, always on top, absent from the taskbar, transparent with an acrylic blur behind them,
-and zoomed to the scale setting.
+frameless, always on top, absent from the taskbar, transparent with a blur behind them, and
+zoomed to the scale setting. The blur is `blur_behind()` in [`lib.rs`](../src-tauri/src/lib.rs):
+Acrylic on Windows; on macOS, where Acrylic doesn't exist, the `HudWindow` vibrancy (always dark),
+kept active while the window doesn't have the focus so that it doesn't turn grey.
 
 Transparent windows need macOS's private API: on macOS, Tauri's `transparent()` builder method
 exists only with the `macos-private-api` feature of the `tauri` crate, so without it the app does

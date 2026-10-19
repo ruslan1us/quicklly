@@ -70,9 +70,9 @@ The page links `../../shared/themes.css` and its own stylesheet. See
   is unaffected. The Pad's textarea hides its scrollbar both ways (`scrollbar-width: none` and
   `::-webkit-scrollbar { display: none }`): a scrollbar would narrow its lines, and its highlighting
   backdrop and caret would drift off the text.
-- **Transparency.** Rust gives every window an acrylic blur. The page background is `--surface`,
-  `color-mix(in srgb, var(--bg) var(--opacity), transparent)`, where `--opacity` is
-  `100 % − transparency`.
+- **Transparency.** Rust gives every window an acrylic blur (a dark vibrancy on macOS). The page
+  background is `--surface`, `color-mix(in srgb, var(--bg) var(--opacity), transparent)`, where
+  `--opacity` is `100 % − transparency`.
 - **Scale.** Rust zooms each webview (`set_zoom`). Window sizes are set in logical pixels, so pages
   multiply CSS sizes by `zoom` from `theme.ts` when sizing their window, and refit on
   `appearance-changed`.

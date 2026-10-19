@@ -202,8 +202,20 @@ const POPUP_WIDTH: f64 = 640.0;
 
 /// The blurred desktop behind every window, which shows through as much as the
 /// transparency setting lets the background through.
+#[cfg(not(target_os = "macos"))]
 pub(crate) fn blur_behind() -> WindowEffectsConfig {
     EffectsBuilder::new().effect(Effect::Acrylic).build()
+}
+
+/// The blurred desktop behind every window on macOS, where Acrylic doesn't exist: the dark HUD
+/// vibrancy. It stays on while the window doesn't have the keys, as the reminders shown without
+/// the focus or a pinned Pad in the background; by default it would look grey then.
+#[cfg(target_os = "macos")]
+pub(crate) fn blur_behind() -> WindowEffectsConfig {
+    EffectsBuilder::new()
+        .effect(Effect::HudWindow)
+        .state(tauri::window::EffectState::Active)
+        .build()
 }
 
 /// Zooms every window to the scale from settings. The input window and the popups then size
