@@ -165,7 +165,10 @@ command) returns `false` and opens nothing when there is nothing due and nothing
 
 A thread checks at start and then every 6 hours while automatic updates are on. A found release is
 downloaded (the plugin verifies the signature) and stored as `update-<version>.bin` in the app
-cache directory; at the next start the stored bytes are installed instead of downloaded again.
+cache directory; at the next start the stored bytes are installed instead of downloaded again,
+except in a deb or rpm install, which waits for `/update` (see
+[Architecture](architecture.md#updates)). After a successful install the app restarts into the new
+version.
 The download is written to `update-<version>.bin.tmp` and renamed into place, one check at a time
 (turning automatic updates on can start a check alongside the periodic one), so the stored file is
 always complete; a failed save removes the temporary file, is logged, and the release is not

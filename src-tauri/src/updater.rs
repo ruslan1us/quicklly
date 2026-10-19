@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
+use tauri::utils::{config::BundleType, platform::bundle_type};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_updater::{Update, UpdaterExt};
 
@@ -106,14 +107,15 @@ pub fn auto_update_changed(app: &AppHandle, enabled: bool) {
 }
 
 /// Downloads a newer release for the next start. At startup, a release downloaded earlier is
-/// installed right away instead (on Windows this exits and restarts the app).
+/// installed right away instead, and the app restarts into it; a deb or rpm install only
+/// announces it (see `installs_at_startup`).
 async fn check(app: &AppHandle, at_startup: bool) -> Result<(), String> {
     let Some(update) = find(app).await? else {
         return Ok(());
     };
     let path = download_path(app, &update.version);
     match path.as_ref().and_then(|path| fs::read(path).ok()) {
-        Some(bytes) if at_startup => return install(app, &update, bytes),
+        Some(bytes) if at_startup && installs_at_startup() => return install(app, &update, bytes),
         Some(_) => {}
         None => {
             let bytes = download(&update).await?;
@@ -163,11 +165,21 @@ async fn download(update: &Update) -> Result<Vec<u8>, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Whether a downloaded release is installed at startup. A deb or rpm package is installed through
+/// `pkexec`, which asks for the root password, so it waits for `/update` instead of popping that
+/// prompt up at login.
+fn installs_at_startup() -> bool {
+    !matches!(bundle_type(), Some(BundleType::Deb | BundleType::Rpm))
+}
+
+/// Installs a release and restarts into it. On Windows the plugin has already exited into the
+/// installer, which starts the app again; on macOS and Linux it only replaces the app and returns.
 fn install(app: &AppHandle, update: &Update, bytes: Vec<u8>) -> Result<(), String> {
     if let Some(path) = download_path(app, &update.version) {
         let _ = fs::remove_file(path);
     }
-    update.install(bytes).map_err(|e| e.to_string())
+    update.install(bytes).map_err(|e| e.to_string())?;
+    app.restart()
 }
 
 /// The version of the newer release waiting to be installed, if any.

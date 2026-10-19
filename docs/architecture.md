@@ -219,7 +219,7 @@ Persistent settings live in `settings.json` through `tauri-plugin-store`; see
 
 | Thread | Module | Interval | Work |
 | --- | --- | --- | --- |
-| Updater | [`updater.rs`](../src-tauri/src/updater.rs) | At start, then every 6 hours | When automatic updates are on: look for a release, download and verify it, announce it; at start, install a release downloaded earlier |
+| Updater | [`updater.rs`](../src-tauri/src/updater.rs) | At start, then every 6 hours | When automatic updates are on: look for a release, download and verify it, announce it; at start, install a release downloaded earlier and restart into it (not for deb or rpm installs) |
 | Daily round | [`reminders.rs`](../src-tauri/src/reminders.rs) | Checks the date every 60 seconds | At start and whenever the local date changes (midnight, or waking on a later day): archive done notes, then show the reminders unfocused if anything is due |
 | Notes folder watcher | [`watcher.rs`](../src-tauri/src/watcher.rs) | On file system events, debounced by 300 ms | Started at start and again when the notes folder changes in settings: watches the folder recursively and emits `notes-changed` when a `.md` file changes (not `*.md.tmp`, `images/` or dot-folders). See [ADR 0017](decisions/0017-watch-the-notes-folder-for-changes.md) |
 
@@ -246,9 +246,15 @@ Releases are signed and published on GitHub; the updater plugin reads
 `releases/latest/download/latest.json` and verifies signatures with the public key in
 [`tauri.conf.json`](../src-tauri/tauri.conf.json). A running instance downloads a newer release in
 the background to the app cache directory (`update-<version>.bin`) and announces it with
-`update-available`; the next start installs it (the NSIS installer in passive mode, which exits
-and restarts the app). `/update` installs immediately. Each check keeps only the download of the
-latest release and removes the others. See [Release](release.md) and
+`update-available`; the next start installs it, and `/update` installs immediately. Either way the
+app then runs the new version: on Windows the plugin starts the NSIS installer in passive mode and
+exits, and the installer starts the app again; on macOS (the `.app` bundle) and Linux (the
+AppImage file) the plugin replaces the app in place and returns, and `updater::install` restarts
+it with `AppHandle::restart`. A deb or rpm install (the bundle type is stamped into the binary,
+`tauri::utils::platform::bundle_type`) is installed only on `/update`, never at start: the plugin
+runs `pkexec dpkg -i` or `pkexec rpm -U`, which asks for the root password, and that prompt must
+not appear at login. Each check keeps only the download of the latest release and removes the
+others. See [Release](release.md) and
 [ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md).
 
 ## Known limitations
