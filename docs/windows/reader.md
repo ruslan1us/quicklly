@@ -69,6 +69,7 @@ opened file selects its latest note.
 On macOS <kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Ctrl</kbd>+<kbd>P</kbd> are ⌘Z and ⌘P, and
 <kbd>⌫</kbd> works as <kbd>Del</kbd> (Mac keyboards have no forward Delete);
 <kbd>Ctrl</kbd>+<kbd>C</kbd> still closes (see [Frontend](../frontend.md#editing-conventions)).
+The footer names the keys that way, and the Trash instead of the Recycle Bin on macOS and Linux.
 
 While a delete waits for confirmation the footer says so; any other key or a click cancels it.
 

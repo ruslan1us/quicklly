@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "vitest";
 import { DONE_DAYS } from "../src/shared/dates";
 import html from "../src/windows/help/index.html?raw";
-import { closePage, loadPage, mockTauri } from "./helpers";
+import { closePage, loadPage, mockTauri, onPlatform } from "./helpers";
 
 // The help, with its real page and code; only the Rust side is pretended.
 
@@ -53,4 +53,37 @@ test("the done journal's period is the one it lists", async () => {
   await open(3);
   const shown = Array.from(document.querySelectorAll(".done-days"), (el) => el.textContent);
   expect(shown).toEqual([`${DONE_DAYS} days`, `${DONE_DAYS} days`]);
+});
+
+const keys = () => Array.from(document.querySelectorAll("dt"), (dt) => dt.textContent!);
+const text = () => document.querySelector("main")!.textContent!.replace(/\s+/g, " ");
+
+test("keys and things are named as on Windows", async () => {
+  await open(7);
+  expect(keys()).toEqual(
+    expect.arrayContaining(["Shift+Enter", "Ctrl+E", "Ctrl+V", "Esc, Ctrl+C", "Del", "Ctrl+Z"]),
+  );
+  expect(keys()).toEqual(expect.arrayContaining(["Ctrl+P", "Ctrl+Enter"]));
+  expect(text()).toContain("indent (Shift+Tab: outdent)");
+  expect(text()).toContain("move a file to the Recycle Bin");
+  expect(text()).toContain('quicklly.exe add "buy milk #todo"');
+});
+
+test("on macOS the shortcuts take ⌘, ⌃C closes, ⌫ deletes, files go to the Trash", async () => {
+  onPlatform("darwin");
+  await open(7);
+  expect(keys()).toEqual(expect.arrayContaining(["⇧Enter", "⌘E", "⌘V", "Esc, ⌃C", "⌫", "⌘Z"]));
+  expect(keys()).toEqual(expect.arrayContaining(["⌘P", "⌘Enter"]));
+  expect(keys().filter((key) => /Ctrl|Shift|Del/.test(key))).toEqual([]);
+  expect(text()).toContain("indent (⇧Tab: outdent)");
+  expect(text()).toContain("move a file to the Trash");
+  expect(text()).toContain('quicklly add "buy milk #todo"');
+});
+
+test("on Linux files go to the Trash, the keys are named as on Windows", async () => {
+  onPlatform("linux");
+  await open(7);
+  expect(keys()).toEqual(expect.arrayContaining(["Ctrl+E", "Esc, Ctrl+C", "Del", "Ctrl+Z"]));
+  expect(text()).toContain("move a file to the Trash");
+  expect(text()).toContain('quicklly add "buy milk #todo"');
 });

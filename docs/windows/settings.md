@@ -32,7 +32,7 @@ Each row defines a label, how its value is shown, and optionally `cycle` (←/�
 | Theme | `set_theme` | Same as → | Default | Emits `appearance-changed` |
 | Transparency | `set_transparency` (0–80 % in steps) | Same as → | 30 % | Emits `appearance-changed` |
 | Scale | `set_scale` (80, 90, 100, 110, 125, 150 %) | Same as → | 100 % | Re-zooms all windows, resizes an unpinned Pad, emits `appearance-changed` |
-| Start with Windows | `set_autostart` | Same as → | Off | Adds or removes the `Run` registry entry through the autostart plugin |
+| Start with Windows (Start at login on macOS and Linux) | `set_autostart` | Same as → | Off | Adds or removes the `Run` registry entry through the autostart plugin |
 | Auto update | `set_auto_update` | Same as → | On | On: check now; off: forget the announced release |
 
 ## Keys
@@ -42,12 +42,13 @@ Each row defines a label, how its value is shown, and optionally `cycle` (←/�
 | <kbd>↑</kbd> <kbd>↓</kbd> | Select a row (wraps) |
 | <kbd>←</kbd> <kbd>→</kbd> | Previous or next value |
 | <kbd>Enter</kbd>, <kbd>Space</kbd>, click on a value | Edit, or next value for rows without an editor |
-| <kbd>Del</kbd>, <kbd>Backspace</kbd> | Reset to the default |
+| <kbd>Del</kbd>, <kbd>Backspace</kbd> | Reset to the default (the footer says `⌫` on macOS) |
 | <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close |
 
 ## Behaviour
 
-- **Hotkey recording.** While recording, held modifiers are shown (`Ctrl+Alt+…`); the first
+- **Hotkey recording.** While recording, held modifiers are shown as `hotkey::label` names them
+  (`Ctrl+Alt+…`; the Super key `Win` on Windows and `Super` on Linux; `⌃⌥⇧⌘…` on macOS); the first
   non-modifier key completes the combination, sent as modifiers plus `KeyboardEvent.code`, for
   example `Ctrl+Alt+KeyN`, and parsed by `hotkey::parse`. <kbd>Esc</kbd> without modifiers, a click
   or leaving the window cancels. Any key the global-shortcut plugin accepts is allowed, with or

@@ -508,6 +508,38 @@ test("on macOS ⌫ deletes like Del, a file and a note", async () => {
   expect(argsOf(calls, "delete_note")).toEqual([{ name: "2026-10-13.md", note: NOTES[1] }]);
 });
 
+test("the hints name the keys and the Trash as the system does", async () => {
+  const hints = async () => {
+    const shown = [text("#help"), document.querySelector<HTMLElement>("#pin")!.title];
+    press(document, "Delete");
+    shown.push(text("#help"));
+    // Any other key cancels the delete.
+    press(document, "ArrowDown");
+    await openToday();
+    shown.push(text("#help"));
+    return shown;
+  };
+  expect(await hints()).toEqual([
+    "↑↓ select · Enter open · Tab sort · Del delete · → new note · Esc close",
+    "Ctrl+P",
+    "Del again to move it to the Recycle Bin · any other key cancels",
+    "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · Del delete · Ctrl+P pin · ← back · Esc close",
+  ]);
+  closePage();
+  onPlatform("darwin");
+  await open();
+  expect(await hints()).toEqual([
+    "↑↓ select · Enter open · Tab sort · ⌫ delete · → new note · Esc close",
+    "⌘P",
+    "⌫ again to move it to the Trash · any other key cancels",
+    "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · ⌫ delete · ⌘P pin · ← back · Esc close",
+  ]);
+  closePage();
+  onPlatform("linux");
+  await open();
+  expect((await hints())[2]).toBe("Del again to move it to the Trash · any other key cancels");
+});
+
 test("elsewhere ⌫ deletes nothing", async () => {
   press(document, "Backspace");
   press(document, "Backspace");

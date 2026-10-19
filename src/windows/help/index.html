@@ -20,16 +20,16 @@
       <h2>Input window</h2>
       <dl>
         <dt>Enter</dt><dd>save the note</dd>
-        <dt>Shift+Enter</dt><dd>new line</dd>
+        <dt><span data-name="shift">Shift+</span>Enter</dt><dd>new line</dd>
         <dt>↑ ↓</dt><dd>previous / next saved note (in an empty field)</dd>
         <dt>←</dt><dd>browse your notes in the reader</dd>
         <dt>→</dt><dd>open the Pad for longer notes</dd>
-        <dt>Ctrl+E</dt><dd>move what you typed into the Pad</dd>
-        <dt>Ctrl+V</dt><dd>paste an image: saved in images/, shown as [Image #1] (also in the Pad)</dd>
+        <dt><span data-name="mod">Ctrl+</span>E</dt><dd>move what you typed into the Pad</dd>
+        <dt><span data-name="mod">Ctrl+</span>V</dt><dd>paste an image: saved in images/, shown as [Image #1] (also in the Pad)</dd>
         <dt>?</dt><dd>search all notes</dd>
         <dt>#</dt><dd>suggest your tags: ↑ ↓ choose, Enter or Tab pick (also in the Pad)</dd>
         <dt>/date</dt><dd>Enter opens a calendar to put a date in the note (also in the Pad)</dd>
-        <dt>Esc, Ctrl+C</dt><dd>close</dd>
+        <dt>Esc, <span data-name="ctrl">Ctrl+</span>C</dt><dd>close</dd>
       </dl>
 
       <h2>Commands</h2>
@@ -112,27 +112,27 @@
       <dl>
         <dt>Enter</dt><dd>open a file · edit a note</dd>
         <dt>Tab</dt><dd>sort the files: recent first · by name</dd>
-        <dt>Shift+Enter</dt><dd>edit a note in the Pad</dd>
+        <dt><span data-name="shift">Shift+</span>Enter</dt><dd>edit a note in the Pad</dd>
         <dt>Space</dt><dd>mark a note done</dd>
         <dt>C</dt><dd>copy a note's links</dd>
         <dt>O</dt><dd>open a note's images</dd>
-        <dt>Del</dt><dd>move a file to the Recycle Bin · delete a note (press twice)</dd>
-        <dt>Ctrl+Z</dt><dd>undo a delete, done or edit made in this reader, latest first</dd>
-        <dt>Ctrl+P</dt><dd>pin the open file: keep it on screen, up to date</dd>
+        <dt><span data-name="del">Del</span></dt><dd>move a file to the <span data-name="trash">Recycle Bin</span> · delete a note (press twice)</dd>
+        <dt><span data-name="mod">Ctrl+</span>Z</dt><dd>undo a delete, done or edit made in this reader, latest first</dd>
+        <dt><span data-name="mod">Ctrl+</span>P</dt><dd>pin the open file: keep it on screen, up to date</dd>
         <dt>← →</dt><dd>back to the files · back to the input</dd>
       </dl>
 
       <h2>Pad</h2>
       <dl>
-        <dt>Ctrl+Enter</dt><dd>save as a note</dd>
-        <dt>Tab</dt><dd>indent (Shift+Tab: outdent)</dd>
-        <dt>Ctrl+P</dt><dd>pin: keep it open over other windows</dd>
+        <dt><span data-name="mod">Ctrl+</span>Enter</dt><dd>save as a note</dd>
+        <dt>Tab</dt><dd>indent (<span data-name="shift">Shift+</span>Tab: outdent)</dd>
+        <dt><span data-name="mod">Ctrl+</span>P</dt><dd>pin: keep it open over other windows</dd>
         <dt>←</dt><dd>back to the input (in an empty Pad)</dd>
       </dl>
 
       <h2>From scripts and links</h2>
       <p>
-        <span class="key">quicklly.exe add "buy milk #todo"</span> or the link
+        <span class="key"><span data-name="cli">quicklly.exe</span> add "buy milk #todo"</span> or the link
         <span class="key">quicklly://add?text=buy%20milk%20%23todo</span> saves a note without
         opening a window, like Enter in the input window.
       </p>

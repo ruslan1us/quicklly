@@ -41,7 +41,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 
 | Module | Responsibility | Used by |
 | --- | --- | --- |
-| [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isMac`, `isLinux`; `primary(e)`, the modifier of the app's own shortcuts (⌘ on macOS, <kbd>Ctrl</kbd> elsewhere) | Input, Pad, reader |
+| [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isWindows`, `isMac`, `isLinux`; `primary(e)`, the modifier of the app's own shortcuts (⌘ on macOS, <kbd>Ctrl</kbd> elsewhere); `names`, what the hints call keys and things on this system (`mod`, `ctrl`, `shift`, `del`, `trash`, `cli`); `nameThings()`, which puts them into a page's elements marked `data-name` | Input, Pad, reader, settings, help |
 | [`theme.ts`](../src/shared/theme.ts) | Loads the appearance (`get_appearance`) and follows `appearance-changed`: sets `data-theme`, the `--opacity` variable and the exported `zoom` | Every page |
 | [`popup.ts`](../src/shared/popup.ts) | `fitToContent(maxHeight)` sizes a popup to its `main` element at the base width (640 logical pixels × zoom); `reveal()` centres, shows and focuses it | Reader, reminders, done, settings, help, changelog |
 | [`dates.ts`](../src/shared/dates.ts) | Date format, `toStored`/`toDisplay`, `/date` detection, `splitDoneDate`, `DONE_DAYS` (the done journal's period), `dateNodes` highlighting, `deleteDatesWhole`, `followDateFormat` | Input, Pad, reader, reminders, done, help |
@@ -105,6 +105,12 @@ The page links `../../shared/themes.css` and its own stylesheet. See
   macOS they take ⌘ instead, as Mac users expect. <kbd>Ctrl</kbd>+<kbd>C</kbd> still closes there:
   ⌘C copies. Mac keyboards have no forward <kbd>Delete</kbd>, so the reader list takes
   <kbd>⌫</kbd> for <kbd>Del</kbd> there.
+- **Keys named as the system does.** Hints, tooltips and the help write keys and words through
+  `names` from `platform.ts`: a modifier goes with its key, as `${names.mod}P`, which shows
+  `Ctrl+P` on Windows and Linux and `⌘P` on macOS (`⌃C`, `⇧Enter`, `⌫` likewise). Deleted files go
+  to the `Recycle Bin` on Windows and the `Trash` elsewhere. Text in static HTML marks the part
+  that differs, `<span data-name="mod">Ctrl+</span>P`, and the page calls `nameThings()`. The
+  Windows text is the one written in the HTML, so it is what shows unchanged on Windows.
 - **Focus stays in the text.** Clickable list items (tag suggestions, calendar days, search
   results) act on `mousedown` with `preventDefault`, so the textarea keeps the focus.
 - **Hidden windows refresh on focus.** The input window and the Pad are hidden, not destroyed, so

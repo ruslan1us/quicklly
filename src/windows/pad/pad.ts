@@ -20,7 +20,7 @@ import {
   toMarkdown,
 } from "../../shared/images";
 import { linkNodes } from "../../shared/links";
-import { primary } from "../../shared/platform";
+import { names, primary } from "../../shared/platform";
 import { TAG_NAME, tagSuggest } from "../../shared/tagSuggest";
 import { followTheme } from "../../shared/theme";
 
@@ -30,6 +30,7 @@ const numbers = document.querySelector<HTMLDivElement>("#numbers")!;
 const backdrop = document.querySelector<HTMLDivElement>("#backdrop")!;
 const status = document.querySelector<HTMLSpanElement>("#status")!;
 const pin = document.querySelector<HTMLSpanElement>("#pin")!;
+pin.title = `${names.mod}P`;
 const help = document.querySelector<HTMLSpanElement>("#help")!;
 const title = document.querySelector<HTMLSpanElement>("#title")!;
 const caret = document.querySelector<HTMLDivElement>("#caret")!;
@@ -251,11 +252,11 @@ function showError(err: unknown) {
 function renderHelp() {
   title.textContent = editing ? `Quicklly · Pad · editing ${editing.note.time}` : "Quicklly · Pad";
   if (editing) {
-    help.textContent = "Ctrl+Enter save · Esc cancel";
+    help.textContent = `${names.mod}Enter save · Esc cancel`;
     return;
   }
-  const first = text.value === "" ? "← quick line" : "Ctrl+Enter save";
-  help.textContent = `${first} · Ctrl+P pin · Esc close`;
+  const first = text.value === "" ? "← quick line" : `${names.mod}Enter save`;
+  help.textContent = `${first} · ${names.mod}P pin · Esc close`;
 }
 
 function refresh() {

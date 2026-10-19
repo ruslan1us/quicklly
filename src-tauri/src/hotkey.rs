@@ -13,21 +13,32 @@ pub fn parse(hotkey: &str) -> Result<Shortcut, String> {
         .map_err(|_| format!("\"{hotkey}\" is not a supported hotkey."))
 }
 
-/// Human-readable form, e.g. `Ctrl+Alt+N`.
+/// The names of Ctrl, Alt, Shift and Super in a label, as the system calls them, and what goes
+/// between the parts: `Ctrl+Alt+N`, or `⌃⌥N` on macOS.
+#[cfg(windows)]
+const MODIFIER_NAMES: [&str; 4] = ["Ctrl", "Alt", "Shift", "Win"];
+#[cfg(target_os = "macos")]
+const MODIFIER_NAMES: [&str; 4] = ["⌃", "⌥", "⇧", "⌘"];
+#[cfg(not(any(windows, target_os = "macos")))]
+const MODIFIER_NAMES: [&str; 4] = ["Ctrl", "Alt", "Shift", "Super"];
+const SEPARATOR: &str = if cfg!(target_os = "macos") { "" } else { "+" };
+
+/// Human-readable form, e.g. `Ctrl+Alt+N` (`⌃⌥N` on macOS).
 pub fn label(shortcut: &Shortcut) -> String {
     let mut parts = Vec::new();
-    for (modifier, name) in [
-        (Modifiers::CONTROL, "Ctrl"),
-        (Modifiers::ALT, "Alt"),
-        (Modifiers::SHIFT, "Shift"),
-        (Modifiers::SUPER, "Win"),
-    ] {
+    let modifiers = [
+        Modifiers::CONTROL,
+        Modifiers::ALT,
+        Modifiers::SHIFT,
+        Modifiers::SUPER,
+    ];
+    for (modifier, name) in modifiers.into_iter().zip(MODIFIER_NAMES) {
         if shortcut.mods.contains(modifier) {
             parts.push(name.to_string());
         }
     }
     parts.push(key_label(shortcut.key));
-    parts.join("+")
+    parts.join(SEPARATOR)
 }
 
 fn key_label(key: Code) -> String {
@@ -61,14 +72,41 @@ fn key_label(key: Code) -> String {
 mod tests {
     use super::*;
 
+    /// Hotkeys in their stored form and their labels on this system.
+    #[cfg(windows)]
+    const LABELS: [(&str, &str); 6] = [
+        ("Ctrl+Alt+KeyN", "Ctrl+Alt+N"),
+        ("Shift+Super+Digit1", "Shift+Win+1"),
+        ("Ctrl+Slash", "Ctrl+/"),
+        ("Alt+F5", "Alt+F5"),
+        ("Ctrl+ArrowUp", "Ctrl+Up"),
+        ("Shift+KeyN", "Shift+N"),
+    ];
+    #[cfg(target_os = "macos")]
+    const LABELS: [(&str, &str); 6] = [
+        ("Ctrl+Alt+KeyN", "⌃⌥N"),
+        ("Shift+Super+Digit1", "⇧⌘1"),
+        ("Ctrl+Slash", "⌃/"),
+        ("Alt+F5", "⌥F5"),
+        ("Ctrl+ArrowUp", "⌃Up"),
+        ("Shift+KeyN", "⇧N"),
+    ];
+    #[cfg(not(any(windows, target_os = "macos")))]
+    const LABELS: [(&str, &str); 6] = [
+        ("Ctrl+Alt+KeyN", "Ctrl+Alt+N"),
+        ("Shift+Super+Digit1", "Shift+Super+1"),
+        ("Ctrl+Slash", "Ctrl+/"),
+        ("Alt+F5", "Alt+F5"),
+        ("Ctrl+ArrowUp", "Ctrl+Up"),
+        ("Shift+KeyN", "Shift+N"),
+    ];
+
     #[test]
     fn parses_and_labels_hotkeys() {
         assert_eq!(parse("Ctrl+Alt+KeyN").unwrap(), default());
-        assert_eq!(label(&default()), "Ctrl+Alt+N");
-        assert_eq!(label(&parse("Shift+Super+Digit1").unwrap()), "Shift+Win+1");
-        assert_eq!(label(&parse("Ctrl+Slash").unwrap()), "Ctrl+/");
-        assert_eq!(label(&parse("Alt+F5").unwrap()), "Alt+F5");
-        assert_eq!(label(&parse("Ctrl+ArrowUp").unwrap()), "Ctrl+Up");
+        for (hotkey, shown) in LABELS {
+            assert_eq!(label(&parse(hotkey).unwrap()), shown, "{hotkey}");
+        }
     }
 
     #[test]
@@ -81,7 +119,6 @@ mod tests {
     fn accepts_any_supported_key() {
         assert_eq!(label(&parse("F9").unwrap()), "F9");
         assert_eq!(label(&parse("KeyN").unwrap()), "N");
-        assert_eq!(label(&parse("Shift+KeyN").unwrap()), "Shift+N");
         assert!(parse("Ctrl+Nope").is_err());
     }
 }

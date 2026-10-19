@@ -59,13 +59,15 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `calendar.test.ts` | `/date` resolution and the calendar keys |
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
 | `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search (marks in the shown text, the day in the date format or blank, the delay after typing, Enter during the delay, late results of an older search ignored), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails, ⌘E on macOS |
-| `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over; ⌘Enter and ⌘P on macOS |
-| `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused, Ctrl+Z in its cases; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere |
+| `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over; ⌘Enter and ⌘P on macOS, and the hints naming them |
+| `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused, Ctrl+Z in its cases; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere; the hints naming the keys and the Recycle Bin or Trash |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
 | `done.test.ts` | The period asked for, grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
-| `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period |
+| `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period, keys and the Recycle Bin or Trash named for Windows, macOS and Linux |
+| `settings.test.ts` | The autostart row, the footer and the held modifiers while recording a hotkey, named for Windows, macOS and Linux |
 
-Not covered by automated tests: the Pad beyond its pasted images, settings and changelog pages,
+Not covered by automated tests: the Pad beyond its pasted images and its keys, the settings beyond
+their names for each system, the changelog page,
 the rest of the help, and opening a search result in the input window.
 
 ## Rust tests
@@ -80,7 +82,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | `archive` | Selection by done date, daily, grouped, tag, hand-written and nested files, empty headings that are no day kept, appending to an existing archive, notes and archive files that can't be read left alone |
 | `images` | Naming and numbering, extensions, path extraction, relinking, safe resolution (only pasted images right in `images/` with an image extension), unused-image detection (archive and nested files included, links in other case), pasted images nothing mentions (notes, archive, tag folders, kept texts, any link form, case) and only files right in `images/`, failing with the file's name when a notes file can't be read, going on after an image that can't be moved (with a stand-in for the Recycle Bin), original paths without the `\\?\` or `\\?\UNC\` prefix (local and network share), Recycle Bin item matching |
 | `settings` | Serialised strings of date formats and archive periods; reading the notes folder and mode from a settings file |
-| `hotkey` | Parsing, labels, round trip of the stored form |
+| `hotkey` | Parsing, labels (expected per system with `cfg`), round trip of the stored form |
 | `pad` | Draft file: missing reads as empty, appending text, an unreadable draft an error and left unchanged |
 | `cli` | Request parsing for `add` and links, decoding, rejection of other input, relative file names |
 | `updater` | Which cache files count as stale downloads (temporary files do not), their removal from a folder, saving a download through a temporary file and removing it when the save fails |

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { DateFormat } from "../../shared/dates";
+import { isMac, isWindows, names } from "../../shared/platform";
 import { appWindow, fitToContent, reveal } from "../../shared/popup";
 import { type Theme, applyTheme, followTheme } from "../../shared/theme";
 
@@ -36,7 +37,7 @@ const rowsList = document.querySelector<HTMLUListElement>("#rows")!;
 const error = document.querySelector<HTMLParagraphElement>("#error")!;
 const help = document.querySelector<HTMLElement>("#help")!;
 
-const HELP = "↑↓ select · ←→ change · Enter edit · Del reset · Esc close";
+const HELP = `↑↓ select · ←→ change · Enter edit · ${names.del} reset · Esc close`;
 const RECORDING_HELP = "Press a key or combination · Esc cancel";
 const MODIFIER_CODES = new Set([
   "ControlLeft",
@@ -48,6 +49,11 @@ const MODIFIER_CODES = new Set([
   "MetaLeft",
   "MetaRight",
 ]);
+
+/** How the held modifiers show while recording, named as in `hotkey::label`. */
+const MODIFIER_NAMES: Record<string, string> = isMac
+  ? { Ctrl: "⌃", Alt: "⌥", Shift: "⇧", Super: "⌘" }
+  : { Ctrl: "Ctrl", Alt: "Alt", Shift: "Shift", Super: isWindows ? "Win" : "Super" };
 
 let settings: Settings | null = null;
 let selected = 0;
@@ -185,7 +191,7 @@ const rows: Row[] = [
     reset: () => void run("set_scale", { percent: 100 }),
   },
   {
-    label: "Start with Windows",
+    label: isWindows ? "Start with Windows" : "Start at login",
     value: (s) => choice(s.autostart ? "On" : "Off"),
     cycle: (s) => void run("set_autostart", { enabled: !s.autostart }),
     reset: () => void run("set_autostart", { enabled: false }),
@@ -269,7 +275,7 @@ function recordKey(e: KeyboardEvent) {
   if (e.code === "Escape" && mods.length === 0) {
     stopRecording();
   } else if (MODIFIER_CODES.has(e.code)) {
-    recording = [...mods.map((m) => (m === "Super" ? "Win" : m)), "…"].join("+");
+    recording = [...mods.map((m) => MODIFIER_NAMES[m]), "…"].join(isMac ? "" : "+");
     render();
   } else {
     recording = null;

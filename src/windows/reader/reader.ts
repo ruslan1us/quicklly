@@ -13,7 +13,7 @@ import {
 } from "../../shared/dates";
 import { type Images, fromMarkdown, imagePaths, markdownNodes, toMarkdown } from "../../shared/images";
 import { findLinks, linkNodes, shortLink } from "../../shared/links";
-import { isMac, primary } from "../../shared/platform";
+import { isMac, names, primary } from "../../shared/platform";
 import { appWindow, fitToContent, reveal } from "../../shared/popup";
 import { followTheme } from "../../shared/theme";
 
@@ -63,6 +63,7 @@ type Item =
 
 const title = document.querySelector<HTMLSpanElement>("#title")!;
 const pin = document.querySelector<HTMLSpanElement>("#pin")!;
+pin.title = `${names.mod}P`;
 const rowsList = document.querySelector<HTMLUListElement>("#rows")!;
 const empty = document.querySelector<HTMLParagraphElement>("#empty")!;
 const error = document.querySelector<HTMLParagraphElement>("#error")!;
@@ -257,14 +258,14 @@ let footerTimer: number | undefined;
 function renderHelp() {
   if (view === "files") {
     help.textContent = confirmingDelete
-      ? "Del again to move it to the Recycle Bin · any other key cancels"
-      : `↑↓ select · Enter open · Tab sort · Del delete · → new note${pinned ? " · Ctrl+P unpin" : ""} · Esc close`;
+      ? `${names.del} again to move it to the ${names.trash} · any other key cancels`
+      : `↑↓ select · Enter open · Tab sort · ${names.del} delete · → new note${pinned ? ` · ${names.mod}P unpin` : ""} · Esc close`;
   } else {
     help.textContent = editing
-      ? "Enter save · Shift+Enter new line · Esc cancel"
+      ? `Enter save · ${names.shift}Enter new line · Esc cancel`
       : confirmingDelete
-        ? "Del again to delete · any other key cancels"
-        : "↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · Del delete · Ctrl+P pin · ← back · Esc close";
+        ? `${names.del} again to delete · any other key cancels`
+        : `↑↓ select · Space done · Enter edit (⇧ in Pad) · C copy links · O open images · ${names.del} delete · ${names.mod}P pin · ← back · Esc close`;
   }
   if (footerMessage && !editing && !confirmingDelete) {
     help.prepend(span(footerMessage, "message"), " · ");

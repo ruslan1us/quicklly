@@ -18,7 +18,7 @@ for errors, file writes and undo.
 | [`archive.rs`](../src-tauri/src/archive.rs) | Moving done notes to `archive/<same path>` after the configured number of days. |
 | [`images.rs`](../src-tauri/src/images.rs) | Saving pasted images, relinking image paths for nested files, resolving paths safely, finding images no note links to, moving them to the Recycle Bin and restoring them, and moving pasted images a window let go of unsaved to the Recycle Bin. |
 | [`settings.rs`](../src-tauri/src/settings.rs) | `settings.json` keys, typed getters with defaults, the settings view and all setting commands, hotkey registration and change, appearance and date-format events. |
-| [`hotkey.rs`](../src-tauri/src/hotkey.rs) | Default hotkey, parsing from the `KeyboardEvent.code` form, human-readable labels. |
+| [`hotkey.rs`](../src-tauri/src/hotkey.rs) | Default hotkey, parsing from the `KeyboardEvent.code` form, human-readable labels as the system names the keys (`Ctrl+Shift+Win+N` on Windows, `Ctrl+Shift+Super+N` on Linux, `⌃⇧⌘N` on macOS). |
 | [`pad.rs`](../src-tauri/src/pad.rs) | The Pad window: creation, placement, pin state, bounds, draft file, moving input text into the draft, editing a reader note. |
 | [`reader_window.rs`](../src-tauri/src/reader_window.rs) | The reader window's pin state, pinned file, saved bounds and sort order. |
 | [`window_bounds.rs`](../src-tauri/src/window_bounds.rs) | Saving and restoring a pinned window's position and size; minimum size and resizability. |

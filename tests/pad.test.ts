@@ -149,6 +149,30 @@ test("tags are highlighted whole, in any script, as the notes files understand t
   await settle();
 });
 
+test("the hints name the keys as the system does", async () => {
+  const help = () => document.querySelector("#help")!.textContent;
+  /** The help of an empty Pad, the pin's tooltip and the help once there is text. */
+  const hints = () => {
+    const shown = [help(), document.querySelector<HTMLElement>("#pin")!.title];
+    type(text, "call mom");
+    return [...shown, help()];
+  };
+  await open();
+  expect(hints()).toEqual([
+    "← quick line · Ctrl+P pin · Esc close",
+    "Ctrl+P",
+    "Ctrl+Enter save · Ctrl+P pin · Esc close",
+  ]);
+  closePage();
+  onPlatform("darwin");
+  await open();
+  expect(hints()).toEqual([
+    "← quick line · ⌘P pin · Esc close",
+    "⌘P",
+    "⌘Enter save · ⌘P pin · Esc close",
+  ]);
+});
+
 test("on macOS ⌘Enter saves and ⌘P pins, not Ctrl", async () => {
   onPlatform("darwin");
   await open();

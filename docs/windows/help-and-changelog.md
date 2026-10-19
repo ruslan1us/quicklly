@@ -30,6 +30,10 @@ input window and closed with <kbd>Esc</kbd>.
   the next time.
 - The period of the done journal in the Commands and Done sections (`.done-days`) is filled in
   from `DONE_DAYS`, the constant the done journal uses.
+- Keys and words that differ by system are marked with `data-name` (`mod`, `ctrl`, `shift`, `del`,
+  `trash`, `cli`) and named for the system by `nameThings()` when the page loads: on macOS `⌘E`,
+  `⌃C`, `⇧Enter`, `⌫` and the Trash, on Linux the Trash, and `quicklly add` instead of
+  `quicklly.exe add` outside Windows (see [Frontend](../frontend.md#editing-conventions)).
 
 ## Changelog
 
