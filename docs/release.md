@@ -1,10 +1,11 @@
 # Release
 
 Quicklly is released from tags. Pushing a tag `vX.Y.Z` makes the release workflow verify the
-version, extract the release notes from `CHANGELOG.md`, build the NSIS and MSI installers with
-signed update artifacts, and attach everything to a draft GitHub release. A maintainer publishes
-the draft by hand; from then on installed copies update themselves. This page describes the
-versioning, the changelog, the release steps, the workflows and the update signing.
+version, extract the release notes from `CHANGELOG.md`, build the Windows installers, the macOS
+app and the Linux packages with signed update artifacts, and attach everything to a draft GitHub
+release. A maintainer publishes the draft by hand; from then on installed copies update
+themselves. This page describes the versioning, the changelog, the release steps, the workflows
+and the update signing.
 
 ## Versioning
 
@@ -48,22 +49,39 @@ See [ADR 0016](decisions/0016-changelog-as-the-source-of-release-notes.md).
    `git tag -a vX.Y.Z -m "Quicklly vX.Y.Z"`.
 5. Push the commit and the tag. Agents do this only on an explicit instruction from the
    maintainer.
-6. Wait for the release workflow (about ten minutes), check the draft release and its assets, and
-   publish it (**Edit → Publish release**). Installed copies pick it up within hours, or at once
-   with `/update`.
+6. Wait for the release workflow (about half an hour: the Windows, macOS and Linux jobs run one
+   after another), check the draft release and its assets, and that `latest.json` has the
+   `windows-x86_64`, `darwin-aarch64`, `darwin-x86_64` and `linux-x86_64` entries, and publish it
+   (**Edit → Publish release**). Installed copies pick it up within hours, or at once with
+   `/update`.
 
 ## Workflows
 
 | Workflow | Trigger | Runner | Steps |
 | --- | --- | --- | --- |
 | [`ci.yml`](../.github/workflows/ci.yml) | Push to any branch, pull requests | Matrix: `windows-latest`, `macos-latest`, `ubuntu-24.04` (`fail-fast: false`) | On Ubuntu, `apt-get install` the Tauri Linux libraries (`libwebkit2gtk-4.1-dev`, `libdbus-1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`); then `npm ci`, `npm run build`, `npm test`, `cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked`; a newer run cancels an older one on the same ref |
-| [`release.yml`](../.github/workflows/release.yml) | Push of a tag `v*` | `windows-latest` | Verify that the tag equals the version in all three files; extract the changelog section; `tauri-apps/tauri-action` builds and drafts the release |
+| [`release.yml`](../.github/workflows/release.yml) | Push of a tag `v*` | Three jobs one after another: `windows-latest`, then `macos-latest` (`needs: release`), then `ubuntu-24.04` (`needs: [release, macos]`) | Windows: verify that the tag equals the version in all three files, extract the changelog section, and `tauri-apps/tauri-action` builds the installers and drafts the release. macOS: a universal build (`--target universal-apple-darwin`, Rust targets `aarch64-apple-darwin` and `x86_64-apple-darwin`). Linux: `apt-get install` the libraries CI installs plus `xdg-utils`, then the AppImage, deb and rpm. Each later job attaches its files to the same draft |
 
-The release step runs with `releaseDraft: true` and `updaterJsonPreferNsis: true`, and receives
-the signing key from the repository secret `TAURI_SIGNING_PRIVATE_KEY` with an empty
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (the key has no password).
+Every tauri-action step runs with `releaseDraft: true` and the same `tagName`, and receives the
+signing key from the repository secret `TAURI_SIGNING_PRIVATE_KEY` with an empty
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (the key has no password). The Windows step also sets
+`updaterJsonPreferNsis: true`. The macOS signature is ad hoc, from the
+[macOS bundle settings](#macos-bundle), so no Apple secrets are needed; Linux packages have no
+code signature of their own.
 
-Because that job sees the signing key that every installed copy trusts, the actions in
+The Windows job creates the draft. The later jobs find it by its tag and upload to it; tauri-action
+leaves the name and body of an existing draft as they are. Each tauri-action run also downloads
+the draft's `latest.json`, adds the entries for its own platform and uploads it again, which is why
+the jobs run one after another rather than in parallel: two runs at once could each upload a file
+without the other's entries. A later job failing leaves a draft without that platform; re-run
+the failed jobs before publishing.
+
+The release notes come from `CHANGELOG.md` once, in the Windows job: they become the body of the
+draft and the `notes` of `latest.json`. The job passes them to the later jobs as its `notes`
+output, because each run writes `notes` into `latest.json` anew. The version check also runs only
+in the Windows job; the later jobs don't start if it fails.
+
+Because these jobs see the signing key that every installed copy trusts, the actions in
 `release.yml` are pinned to a commit (`uses: owner/action@<sha> # vX.Y.Z`) rather than to a tag
 or branch that could be moved. To update one, look up the commit of the new version
 (`git ls-remote https://github.com/<owner>/<action> refs/tags/vX.Y.Z refs/tags/vX.Y.Z^{}`; for an
@@ -75,12 +93,28 @@ annotated tag the `^{}` line is the commit) and replace the SHA and the comment.
 | --- | --- |
 | `Quicklly_X.Y.Z_x64-setup.exe` | NSIS installer, per-user, installs to `%LOCALAPPDATA%\Quicklly`; used by the updater |
 | `Quicklly_X.Y.Z_x64_en-US.msi` | MSI installer, per-machine, installs to `C:\Program Files\Quicklly` |
-| `.sig` files | Update signatures (`bundle.createUpdaterArtifacts: true`) |
+| `Quicklly_X.Y.Z_universal.dmg` | macOS disk image with the universal app (Apple silicon and Intel) |
+| `Quicklly_X.Y.Z_universal.app.tar.gz` | The macOS app packed for the updater |
+| `Quicklly_X.Y.Z_amd64.AppImage` | Linux, a single file that runs without installing; used by the updater by default |
+| `Quicklly_X.Y.Z_amd64.deb` | Linux package for Debian, Ubuntu and their derivatives |
+| `Quicklly-X.Y.Z-1.x86_64.rpm` | Linux package for Fedora, openSUSE and their derivatives |
+| `.sig` files | Update signatures (`bundle.createUpdaterArtifacts: true`), one for the NSIS and MSI installers, the `.app.tar.gz`, the AppImage, the deb and the rpm |
 | `latest.json` | Update manifest read by installed copies |
 
-Both installers register the `quicklly://` scheme. The installers themselves are not
-code-signed, so Windows SmartScreen warns on first run; this is a known limitation documented in
-the README's [Installation](../README.md#installation) section.
+`latest.json` names each download under one or more platform keys: `windows-x86_64` (the NSIS
+installer) with `windows-x86_64-nsis` and `-msi`; `darwin-aarch64`, `darwin-x86_64` and
+`darwin-universal`, with `-app` variants, all pointing to the universal `.app.tar.gz`;
+`linux-x86_64` (the AppImage) with `linux-x86_64-appimage`, `-deb` and `-rpm`. The updater looks up
+`<os>-<arch>-<bundle type>` first and then `<os>-<arch>`, so a deb install updates from the deb and
+an rpm install from the rpm.
+
+The macOS app needs macOS 13.1 or later (`minimumSystemVersion`). The Linux files are built on
+Ubuntu 24.04, so the AppImage needs glibc 2.39 or later (Ubuntu 24.04, Debian 13, Fedora 40 and
+newer).
+
+Both Windows installers register the `quicklly://` scheme. They are not code-signed, so Windows
+SmartScreen warns on first run; this is a known limitation documented in the README's
+[Installation](../README.md#installation) section.
 
 ## Bundle settings
 
@@ -112,7 +146,7 @@ would list it twice.
 
 The macOS settings are in [`tauri.macos.conf.json`](../src-tauri/tauri.macos.conf.json), which
 Tauri merges over `tauri.conf.json` (JSON Merge Patch) only when building for macOS; Windows
-builds don't read it. The release workflow doesn't build macOS yet.
+builds don't read it. The release workflow builds it as one universal app.
 
 | Setting | Value | Why |
 | --- | --- | --- |
@@ -142,9 +176,11 @@ The `quicklly://` scheme (`CFBundleURLTypes`) is not in this file: the bundler w
   It is never committed or written into documentation. Local `npm run tauri build` needs it in the
   environment; without it, `npm run tauri build -- --no-bundle` builds the executable only.
 - Installed copies download and verify a newer release in the background and install it at the
-  next start, or immediately on `/update`. The signature is verified only when downloading, so
-  the download is saved through a temporary file renamed into place: the stored file is complete
-  or absent, never cut short. A download superseded by a later release before it was
+  next start, or immediately on `/update`. A deb or rpm install waits for `/update`: the plugin
+  installs the package through `pkexec`, which asks for the root password, so it is never started
+  at login ([ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md)). The signature is
+  verified only when downloading, so the download is saved through a temporary file renamed into
+  place: the stored file is complete or absent, never cut short. A download superseded by a later release before it was
   installed is removed at the next check; see [Architecture](architecture.md#updates) and
   [ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md).
 - Losing the private key would mean that installed copies can no longer verify new releases and

@@ -312,8 +312,9 @@ it with `AppHandle::restart`. A deb or rpm install (the bundle type is stamped i
 `tauri::utils::platform::bundle_type`) is installed only on `/update`, never at start: the plugin
 runs `pkexec dpkg -i` or `pkexec rpm -U`, which asks for the root password, and that prompt must
 not appear at login. Each check keeps only the download of the latest release and removes the
-others. See [Release](release.md) and
-[ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md).
+others. See [Release](release.md),
+[ADR 0013](decisions/0013-signed-auto-updates-via-github-releases.md) and
+[ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md).
 
 ## Known limitations
 

@@ -14,6 +14,9 @@ jobs:
   release:
     name: Build installers and draft a release
     runs-on: windows-latest
+    # The macOS and Linux jobs build for the same draft and need the notes for latest.json.
+    outputs:
+      notes: ${{ steps.changelog.outputs.notes }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -89,3 +92,96 @@ jobs:
           releaseDraft: true
           # The updater installs the per-user NSIS setup, not the MSI.
           updaterJsonPreferNsis: true
+
+  # The macOS and Linux jobs run one after another after the Windows job, not in parallel: each
+  # tauri-action run downloads the draft's latest.json, adds its own platforms and uploads it
+  # again, so two runs at once could drop one platform's entries. They find the draft by its tag;
+  # the version check and the release notes come from the Windows job.
+  macos:
+    name: Build the macOS app
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          # Pinned to a commit, the action no longer takes the toolchain from its ref.
+          toolchain: stable
+          # Both architectures, for the universal build.
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # One universal app for Apple silicon and Intel: the DMG, and the signed update with the
+      # darwin entries of latest.json. The bundle is signed ad hoc (tauri.macos.conf.json).
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # The key has no password of its own.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Quicklly ${{ github.ref_name }}
+          # The draft keeps the body it was created with; this one goes into latest.json.
+          releaseBody: ${{ needs.release.outputs.notes }}
+          releaseDraft: true
+          args: --target universal-apple-darwin
+
+  linux:
+    name: Build the Linux packages
+    # Listed with the Windows job too, for its release notes.
+    needs: [release, macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The libraries CI installs (WebKitGTK, D-Bus, appindicator, librsvg), and xdg-utils, whose
+      # xdg-mime the bundler copies into the AppImage for the quicklly:// scheme.
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libdbus-1-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          # Pinned to a commit, the action no longer takes the toolchain from its ref.
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # The AppImage, deb and rpm (tauri.linux.conf.json), each with a signed update and its
+      # linux entries of latest.json; the AppImage is the default linux-x86_64 one.
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # The key has no password of its own.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Quicklly ${{ github.ref_name }}
+          # The draft keeps the body it was created with; this one goes into latest.json.
+          releaseBody: ${{ needs.release.outputs.notes }}
+          releaseDraft: true
