@@ -65,6 +65,8 @@ fn show(app: &AppHandle, focus: bool) {
             crate::come_forward(app);
             let _ = window.show();
             let _ = window.set_focus();
+            // The page may ignore the keys, having shown by itself (see `reveal_reminders`).
+            let _ = app.emit_to(REMINDERS_WINDOW, "reminders-focused", ());
         } else {
             let _ = app.emit_to(REMINDERS_WINDOW, "notes-changed", ());
         }
@@ -133,9 +135,10 @@ pub async fn list_due(app: AppHandle, ahead: bool) -> Result<Vec<reader::Due>, S
 
 /// Shows the reminders window, once the page is ready, in the corner of the screen in use. It
 /// takes the focus only when it was asked for: a window created unfocused shows without
-/// activating it.
+/// activating it. Returns whether it took the focus; on Linux, where the window may get the
+/// keyboard anyway, the page ignores the keys of reminders that showed by themselves.
 #[tauri::command]
-pub fn reveal_reminders(window: WebviewWindow) {
+pub fn reveal_reminders(window: WebviewWindow) -> bool {
     if let Some(monitor) = monitor::active(window.app_handle()) {
         place(&window, &monitor);
     }
@@ -150,6 +153,7 @@ pub fn reveal_reminders(window: WebviewWindow) {
     } else {
         show_unfocused(&window);
     }
+    focus
 }
 
 /// Shows the reminders on macOS without taking the focus. It unhides Quicklly without activating

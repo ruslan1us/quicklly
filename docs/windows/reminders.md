@@ -24,18 +24,25 @@ snoozed or opened in the reader. User-facing keys are in the root README,
   with `focus = false`. If the window is already open it only receives `notes-changed` and reloads.
 - **On request.** `/reminders` calls `open_reminders`, which returns `false` (the input window shows
   "Nothing due") when there is nothing due and nothing ahead; otherwise it shows the window with
-  `focus = true`, or focuses an open one.
+  `focus = true`, or focuses an open one and sends it `reminders-focused`.
 - **Showing.** The window is created hidden and unfocused. The page loads the due list; if it is
   empty it switches to the ahead list; if that is empty too it closes without ever showing. It then
   fits its content (up to 400 CSS pixels) and calls `reveal_reminders`, which places it in the
   bottom-right corner of the active monitor's work area, 16 pixels from the edges, shows it and
-  focuses it only when it was requested. A window shown without focus does not activate; a click
-  gives it the keyboard. On macOS, where Quicklly hides itself when its last window goes (see
-  [Focus on macOS](../architecture.md#focus-on-macos)), `reveal_reminders` first unhides the app:
-  with `come_forward` when the window takes the focus, and without activating it
-  (`unhideWithoutActivation`) when it doesn't. A window shown without focus is then ordered in
-  with `orderFrontRegardless`, as showing it would make it the key window inside Quicklly, so an
-  input window or a Pad being typed in would lose the keys and hide.
+  focuses it only when it was requested, and returns whether it did. A window shown without focus
+  does not activate; a click gives it the keyboard. On macOS, where Quicklly hides itself when its
+  last window goes (see [Focus on macOS](../architecture.md#focus-on-macos)), `reveal_reminders`
+  first unhides the app: with `come_forward` when the window takes the focus, and without
+  activating it (`unhideWithoutActivation`) when it doesn't. A window shown without focus is then
+  ordered in with `orderFrontRegardless`, as showing it would make it the key window inside
+  Quicklly, so an input window or a Pad being typed in would lose the keys and hide.
+- **Keys of unrequested reminders on Linux.** Some Linux desktops give the window the keyboard
+  anyway: GNOME on Wayland focuses every new window (`focused(false)` doesn't reach the
+  compositor there), and KDE may too. What the user was typing elsewhere would then mark notes
+  done, snooze or open them. So on Linux the page ignores every key (<kbd>Esc</kbd> too) until
+  the window was asked for (`reveal_reminders` returns `true`, or `/reminders` on the open window
+  sends `reminders-focused`) or clicked into (a `pointerdown` in it). On Windows and macOS the
+  keys always work.
 - It does not close on focus loss. It closes on <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>, and by
   itself when the last note leaves the list it is showing.
 

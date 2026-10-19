@@ -1,6 +1,16 @@
+import { emit } from "@tauri-apps/api/event";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import html from "../src/windows/reminders/index.html?raw";
-import { type Call, argsOf, closePage, loadPage, mockTauri, press, settle } from "./helpers";
+import {
+  type Call,
+  argsOf,
+  closePage,
+  loadPage,
+  mockTauri,
+  onPlatform,
+  press,
+  settle,
+} from "./helpers";
 
 // The reminders window, with its real page and code; only the Rust side is pretended.
 const DUE = [
@@ -48,8 +58,11 @@ const title = () => document.querySelector("#title")!.textContent;
 /** Whether the window was closed. */
 const closed = () => calls.some((call) => call.cmd === "plugin:window|close");
 
-/** Opens the reminders window on the notes `due` and `ahead`. */
-async function open(dueNotes: typeof DUE, aheadNotes: typeof AHEAD) {
+/**
+ * Opens the reminders window on the notes `due` and `ahead`; `focused` is whether it was shown
+ * with the focus, as asked for, or by itself.
+ */
+async function open(dueNotes: typeof DUE, aheadNotes: typeof AHEAD, focused = true) {
   due = [...dueNotes];
   ahead = [...aheadNotes];
   calls = mockTauri({
@@ -59,6 +72,7 @@ async function open(dueNotes: typeof DUE, aheadNotes: typeof AHEAD) {
     // Each change takes the note it was sent for off the list, as the Rust side would.
     set_note_done: (args: { name: string; note: { line: number } }) => drop(args),
     snooze_note: (args: { name: string; note: { line: number } }) => drop(args),
+    reveal_reminders: focused,
   });
   await loadPage(html, () => import("../src/windows/reminders/reminders.ts"));
 }
@@ -177,4 +191,61 @@ test("Tab to an empty list says so and keeps the window open", async () => {
   expect(title()).toBe("Quicklly · Reminders · 0 ahead");
   expect(document.querySelector<HTMLElement>("#empty")!.hidden).toBe(false);
   expect(closed()).toBe(false);
+});
+
+/** Presses every key that acts on a note or the window. */
+async function pressAll() {
+  press(document, " ");
+  press(document, "s", { code: "KeyS" });
+  press(document, "w", { code: "KeyW" });
+  press(document, "Enter");
+  press(document, "Escape");
+  await settle();
+}
+
+/** Whether nothing was done to the notes or the window. */
+const untouched = () =>
+  ["set_note_done", "snooze_note", "open_note", "plugin:window|close"].every(
+    (cmd) => argsOf(calls, cmd).length === 0,
+  );
+
+test("on Linux the reminders that showed by themselves ignore the keys until clicked", async () => {
+  closePage();
+  onPlatform("linux");
+  await open(DUE, AHEAD, false);
+  await pressAll();
+  expect(untouched()).toBe(true);
+  document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+  press(document, " ");
+  await settle();
+  expect(argsOf(calls, "set_note_done")).toEqual([
+    { name: "inbox.md", note: DUE[0].note, done: true },
+  ]);
+});
+
+test("on Linux the reminders asked for take the keys at once", async () => {
+  closePage();
+  onPlatform("linux");
+  await open(DUE, AHEAD, true);
+  press(document, " ");
+  await settle();
+  expect(argsOf(calls, "set_note_done")).toHaveLength(1);
+});
+
+test("on Linux /reminders gives the keys to reminders that showed by themselves", async () => {
+  closePage();
+  onPlatform("linux");
+  await open(DUE, AHEAD, false);
+  await emit("reminders-focused");
+  press(document, " ");
+  await settle();
+  expect(argsOf(calls, "set_note_done")).toHaveLength(1);
+});
+
+test("on Windows the reminders that showed by themselves take the keys", async () => {
+  closePage();
+  await open(DUE, AHEAD, false);
+  press(document, " ");
+  await settle();
+  expect(argsOf(calls, "set_note_done")).toHaveLength(1);
 });

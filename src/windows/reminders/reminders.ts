@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { dateNodes, followDateFormat, shownDate, toDisplay } from "../../shared/dates";
 import { markdownNodes } from "../../shared/images";
 import { linkNodes, shortLink } from "../../shared/links";
+import { isLinux } from "../../shared/platform";
 import { appWindow, fitToContent } from "../../shared/popup";
 import { followTheme } from "../../shared/theme";
 
@@ -37,6 +38,14 @@ const MAX_HEIGHT = 400;
 let ahead = false;
 let due: Due[] = [];
 let selected = 0;
+
+/**
+ * Whether the keys act on the notes. On Linux the reminders that show by themselves may get the
+ * keyboard anyway (GNOME on Wayland focuses every new window), and what the user was typing
+ * elsewhere would mark notes done, snooze or open them; there the keys count only once the
+ * window was asked for or clicked into.
+ */
+let keysOn = !isLinux;
 
 function span(text: string, className = "") {
   const el = document.createElement("span");
@@ -166,6 +175,7 @@ async function openNote() {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (!keysOn) return;
   // Esc or Ctrl+C (by physical key, so any keyboard layout works) closes like in a terminal.
   if (e.key === "Escape" || (e.ctrlKey && e.code === "KeyC")) {
     e.preventDefault();
@@ -202,6 +212,10 @@ document.addEventListener("keydown", (e) => {
 // Notes may be done, changed or added anywhere while the reminders are open.
 void listen("notes-changed", () => void refresh());
 
+document.addEventListener("pointerdown", () => (keysOn = true));
+// `/reminders` while the window is open.
+void listen("reminders-focused", () => (keysOn = true));
+
 /**
  * Shows the window once it is filled in and fitted: on the notes due, or if there are none (as
  * `/reminders` opens it) on those ahead; unless there are none of those either after all.
@@ -217,7 +231,7 @@ async function start() {
     return;
   }
   await fitToContent(MAX_HEIGHT);
-  await invoke("reveal_reminders");
+  if (await invoke<boolean>("reveal_reminders")) keysOn = true;
 }
 
 // Shown only once themed and filled in, so it never flickers.

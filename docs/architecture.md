@@ -255,7 +255,7 @@ create or may create a window, or read every notes file (see [below](#threads-of
 | `exit_app` *async* | lib | input | Quit |
 | `open_reminders` *async* | reminders | input | Open focused; returns `false` when nothing is due or ahead |
 | `list_due(ahead)` *async* | reminders | reminders | Notes due today or earlier, or ahead |
-| `reveal_reminders`, `place_reminders` | reminders | reminders | Show in the corner; keep the corner after a resize |
+| `reveal_reminders`, `place_reminders` | reminders | reminders | Show in the corner, returning whether it took the focus; keep the corner after a resize |
 | `open_pad`, `expand_to_pad(text)`, `edit_in_pad(name, note)` *async* | pad | input, reader | Open the Pad, append text to its draft, or edit a note in it |
 | `get_pad_draft`, `set_pad_draft(text)`, `take_pad_edit` | pad | Pad | Draft persistence and the pending edit |
 | `get_pad_pinned`, `set_pad_pinned(pinned)` | pad | Pad | Pin state |
@@ -279,6 +279,7 @@ create or may create a window, or read every notes file (see [below](#threads-of
 | `reader-target` | none | `reader` | `open_note` while the reader exists | Reader takes the target |
 | `pad-edit` | none | `pad` | `edit_in_pad` while the Pad exists | Pad takes the edit |
 | `pad-draft-changed` | none | `pad` | `expand_to_pad` while the Pad exists | Pad reloads the draft |
+| `reminders-focused` | none | `reminders` | `open_reminders` while the reminders are open | On Linux, the keys work from then on |
 
 Events that carry a request (`reader-target`, `pad-edit`) have no payload: the request is stored
 in managed state and taken by the page with a command. The same command serves a freshly created

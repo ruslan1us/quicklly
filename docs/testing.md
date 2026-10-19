@@ -61,7 +61,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search (marks in the shown text, the day in the date format or blank, the delay after typing, Enter during the delay, late results of an older search ignored), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails, ⌘E on macOS, the Enter that ends an input method's composition |
 | `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over; ⌘Enter and ⌘P on macOS, and the hints naming them; the Enter that ends an input method's composition |
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused (not on the Enter that ends an input method's composition), Ctrl+Z in its cases; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere; the hints naming the keys and the Recycle Bin or Trash |
-| `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab |
+| `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab; on Linux, keys ignored in reminders that showed by themselves until a click or `/reminders` |
 | `done.test.ts` | The period asked for, grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
 | `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period, keys and the Recycle Bin or Trash named for Windows, macOS and Linux, the hotkey on Wayland mentioned only on Linux |
 | `settings.test.ts` | The autostart row, the footer and the held modifiers while recording a hotkey, named for Windows, macOS and Linux; on Wayland the Hotkey row naming the command to bind, with nothing to record or reset |
@@ -170,6 +170,9 @@ comes first: it decides whether the Wayland hotkey works at all.
 - Placement: where GNOME and KDE put the input window, the popups, the Pad and the reminders;
   pinned windows; always on top on X11; taskbar entries.
 - Focus loss hides the input window and the Pad and closes an unpinned reader.
+- Reminders at start (or after changing the date) while typing in another app, on GNOME Wayland
+  and KDE: whether they take the keyboard; either way the typing doesn't touch the notes, and a
+  click into them makes the keys work.
 - Paste a screenshot (GNOME Screenshot, Spectacle) into the input window and the Pad; copy links in
   the reader and the done list.
 - Delete a note with an image, then Ctrl+Z brings both back from the Trash; delete a file; a notes
