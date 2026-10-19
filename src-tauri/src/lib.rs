@@ -155,7 +155,8 @@ const HAND_OVER: std::time::Duration = std::time::Duration::from_millis(250);
 /// window, until the app hides itself. Decided a moment later (`HAND_OVER`), on the main thread,
 /// so that switching from one window to another doesn't hide the app in between. Not while a
 /// popup is still being set up hidden, as it is about to show: popups are closed when they are
-/// done, while the input window and the Pad live hidden.
+/// done, while the input window and the Pad live hidden. The reminders that come up by
+/// themselves don't need the app active, so they count only once they show.
 #[cfg(target_os = "macos")]
 fn give_focus_back(app: &AppHandle) {
     let app = app.clone();
@@ -164,8 +165,10 @@ fn give_focus_back(app: &AppHandle) {
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || {
             let showing = handle.webview_windows().into_iter().any(|(label, window)| {
-                (label != MAIN_WINDOW && label != pad::PAD_WINDOW)
-                    || window.is_visible().unwrap_or(false)
+                let about_to_show = label != MAIN_WINDOW
+                    && label != pad::PAD_WINDOW
+                    && (label != reminders::REMINDERS_WINDOW || reminders::takes_focus(&handle));
+                about_to_show || window.is_visible().unwrap_or(false)
             });
             if !showing {
                 let _ = handle.hide();
@@ -592,7 +595,7 @@ pub fn run() {
     if let Some(text) = cli::note_request(&args) {
         std::process::exit(cli::save(&context.config().identifier, &text));
     }
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         // Must be registered first: a second launch exits here and opens the input
         // window of the already running instance instead. On Wayland, where the desktop runs
         // `quicklly` for the hotkey, it opens what the hotkey would.
@@ -627,10 +630,6 @@ pub fn run() {
         .manage(reminders::FocusOnShow::default())
         .manage(watcher::Watcher::default())
         .setup(|app| {
-            // A menu-bar app: no Dock icon and not in ⌘-Tab, as Quicklly is not in the taskbar
-            // on Windows.
-            #[cfg(target_os = "macos")]
-            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             // Windows installers register `quicklly://` links; a dev build registers itself.
             // On Linux the app always registers itself: an AppImage registers nothing (deb and
             // rpm declare the scheme in their `.desktop` file). On macOS the bundle's
@@ -667,6 +666,9 @@ pub fn run() {
             apply_scale(app.handle());
             reminders::start(app.handle());
             watcher::start(app.handle());
+            // macOS made Quicklly the active app to launch it, with no window to show.
+            #[cfg(target_os = "macos")]
+            give_focus_back(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -780,8 +782,17 @@ pub fn run() {
             settings::get_archive_days,
         ])
         .build(context)
-        .expect("error while running tauri application")
-        .run(on_run_event);
+        .expect("error while running tauri application");
+    // A menu-bar app: no Dock icon and not in ⌘-Tab, as Quicklly is not in the taskbar on
+    // Windows. Set before the app runs: once it has launched, tao would first apply its default
+    // policy, which shows the Dock icon and the menu bar for a moment.
+    #[cfg(target_os = "macos")]
+    let app = {
+        let mut app = app;
+        app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+        app
+    };
+    app.run(on_run_event);
 }
 
 /// Opening Quicklly in Finder while it runs starts no second process on macOS: the running app

@@ -20,6 +20,12 @@ const CHECK_EVERY: Duration = Duration::from_secs(60);
 #[derive(Default)]
 pub struct FocusOnShow(AtomicBool);
 
+/// Whether the reminders window being set up takes the focus when it shows.
+#[cfg(target_os = "macos")]
+pub fn takes_focus(app: &AppHandle) -> bool {
+    app.state::<FocusOnShow>().0.load(Ordering::Relaxed)
+}
+
 /// The notes due today or earlier, or with `ahead` those due after today.
 fn due_notes(app: &AppHandle, ahead: bool) -> Result<Vec<reader::Due>, String> {
     let dir = settings::notes_dir(app).map_err(|e| e.to_string())?;

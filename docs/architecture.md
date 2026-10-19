@@ -57,19 +57,23 @@ flowchart TB
   ([ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md)).
 - **Plugins**, in registration order: `single-instance` (must be first), `deep-link`, `opener`,
   `store`, `dialog`, `autostart`, `updater`, `global-shortcut`.
-- **Set-up** (`.setup`): on macOS the activation policy becomes `Accessory` (see below); the
-  `quicklly://` scheme is registered for the running binary in Windows
+- **Set-up** (`.setup`): the `quicklly://` scheme is registered for the running binary in Windows
   debug builds (installers register it for release builds) and in every Linux build (see
   [CLI and links](cli-and-links.md#registration-of-the-scheme)); on macOS the app starts listening
   for opened `quicklly://` links and saves the one it was started with, if any
   ([Links on macOS](cli-and-links.md#links-on-macos)); then the tray is built, the
   saved hotkey is registered, the updater thread starts, the Pad and reader pin states are loaded,
   the blur effect is applied to the input window, the scale setting is applied, the daily-round
-  thread starts, and the notes folder starts being watched.
+  thread starts, and the notes folder starts being watched. On macOS set-up ends with
+  `give_focus_back` (see [Focus on macOS](#focus-on-macos)): macOS makes an app active to launch
+  it, and Quicklly has no window to show then.
 - **The app lives in the tray.** No window is visible at start. Closing a window never quits the
   application; only the tray's **Quit** or `/exit` does (`app.exit(0)`).
-- **A menu-bar app on macOS.** `skipTaskbar` does nothing there, so set-up sets the activation
-  policy to `Accessory`: no Dock icon and no entry in ⌘-Tab, only the icon in the menu bar.
+- **A menu-bar app on macOS.** `skipTaskbar` does nothing there, so `run()` sets the activation
+  policy to `Accessory`: no Dock icon and no entry in ⌘-Tab, only the icon in the menu bar. It is
+  set on the built app before it runs, not in set-up: tao applies its own policy (`Regular`, over
+  the bundle's `LSUIElement`) when the app has launched, before set-up, so a change in set-up
+  would come after the Dock icon and the menu bar had shown for a moment.
 - **Run events.** `run()` builds the app and runs it with `on_run_event`, which does nothing on
   Windows and Linux; on macOS it handles `RunEvent::Reopen` (see
   [Single instance](#single-instance)).
@@ -154,11 +158,12 @@ the user clicks somewhere. Quicklly therefore hides itself (`app.hide()`), and m
 previous application:
 
 - **When.** `give_focus_back` in [`lib.rs`](../src-tauri/src/lib.rs) runs on every
-  `Focused(false)` and `Destroyed` window event, and after a [link](cli-and-links.md#links-on-macos)
-  is saved. It decides 250 ms later (`HAND_OVER`), on the main thread, and hides the app when no
+  `Focused(false)` and `Destroyed` window event, at the end of set-up, and after a
+  [link](cli-and-links.md#links-on-macos) is saved. It decides 250 ms later (`HAND_OVER`), on the main thread, and hides the app when no
   window is visible and no popup exists then. Popups are closed when they are done, so one that
   exists hidden is still being set up and about to show (the reminders open the reader and close
-  themselves, for example); the input window and the Pad live hidden and count only when visible.
+  themselves, for example); the input window and the Pad live hidden and count only when visible,
+  and so do the reminders that come up by themselves, which show without the app being active.
   A visible pinned Pad or reader keeps Quicklly from hiding, since hiding the app would hide them
   too.
 - **Hand-overs.** When the input window or the Pad hands over to another window (the reader,

@@ -160,6 +160,8 @@ builds don't read it. The release workflow builds it as one universal app.
 
 - `LSUIElement`: Quicklly is a menu-bar app from the moment it starts, with no Dock icon, menu bar
   or ⌘-Tab entry. It applies to the bundled app only; `npm run tauri dev` runs without a bundle.
+  Once the app has launched, the activation policy that `run()` sets keeps it that way (see
+  [Architecture](architecture.md#process-model)).
 - `NSDocumentsFolderUsageDescription`: the text of the prompt for access to `~/Documents`, where
   the default notes folder is.
 
