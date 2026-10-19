@@ -1,7 +1,7 @@
 [package]
 name = "quicklly"
 version = "0.8.3"
-description = "Hotkey mini-notepad for Windows"
+description = "Hotkey mini-notepad"
 license = "MIT"
 edition = "2021"
 

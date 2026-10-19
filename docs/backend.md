@@ -16,7 +16,7 @@ for errors, file writes and undo.
 | [`notes.rs`](../src-tauri/src/notes.rs) | Writing new notes: normalisation (`note_lines`, `format_note`), tag detection (`first_tag`), target file choice, headings, append (`append_note`). The `Mode` enum (daily or inbox). |
 | [`reader.rs`](../src-tauri/src/reader.rs) | Reading and changing existing notes: listing files as a tree, parsing, search, due and done queries, done marks, snooze, edit, delete, undo, file deletion, path validation, line-ending-preserving atomic rewrites. |
 | [`archive.rs`](../src-tauri/src/archive.rs) | Moving done notes to `archive/<same path>` after the configured number of days. |
-| [`images.rs`](../src-tauri/src/images.rs) | Saving pasted images, relinking image paths for nested files, resolving paths safely, finding images no note links to, moving them to the Recycle Bin and restoring them, and moving pasted images a window let go of unsaved to the Recycle Bin. |
+| [`images.rs`](../src-tauri/src/images.rs) | Saving pasted images, relinking image paths for nested files, resolving paths safely, finding images no note links to, moving them to the Recycle Bin (the Trash on macOS and Linux) and restoring them, and moving pasted images a window let go of unsaved to the Recycle Bin. |
 | [`settings.rs`](../src-tauri/src/settings.rs) | `settings.json` keys, typed getters with defaults, the settings view and all setting commands, hotkey registration and change, appearance and date-format events. |
 | [`hotkey.rs`](../src-tauri/src/hotkey.rs) | Default hotkey, parsing from the `KeyboardEvent.code` form, human-readable labels as the system names the keys (`Ctrl+Shift+Win+N` on Windows, `Ctrl+Shift+Super+N` on Linux, `⌃⇧⌘N` on macOS). |
 | [`pad.rs`](../src-tauri/src/pad.rs) | The Pad window: creation, placement, pin state, bounds, draft file, moving input text into the draft, editing a reader note. |
@@ -128,7 +128,8 @@ and by `set_archive_after`, and emits `notes-changed` when anything moved. See
   draft (`pad::draft`, which fails rather than reads as empty when the file can't be read) to
   `kept` and only logs failures. Like `trash_unused`, it goes on after an image that can't be
   moved.
-- `to_recycle_bin(path)` is the one place a file goes to the Recycle Bin: `trash_unused`,
+- `to_recycle_bin(path)` is the one place a file goes to the Recycle Bin (the Trash on macOS and
+  Linux): `trash_unused`,
   `trash_unsaved` and `reader::trash_file` all use it. Elsewhere it is `trash::delete`. On macOS it
   uses a `trash::TrashContext` with `DeleteMethod::NsFileManager` (`trashItemAtURL`) instead of the
   crate's default of telling Finder to delete through `osascript`, which asks for the Automation
@@ -254,7 +255,7 @@ harmless, and no attempt is made to tell those writes apart. See
 | Downloaded update | `updater::save_download`: write `<file>.bin.tmp`, then rename over the file | The next start installs whatever is stored, and the signature is checked only when downloading, so a cut-short installer must never be there. |
 | Pasted image | `create_new` under a unique name | Never overwrites an existing image. |
 | Pad draft | `fs::write` | Disposable working copy, rewritten every few hundred milliseconds while typing. |
-| Deleting notes files and images | `images::to_recycle_bin` (Recycle Bin, Trash on macOS) | Recoverable outside the application; see [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |
+| Deleting notes files and images | `images::to_recycle_bin` (Recycle Bin, Trash on macOS and Linux) | Recoverable outside the application; see [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |
 
 ### Changes to existing notes
 

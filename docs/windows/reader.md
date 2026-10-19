@@ -44,7 +44,7 @@ every note is done and shows at least one cell once any note is. By name, folder
 | <kbd>↑</kbd> <kbd>↓</kbd> | Select (wraps) | |
 | <kbd>Enter</kbd>, double-click | Open the file | `read_note_file` |
 | <kbd>Tab</kbd> | Toggle sort recent first / by name, keeping the selected file | `set_reader_sort` |
-| <kbd>Del</kbd> twice | Move the file and its unused images to the Recycle Bin | `delete_note_file` |
+| <kbd>Del</kbd> twice | Move the file and its unused images to the Recycle Bin (the Trash on macOS and Linux) | `delete_note_file` |
 | <kbd>→</kbd> | Hide, show the input window, close | `open_input` |
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Undo the latest note change | `undo_change` |
 
@@ -91,7 +91,8 @@ While a delete waits for confirmation the footer says so; any other key or a cli
   <kbd>Ctrl</kbd>+<kbd>Z</kbd> pops the latest, asks Rust to restore the file (refused if the file
   is no longer exactly as the change left it) and its images, opens that file if another one is
   shown, selects the note and reports `Undone: delete`, `Undone: done` or `Undone: edit`, plus
-  `couldn't bring back N images` when some images were no longer in the Recycle Bin. The entry is
+  `couldn't bring back N images` when some images were no longer in the Recycle Bin (on macOS,
+  where the Trash can't be listed, for every image). The entry is
   dropped even if the undo fails, so the next press moves on to the one before. A change whose
   images couldn't all be moved to the Recycle Bin is still saved and pushed: those images stay in
   `images/` and the failure is only logged. Inside the inline editor <kbd>Ctrl</kbd>+<kbd>Z</kbd> is

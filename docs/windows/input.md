@@ -96,8 +96,9 @@ it, here as in the Pad and the reader editor (see [Frontend](../frontend.md#edit
   cleared (`hide`: saved, <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>, a switch to another
   window), it lets go of them with its history as `kept` (`releaseImages`,
   `trash_unsaved_images`): those that no notes file, the Pad draft or the history mentions go to
-  the Recycle Bin. Images moved to the Pad with <kbd>Ctrl</kbd>+<kbd>E</kbd> are handed over to
-  it instead. Hiding on focus loss keeps the note, so nothing is let go of then. See
+  the Recycle Bin (the Trash on macOS and Linux). Images moved to the Pad with
+  <kbd>Ctrl</kbd>+<kbd>E</kbd> are handed over to it instead. Hiding on focus loss keeps the
+  note, so nothing is let go of then. See
   [ADR 0018](../decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md).
 - **Messages.** Errors and command answers appear on a line under the note for four seconds; an
   error also outlines the field. Typing clears them.

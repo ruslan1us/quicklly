@@ -3,17 +3,29 @@
 This page covers what is needed to build and change Quicklly: prerequisites, commands, the checks
 every change must pass, the code and repository conventions, the known pitfalls that have caused
 real defects, and step-by-step checklists for the most common extensions (a window, a command, a
-setting). Development happens natively on Windows, not in WSL, because the tray, the global hotkey
-and the windows must be native.
+setting). Quicklly runs on Windows, macOS and Linux. Development happens natively on the system
+being worked on (on Windows, not in WSL), because the tray, the global hotkey and the windows must
+be native.
 
 ## Prerequisites
 
-- Node.js LTS and npm.
-- Rust stable with the MSVC toolchain, plus `rustfmt` and `clippy`.
-- Microsoft C++ Build Tools with the Windows SDK.
-- WebView2 (preinstalled on Windows 10 and 11).
+On every system: Node.js LTS and npm, and Rust stable with `rustfmt` and `clippy`. Then:
 
-See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for details.
+| System | Also needed |
+| --- | --- |
+| Windows | The MSVC Rust toolchain; Microsoft C++ Build Tools with the Windows SDK; WebView2 (preinstalled on Windows 10 and 11) |
+| macOS | The Xcode Command Line Tools (`xcode-select --install`). A universal build, as the release makes, also needs `rustup target add aarch64-apple-darwin x86_64-apple-darwin` |
+| Linux (Debian, Ubuntu) | `build-essential` and the libraries CI installs: `libwebkit2gtk-4.1-dev` (WebKitGTK, which pulls in GTK 3 and libsoup), `libdbus-1-dev`, `libayatana-appindicator3-dev` (the tray), `librsvg2-dev`. Building the AppImage also needs `xdg-utils` |
+
+See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for details and for other
+Linux distributions.
+
+Code for one system sits behind `cfg(target_os = "macos")`, `cfg(target_os = "linux")` or
+`cfg(windows)` in Rust and behind `isMac`, `isLinux` and `isWindows` from
+[`platform.ts`](../src/shared/platform.ts) in the pages. A build compiles only its own system's
+Rust code, so the other systems' code is compiled only on their CI runners (see below); the pages'
+code for every system is type-checked everywhere and tested with `onPlatform`
+([Testing](testing.md#set-up)).
 
 ## Commands
 
@@ -30,8 +42,9 @@ See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for detail
 | `cargo test` | `src-tauri/` | Rust unit tests |
 
 A development build and an installed release share the identifier `com.quicklly.app`, so they use
-the same data folder (`%APPDATA%\com.quicklly.app`), the same settings and the same notes folder.
-On macOS the same holds for `com.quicklly.desktop`; see [Data format](data-format.md#application-files).
+the same data folder (`%APPDATA%\com.quicklly.app`, `~/.local/share/com.quicklly.app` on Linux),
+the same settings and the same notes folder. On macOS the same holds for `com.quicklly.desktop`;
+see [Data format](data-format.md#application-files).
 
 ## Checks before every commit
 

@@ -7,6 +7,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Quicklly for macOS, one app for Apple silicon and Intel that lives in the menu bar, and for
+  Linux as an AppImage, a deb and an rpm. On macOS the app's own shortcuts take ⌘ instead of Ctrl
+  (⌃C still closes) and ⌫ deletes in the reader; on Wayland the hotkey is a shortcut you add in
+  your desktop's keyboard settings that runs `quicklly`.
+
 ## [0.8.3] - 2026-10-16
 
 ### Fixed

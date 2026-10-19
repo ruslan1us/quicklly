@@ -1,21 +1,22 @@
 # Architecture
 
 Quicklly is a Tauri 2 application: one Rust process that owns the tray icon, the global hotkey,
-the file system and every window, and one WebView2 page per window that renders the UI in
-TypeScript. Pages call Rust through IPC commands and Rust notifies pages through events. Note
-content is never cached: every view reads the Markdown files again when it needs them. This page
-describes the process model, the windows and their life cycle, the IPC surface, managed state,
-background threads and the start-up paths (normal start, second instance, command line and deep
+the file system and every window, and one web page per window that renders the UI in TypeScript,
+in the system's web view: WebView2 on Windows, WKWebView on macOS, WebKitGTK on Linux. Pages call
+Rust through IPC commands and Rust notifies pages through events. Note content is never cached:
+every view reads the Markdown files again when it needs them. This page describes the process
+model, the windows and their life cycle, the IPC surface, managed state, background threads and
+the start-up paths (normal start, second instance, command line and deep
 link, update).
 
 ## Overview
 
 ```mermaid
 flowchart TB
-    subgraph OS["Windows"]
+    subgraph OS["Operating system"]
         HK["Global hotkey"]
         TRAY["Tray icon"]
-        LINK["quicklly:// link / quicklly.exe add"]
+        LINK["quicklly:// link / quicklly add"]
     end
     subgraph RUST["Rust process (src-tauri)"]
         CLI["cli.rs: save and exit before Tauri starts"]
@@ -23,7 +24,7 @@ flowchart TB
         MODS["notes / reader / archive / images / settings / pad / reminders / updater ..."]
         THR["Threads: updater (6 h), daily round (60 s), notes folder watcher"]
     end
-    subgraph WEB["WebView2 pages (src/windows)"]
+    subgraph WEB["Web view pages (src/windows)"]
         IN["input (main)"]
         PAD["pad"]
         RD["reader"]
@@ -46,8 +47,8 @@ flowchart TB
 ## Process model
 
 - **One Rust process.** [`main.rs`](../src-tauri/src/main.rs) calls `quicklly_lib::run()` in
-  [`lib.rs`](../src-tauri/src/lib.rs). The release binary uses the Windows GUI subsystem, so it has
-  no console window.
+  [`lib.rs`](../src-tauri/src/lib.rs). On Windows the release binary uses the GUI subsystem, so it
+  has no console window.
 - **Command line first.** Before the Tauri builder is created, `run()` checks the arguments with
   `cli::note_request`. A `quicklly add …` or `quicklly://add?…` invocation saves the note in that
   process and exits with its status code; Tauri never starts. See [CLI and links](cli-and-links.md)
@@ -80,7 +81,9 @@ and addressed from Rust with `page(name)` in [`lib.rs`](../src-tauri/src/lib.rs)
 frameless, always on top, absent from the taskbar, transparent with a blur behind them, and
 zoomed to the scale setting. The blur is `blur_behind()` in [`lib.rs`](../src-tauri/src/lib.rs):
 Acrylic on Windows; on macOS, where Acrylic doesn't exist, the `HudWindow` vibrancy (always dark),
-kept active while the window doesn't have the focus so that it doesn't turn grey.
+kept active while the window doesn't have the focus so that it doesn't turn grey. Linux has no
+blur: Tauri can't apply window effects there, so the windows are transparent over the plain
+desktop.
 
 Transparent windows need macOS's private API: on macOS, Tauri's `transparent()` builder method
 exists only with the `macos-private-api` feature of the `tauri` crate, so without it the app does
@@ -193,7 +196,7 @@ create or may create a window, or read every notes file (see [below](#threads-of
 | --- | --- | --- | --- |
 | `save_note(text)` | lib | input, Pad | Append a note; emits `notes-changed` |
 | `save_image(raw body)` | lib | input, Pad | Save a pasted image (MIME type in the `Image-Type` header); returns `images/…` |
-| `trash_unsaved_images(paths, kept)` | lib | input, Pad | Move the pasted images a window let go of to the Recycle Bin unless a notes file, the Pad draft or `kept` mentions them; failures only logged |
+| `trash_unsaved_images(paths, kept)` | lib | input, Pad | Move the pasted images a window let go of to the Recycle Bin (the Trash on macOS and Linux) unless a notes file, the Pad draft or `kept` mentions them; failures only logged |
 | `open_images(name, paths)` | lib | reader | Open a note's images in the default viewer |
 | `search_notes(query)` *async* | lib | input | Up to 50 matching notes, newest first |
 | `list_note_files` *async* | lib | reader | Notes files with counts and modification times |
@@ -281,10 +284,11 @@ LaunchServices sends the running app a reopen event instead (`RunEvent::Reopen`)
 ## Tray and hotkey
 
 The tray ([`lib.rs`](../src-tauri/src/lib.rs) `setup_tray`) shows the input window on a left
-click and offers **New note**, **Open notes folder**, **Settings…** and **Quit**. Its icon is the
-app icon; on macOS it is used as a template image (`icon_as_template`), which the menu bar draws
-from the icon's shape alone, in the bar's own light or dark colour. The global shortcut plugin
-has a single handler for the single registered shortcut; on press it opens the input window or the
+click (on Linux, where the tray is an AppIndicator, every click opens the menu) and offers
+**New note**, **Open notes folder**, **Settings…** and **Quit**. Its icon is the app icon; on
+macOS it is used as a template image (`icon_as_template`), which the menu bar draws from the
+icon's shape alone, in the bar's own light or dark colour. The global shortcut plugin has a
+single handler for the single registered shortcut; on press it opens the input window or the
 Pad according to the **Hotkey opens** setting. Hotkey parsing and labels are in
 [`hotkey.rs`](../src-tauri/src/hotkey.rs); registration and changes are in
 [`settings.rs`](../src-tauri/src/settings.rs). A hotkey that cannot be registered at start is

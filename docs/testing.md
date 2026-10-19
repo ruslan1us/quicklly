@@ -3,9 +3,9 @@
 Quicklly has two automated test suites: Vitest tests for the frontend, which run the real window
 pages in a simulated DOM with the Rust side replaced by a mock, and Rust unit tests for the note
 format, file operations and parsing. Neither suite starts the application, touches the user's
-notes or settings, or uses the real Recycle Bin. Behaviour that depends on native windows, focus,
-the hotkey or the installer is verified by hand. Both suites run in CI on Windows, macOS and
-Linux for every push to a branch and every pull request.
+notes or settings, or uses the real Recycle Bin or Trash. Behaviour that depends on native
+windows, focus, the hotkey or the installer is verified by hand, on each system. Both suites run
+in CI on Windows, macOS and Linux for every push to a branch and every pull request.
 
 ## Frontend tests
 
@@ -97,7 +97,8 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
   never use the real notes folder or `%APPDATA%`.
 - **Fixed dates.** Dates are constructed explicitly (`NaiveDate::from_ymd_opt`); nothing depends on
   the current date or time zone.
-- **No real Recycle Bin.** Moving files to the Recycle Bin and restoring them is not exercised.
+- **No real Recycle Bin or Trash.** Moving files to the Recycle Bin (the Trash on macOS and
+  Linux) and restoring them is not exercised.
   Tests cover what decides it: path validation (`trash_file` refuses anything but a notes file,
   before any file is touched), the selection of unused images (`unused`) and of unsaved pasted
   ones (`unsaved`), moving several images one by one (`trash_each`, given a stand-in for
@@ -109,15 +110,66 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 
 ## Manual verification
 
-These are checked by hand in `npm run tauri dev` or an installed build before a release:
+These are checked by hand in `npm run tauri dev` or an installed build before a release, on each
+system:
 
-- Hotkey registration and change, the tray menu, start with Windows.
+- Hotkey registration and change, the tray menu, start with Windows (start at login).
 - Window appearance, focus behaviour (no focus stolen at start, reminders shown without focus),
   hiding on focus loss, pinning, bounds restore.
 - Transparency and scale, the three themes, layout in the release build.
 - Placement on the monitor in use with several monitors and different scalings.
-- Deleting to and restoring from the Recycle Bin, opening images in the default viewer.
-- `quicklly add` from PowerShell and `cmd`, and `quicklly://` links after installation.
+- Deleting to and restoring from the Recycle Bin (the Trash), opening images in the default
+  viewer.
+- `quicklly add` from PowerShell and `cmd` (a shell on macOS and Linux), and `quicklly://` links
+  after installation.
 - Open reader, reminders and done windows following a note saved through the CLI and a file
   edited in another editor; the watcher following a new notes folder chosen in settings.
 - Updates: a release found, downloaded, announced, installed at start and by `/update`.
+
+### macOS
+
+On a real Mac, ideally macOS 14 and 15, from the DMG of a release build (`tauri dev` has no
+bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest builds on it.
+
+- The hotkey from another app: the input window has the keys at once; <kbd>Esc</kbd> and
+  <kbd>Enter</kbd> give the keyboard back to that app; input → reader → input without a visible
+  flash of the previous app.
+- A pinned Pad on another Space comes along; the hotkey while a full-screen app is in front
+  switches to the desktop (known limitation).
+- The reminders at start don't take the focus; no Dock icon, no ⌘-Tab entry; opening the app in
+  Finder while it runs shows the input window; the menu-bar icon follows the light or dark bar.
+- ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields.
+- ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad.
+- ⌫ ⌫ in the reader moves a file to the Trash; ⌘Z brings a deleted note back, and the footer says
+  its images couldn't be brought back.
+- `/update` restarts into the new version; the update at start too.
+- Start at login after logging out and in; the Documents prompt and its text at the first start.
+- `open "quicklly://add?text=x"` saves a note, also when Quicklly isn't running; `quicklly add` from
+  Terminal through the symlink from the README.
+- The Gatekeeper walkthrough of the README on a fresh download.
+
+### Linux
+
+On GNOME Wayland (required), KDE Wayland and one X11 session (Xfce, or GNOME on Xorg). Focus
+comes first: it decides whether the Wayland hotkey works at all.
+
+- The desktop shortcut that runs `quicklly`: the input window (or the Pad, per **Hotkey opens**)
+  is focused and takes the typing; the same for `/config` and the reader from search. On X11 the
+  hotkey registers and can be changed; on Wayland the Hotkey row names the command.
+- Tray: shown on GNOME with the AppIndicator extension and missing without it; menu items; Quit.
+- Look: transparency without blur, the three themes, scale 100/150/200 %, Pad text and highlighting
+  aligned on long wrapped lines, the block caret, fonts, scrollbars, emoji.
+- Placement: where GNOME and KDE put the input window, the popups, the Pad and the reminders;
+  pinned windows; always on top on X11; taskbar entries.
+- Focus loss hides the input window and the Pad and closes an unpinned reader.
+- Paste a screenshot (GNOME Screenshot, Spectacle) into the input window and the Pad; copy links in
+  the reader and the done list.
+- Delete a note with an image, then Ctrl+Z brings both back from the Trash; delete a file; a notes
+  folder on a second disk.
+- `quicklly add` from bash (deb or rpm) and from the AppImage; `xdg-open "quicklly://add?text=x"`
+  with the deb and the AppImage; a link from Firefox.
+- Start at login on and off (`~/.config/autostart`), deb and AppImage, then log in again.
+- Updates: the AppImage installs at start and restarts into the new version; deb and rpm only on
+  `/update`, with the password prompt.
+- Opening images and the notes folder from the AppImage.
+- An NVIDIA machine if available: a blank window, and the variables from the README.

@@ -60,8 +60,8 @@ List items are lines starting with optional indentation and `- [ ] `, `- [x] `, 
   `pad-draft-changed`, when an edit ends), not those of a note being edited. When its text starts
   over (a note saved, once the draft is saved empty; the draft or a note to edit loaded in
   `setText`), it lets go of them (`releaseImages`): those that no notes file and not the draft on
-  disk mentions go to the Recycle Bin. Hiding keeps the text and its undo, so nothing is let go
-  of then. See
+  disk mentions go to the Recycle Bin (the Trash on macOS and Linux). Hiding keeps the text and
+  its undo, so nothing is let go of then. See
   [ADR 0018](../decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md).
 - **Moving text from the input window.** `expand_to_pad` appends the input text to the draft on a
   new line (or replaces a blank draft) on the Rust side, then shows the Pad; an open Pad reloads the

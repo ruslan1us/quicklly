@@ -10,16 +10,16 @@ agents start from [`AGENTS.md`](../AGENTS.md) in the repository root, which poin
 
 | Page | Covers |
 | --- | --- |
-| [Overview](overview.md) | Purpose, product principles, scope and non-goals, direction |
+| [Overview](overview.md) | Purpose, product principles, scope, the platforms and how they differ, non-goals, direction |
 | [Architecture](architecture.md) | Process model, windows and their life cycle, IPC commands and events, managed state, background threads, single instance, deep links, updater |
 | [Data format](data-format.md) | The notes folder, the note line format, tags, dates, images, reserved names, `settings.json` |
 | [Windows](windows/README.md) | One page per window: [input](windows/input.md), [Pad](windows/pad.md), [reader](windows/reader.md), [reminders](windows/reminders.md), [done](windows/done.md), [settings](windows/settings.md), [help and changelog](windows/help-and-changelog.md) |
 | [Backend](backend.md) | The Rust modules, error handling, file writes, undo snapshots |
 | [Frontend](frontend.md) | The Vite multi-page setup, shared modules, styling and editing conventions |
 | [CLI and links](cli-and-links.md) | `quicklly add …` and `quicklly://add?text=…` |
-| [Development](development.md) | Prerequisites, commands, checks, conventions, known pitfalls, checklists for adding a window, a command or a setting |
-| [Testing](testing.md) | Vitest with happy-dom and mocked IPC, Rust unit tests, manual verification |
-| [Release](release.md) | Versioning, changelog, CI workflows, signed updates, installers |
+| [Development](development.md) | Prerequisites on Windows, macOS and Linux, commands, checks, conventions, known pitfalls, checklists for adding a window, a command or a setting |
+| [Testing](testing.md) | Vitest with happy-dom and mocked IPC, Rust unit tests, manual verification on each system |
+| [Release](release.md) | Versioning, changelog, CI workflows, signed updates, the installers and packages for each system |
 | [Decisions](decisions/README.md) | Architecture Decision Records |
 
 ## Reading order before changing code

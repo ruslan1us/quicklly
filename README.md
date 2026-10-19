@@ -1,28 +1,125 @@
 # Quicklly
 
-A hotkey mini-notepad for Windows. Press a global hotkey anywhere, type a thought, hit
-<kbd>Enter</kbd> — it is appended with a timestamp to today's markdown file, and you are
-back in whatever you were doing.
+A hotkey mini-notepad for Windows, macOS and Linux. Press a global hotkey anywhere, type a
+thought, hit <kbd>Enter</kbd> — it is appended with a timestamp to today's markdown file, and you
+are back in whatever you were doing.
 
 ![Quicklly input window](docs/screenshot.png)
 
 - **Fast** — the input window pops up instantly on top of everything, already focused.
 - **Plain text** — notes are ordinary `.md` files you can open in Obsidian or VS Code and sync
   with OneDrive or Git. No database.
-- **Lightweight** — lives in the system tray.
+- **Lightweight** — lives in the system tray (the menu bar on macOS).
 
 ## Installation
 
-Download the installer (`Quicklly_x.y.z_x64-setup.exe`, or the `.msi`) from the
-[latest release](https://github.com/ruslan1us/quicklly/releases/latest) and run it.
+Everything is on the [latest release](https://github.com/ruslan1us/quicklly/releases/latest)
+page. Installed copies update themselves (see **Update** under [Usage](#usage)).
+
+### Windows
+
+Download the installer (`Quicklly_x.y.z_x64-setup.exe`, or the `.msi`) and run it.
 The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 **More info → Run anyway**.
 
+### macOS
+
+Download `Quicklly_x.y.z_universal.dmg` (one app for Apple silicon and Intel; macOS 13.1 or
+later), open it and drag Quicklly to **Applications**. Start it from there, not from the disk
+image, or it can't update itself.
+
+The app is not notarized by Apple, so macOS blocks the first start ("Apple could not verify…"):
+click **Done**, open **System Settings → Privacy & Security**, scroll down and click
+**Open Anyway** next to Quicklly, then confirm. (Right-click → **Open** no longer gets past this
+on macOS 15 and later.) Or remove the quarantine flag in Terminal:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Quicklly.app
+```
+
+Quicklly lives in the menu bar: it has no Dock icon and no entry in ⌘-Tab. Opening it again from
+Finder, Launchpad or Spotlight shows the input window. At the first start macOS asks whether
+Quicklly may access your Documents folder, where the notes go: allow it. As the app isn't signed
+with an Apple developer certificate, macOS may ask again after an update.
+
+On macOS:
+
+- The app's own shortcuts take <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>: <kbd>⌘</kbd>+<kbd>E</kbd>,
+  <kbd>⌘</kbd>+<kbd>V</kbd>, <kbd>⌘</kbd>+<kbd>Enter</kbd> in the Pad, <kbd>⌘</kbd>+<kbd>P</kbd>,
+  <kbd>⌘</kbd>+<kbd>Z</kbd> in the reader. <kbd>⌃</kbd>+<kbd>C</kbd> (Control) still closes a
+  window, since <kbd>⌘</kbd>+<kbd>C</kbd> copies, and <kbd>⌫</kbd> deletes in the reader, as Mac
+  keyboards have no <kbd>Del</kbd>. The default hotkey is <kbd>⌃</kbd>+<kbd>⌥</kbd>+<kbd>N</kbd>.
+- The windows can't show over an app in full screen: the hotkey switches to the desktop first.
+- <kbd>⌘</kbd>+<kbd>Z</kbd> in the reader brings a deleted note back, but not its images: they
+  stay in the Trash, from where you can drag them back into the `images` folder.
+- To save notes from Terminal (see [From scripts and links](#from-scripts-and-links)), put the
+  program on your `PATH` (create `/usr/local/bin` first if it doesn't exist):
+
+  ```sh
+  sudo ln -s /Applications/Quicklly.app/Contents/MacOS/quicklly /usr/local/bin/quicklly
+  ```
+
+### Linux
+
+Three formats, all for x86-64, built on Ubuntu 24.04, so they need glibc 2.39 or later
+(Ubuntu 24.04, Debian 13, Fedora 40 and newer):
+
+- **AppImage** (`Quicklly_x.y.z_amd64.AppImage`): make it executable
+  (`chmod +x Quicklly_x.y.z_amd64.AppImage`) and run it. It updates itself in place, so keep it in
+  a folder you can write to. It isn't on your `PATH`: use its full path, or link it into
+  `~/.local/bin` as `quicklly`.
+- **deb** (Debian, Ubuntu): `sudo apt install ./Quicklly_x.y.z_amd64.deb`.
+- **rpm** (Fedora, openSUSE): `sudo dnf install ./Quicklly-x.y.z-1.x86_64.rpm`.
+
+The deb and rpm install `quicklly` on your `PATH`. They don't update at start, since installing a
+package asks for your password: a new version is announced in the input window, and `/update`
+installs it and asks for the password then.
+
+**Tray.** On GNOME the tray icon needs the AppIndicator extension. Ubuntu ships it turned on; on
+Fedora and other GNOME desktops install **AppIndicator and KStatusNotifierItem Support** (on Fedora
+`sudo dnf install gnome-shell-extension-appindicator`, then turn it on in **Extensions**). KDE,
+Xfce, Cinnamon and MATE show the icon as they are. A click on the icon opens its menu, which has
+**New note**.
+
+**Hotkey.** In an X11 session the hotkey works as on Windows. On Wayland, applications can't take
+a global hotkey, so you bind one in your desktop to the command `quicklly` (for the AppImage, the
+full path to it), and the settings say **Set in system settings: run quicklly**:
+
+- GNOME: **Settings → Keyboard → View and Customize Shortcuts → Custom Shortcuts → Add Shortcut**;
+- KDE Plasma: **System Settings → Keyboard → Shortcuts → Add New → Command or Script**;
+- Sway or Hyprland: a `bindsym` or `bind` line that runs `exec quicklly`.
+
+The key then opens what **Hotkey opens** in the settings names. If Quicklly isn't running, the
+first press starts it in the tray; press again for the window.
+
+On Wayland the desktop decides where windows go, so the Pad and the reminders may not open in
+their corners, and a pinned Pad or reader keeps its size but neither its place nor staying on
+top. There is no blur behind the windows on Linux: the transparency setting shows the desktop as
+it is.
+
+**Pasting images** needs WebKitGTK 2.52 or later. The deb and rpm use your system's WebKitGTK
+(`libwebkit2gtk-4.1`), the AppImage the one it was built with.
+
+**A blank or black window**, mostly with NVIDIA graphics or on Wayland, is a known WebKitGTK
+problem. Start Quicklly from a terminal with one of these set, trying them in turn:
+
+```sh
+WEBKIT_DISABLE_DMABUF_RENDERER=1 quicklly
+__NV_DISABLE_EXPLICIT_SYNC=1 quicklly
+WEBKIT_DISABLE_COMPOSITING_MODE=1 quicklly
+```
+
+If one helps, set it for every start, for example in a file in `~/.config/environment.d/` (read at
+login by GNOME and KDE). If the AppImage misbehaves where the deb or rpm doesn't, use the package.
+
 ## Usage
+
+Keys are written as on Windows and Linux; on macOS the app's own shortcuts take <kbd>⌘</kbd>
+instead of <kbd>Ctrl</kbd> (see [macOS](#macos)).
 
 | Action                         | How                                         |
 | ------------------------------ | ------------------------------------------- |
-| Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon |
+| Open the input window          | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (can be changed in the settings), or click the tray icon (on Linux, **New note** in its menu) |
 | Save the note                  | <kbd>Enter</kbd>                            |
 | New line in the note           | <kbd>Shift</kbd>+<kbd>Enter</kbd>           |
 | Paste an image                 | <kbd>Ctrl</kbd>+<kbd>V</kbd> with an image in the clipboard (also in the Pad); see [Reader](#reader) |
@@ -39,15 +136,17 @@ The installer is not code-signed yet, so Windows SmartScreen may warn you: click
 | Settings                       | Type `/config` and press <kbd>Enter</kbd>, or tray menu → **Settings…** |
 | Help and version               | Type `/help` and press <kbd>Enter</kbd>    |
 | What's new                     | Type `/changelog` and press <kbd>Enter</kbd> (see [CHANGELOG.md](CHANGELOG.md)) |
-| Save a note from a script or a link | `quicklly.exe add "buy milk #todo"` or `quicklly://add?text=buy%20milk%20%23todo`; see [From scripts and links](#from-scripts-and-links) |
+| Save a note from a script or a link | `quicklly.exe add "buy milk #todo"` (`quicklly add …` on macOS and Linux) or `quicklly://add?text=buy%20milk%20%23todo`; see [From scripts and links](#from-scripts-and-links) |
 | Notes due                      | Type `/reminders` and press <kbd>Enter</kbd>; see [Reminders](#reminders) |
 | What you did this week         | Type `/done` and press <kbd>Enter</kbd>; see [Done](#done) |
-| Update                         | When a new version is out, the hint says so for two seconds; type `/update` and press <kbd>Enter</kbd> to install it now. Otherwise it is downloaded in the background and installed on the next start (unless **Auto update** is off in the settings) |
+| Update                         | When a new version is out, the hint says so for two seconds; type `/update` and press <kbd>Enter</kbd> to install it now. Otherwise it is downloaded in the background and installed on the next start (unless **Auto update** is off in the settings; the Linux deb and rpm install only on `/update`) |
 | Exit                           | Type `/exit` and press <kbd>Enter</kbd>, or tray menu → **Quit** |
 
 ## Where notes are stored
 
-Each day gets its own file in `%USERPROFILE%\Documents\Quicklly\`:
+Each day gets its own file in `%USERPROFILE%\Documents\Quicklly\` on Windows,
+`~/Documents/Quicklly/` on macOS and Linux (`~/Quicklly/` on a Linux system without a Documents
+folder):
 
 ```
 Quicklly/
@@ -100,7 +199,9 @@ that folder (`../images/…`), so Obsidian shows them. The reader sorted by name
 as a tree. `archive` and `images` are the app's own folders, so `#archive/x` and `#images/x` are
 just `#archive` and `#images`.
 
-The notes folder can be changed in the settings as well.
+The notes folder can be changed in the settings as well. The settings themselves and the Pad's
+unsaved draft are kept in the app's data folder (`%APPDATA%\com.quicklly.app` on Windows); see
+[Application files](docs/data-format.md#application-files) for every system.
 
 ### Dates
 
@@ -117,7 +218,7 @@ window, the Pad and the reader show it in the **Date format** of the settings.
 ### Reminders
 
 Notes that are not done and have a date of today or earlier pop up in a small window in the
-bottom right corner when Quicklly starts (also with Windows) and when a new day begins while it
+bottom right corner when Quicklly starts (also at login) and when a new day begins while it
 runs: overdue ones first, then today's. The window stays on top without taking the focus, so it
 doesn't get in the way of your typing; click it to use the keys. <kbd>↑</kbd> <kbd>↓</kbd> select
 a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>S</kbd> moves its date
@@ -167,7 +268,7 @@ entry):
 | <kbd>Space</kbd>                     |                        | Mark as done / not done            |
 | <kbd>C</kbd>                         |                        | Copy the note's links              |
 | <kbd>O</kbd>                         |                        | Open the note's images             |
-| <kbd>Del</kbd>                       | Move to the Recycle Bin (press <kbd>Del</kbd> twice) | Delete (press <kbd>Del</kbd> twice) |
+| <kbd>Del</kbd>                       | Move to the Recycle Bin, the Trash on macOS and Linux (press <kbd>Del</kbd> twice) | Delete (press <kbd>Del</kbd> twice) |
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd>         | Undo                   | Undo                               |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd>         |                        | Pin: keep the reader open over other windows, resizable and up to date |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
@@ -186,7 +287,8 @@ elsewhere in the meantime, nothing is written and the reader reloads it.
 
 <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the deletes, done marks and edits made in the reader while it
 is open, one per press, latest first: the note comes back exactly as it was, with its day heading
-and its images (taken back out of the Recycle Bin), and the reader opens its file. A change to a
+and its images (taken back out of the Recycle Bin or the Trash; not on macOS, see
+[macOS](#macos)), and the reader opens its file. A change to a
 file that has changed again since, say by a new note from the input window, is not undone.
 
 Links (`https://…`, or just a domain like `google.com` or `github.com/ruslan1us`) are
@@ -201,9 +303,9 @@ away in an `images` folder next to the notes. The note gets a Markdown image ins
 label, `![Image #1](images/2026-10-07_14-32-05.png)`, so Obsidian shows the picture; the reader
 shows the label again, and <kbd>O</kbd> opens the selected note's images in the default viewer.
 Deleting a note or a notes file in the reader, or taking an image out of a note, moves its images
-to the Recycle Bin too, unless another note still links to them. So does an image pasted but
-never saved: once the note is cleared or cancelled in the input window, or the Pad saves a note
-without it, unless a note or the Pad draft still has it.
+to the Recycle Bin (the Trash) too, unless another note still links to them. So does an image
+pasted but never saved: once the note is cleared or cancelled in the input window, or the Pad
+saves a note without it, unless a note or the Pad draft still has it.
 
 ## Pad
 
@@ -261,6 +363,18 @@ In AutoHotkey v2, for example, a hotkey that saves a fixed note:
 ^!m::Run '"' EnvGet("LOCALAPPDATA") '\Quicklly\quicklly.exe" add "call mom #todo"'
 ```
 
+On macOS and Linux the program is `quicklly`: on your `PATH` with the deb or rpm, through the link
+from [macOS](#macos) on a Mac, or the AppImage's own path. The shell waits for it as for any
+command, so no `Out-Host` is needed:
+
+```sh
+quicklly add "buy milk #todo"
+```
+
+Links work on Linux as on Windows (`xdg-open "quicklly://add?text=…"`). On macOS a link
+(`open "quicklly://add?text=…"` in Terminal, a browser, Shortcuts) goes to the running Quicklly,
+which saves the note; it starts Quicklly first if it isn't running, and gives no output.
+
 ## Settings
 
 Open the settings with `/config` in the input window or from the tray menu. They are fully
@@ -271,40 +385,43 @@ keyboard-driven:
 | <kbd>↑</kbd> <kbd>↓</kbd>            | Select a setting                           |
 | <kbd>←</kbd> <kbd>→</kbd>            | Switch between values                      |
 | <kbd>Enter</kbd>                     | Edit: record a new hotkey, pick a folder   |
-| <kbd>Del</kbd>                       | Reset the setting to its default           |
+| <kbd>Del</kbd> (<kbd>⌫</kbd> on macOS) | Reset the setting to its default         |
 | <kbd>Esc</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> | Close                              |
 
 | Setting            | Default                                     | Options                                      |
 | ------------------ | ------------------------------------------- | -------------------------------------------- |
-| Hotkey             | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Any key or combination except <kbd>Esc</kbd> |
+| Hotkey             | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Any key or combination except <kbd>Esc</kbd>; on Wayland set in the desktop instead (see [Linux](#linux)) |
 | Hotkey opens       | Quick line                                  | Quick line, Pad                              |
 | Pad position       | Top right                                   | Top right, Top left, Bottom right, Bottom left, Center |
-| Notes folder       | `%USERPROFILE%\Documents\Quicklly`          | Any folder                                   |
+| Notes folder       | `Quicklly` in Documents (see [Where notes are stored](#where-notes-are-stored)) | Any folder           |
 | Notes file         | One file per day                            | One file per day, or a single `inbox.md`     |
 | Date format        | DD/MM/YYYY                                  | DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD.MM.YYYY: how `/date` dates are typed and shown |
 | Archive done notes | After 7 days                                | Never, after 1, 3, 7, 14 or 30 days: when done notes move to `archive/` (see [Archive](#archive)) |
 | Theme              | Default                                     | Default (dark), Default+ (dark purple), Light |
-| Transparency       | 30%                                         | Off to 80%: how much of the blurred desktop shows through the windows |
+| Transparency       | 30%                                         | Off to 80%: how much of the blurred desktop (not blurred on Linux) shows through the windows |
 | Scale              | 100%                                        | 80% to 150%                                  |
-| Start with Windows | Off                                         | On, Off                                      |
+| Start with Windows (Start at login on macOS and Linux) | Off     | On, Off                                      |
 | Auto update        | On                                          | On, Off (`/update` works either way)         |
 
 ## Building from source
 
-Prerequisites (on Windows):
+Prerequisites on every system: [Node.js](https://nodejs.org/) LTS and
+[Rust](https://rustup.rs/) (stable). Then:
 
-- [Node.js](https://nodejs.org/) LTS
-- [Rust](https://rustup.rs/) (stable, MSVC toolchain)
-- [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-  with the Windows SDK
-- WebView2 (preinstalled on Windows 10/11)
+- **Windows:** the MSVC Rust toolchain,
+  [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  with the Windows SDK, and WebView2 (preinstalled on Windows 10/11).
+- **macOS:** the Xcode Command Line Tools (`xcode-select --install`).
+- **Linux** (Debian, Ubuntu):
+  `sudo apt install build-essential libwebkit2gtk-4.1-dev libdbus-1-dev libayatana-appindicator3-dev librsvg2-dev`.
 
-See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for details.
+See the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for details and other Linux
+distributions.
 
 ```sh
 npm install
 npm run tauri dev     # run in development mode
-npm run tauri build   # build the installer into src-tauri/target/release/bundle/
+npm run tauri build   # build the installers into src-tauri/target/release/bundle/
 npm test              # run the frontend tests
 ```
 

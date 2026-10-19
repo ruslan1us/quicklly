@@ -196,7 +196,7 @@ number to path. See [ADR 0006](decisions/0006-pasted-images-saved-as-files-next-
 `images/` folder with an extension pasted images are saved with; a hand-written link to anything
 else, such as a program, is never opened.
 
-Images leave `images/` only to the Recycle Bin, in two cases:
+Images leave `images/` only to the Recycle Bin (the Trash on macOS and Linux), in two cases:
 
 | When | Which images | Kept while |
 | --- | --- | --- |
@@ -249,10 +249,12 @@ identifier:
 | --- | --- | --- | --- |
 | Windows | `com.quicklly.app` (`tauri.conf.json`) | `%APPDATA%\com.quicklly.app` | `%LOCALAPPDATA%\com.quicklly.app` |
 | macOS | `com.quicklly.desktop` (`tauri.macos.conf.json`) | `~/Library/Application Support/com.quicklly.desktop` | `~/Library/Caches/com.quicklly.desktop` |
+| Linux | `com.quicklly.app` (`tauri.conf.json`) | `~/.local/share/com.quicklly.app` (`$XDG_DATA_HOME`) | `~/.cache/com.quicklly.app` (`$XDG_CACHE_HOME`) |
 
 macOS has its own identifier because one ending in `.app` makes Finder show these folders as
 broken applications; see [Release](release.md#macos-bundle). The default notes folder is
-`~/Documents/Quicklly` there.
+`~/Documents/Quicklly` on macOS, and `Quicklly` in the XDG Documents folder on Linux (see
+[The notes folder](#the-notes-folder)).
 
 | File | Content |
 | --- | --- |
@@ -288,5 +290,7 @@ deleted by others; both read the same.
 | `readerBounds` | `{ x, y, width, height }` in physical pixels | none | Reader moved or resized while pinned |
 | `readerSort` | `"recent"`, `"name"` | `"recent"` | `set_reader_sort` |
 
-Start with Windows is not stored here: it is a `Run` entry in the user registry managed by
-`tauri-plugin-autostart`. Invalid values fall back to the default (`settings::stored`).
+Start with Windows (Start at login) is not stored here: `tauri-plugin-autostart` keeps it as a
+`Run` entry in the user registry on Windows, a LaunchAgent in `~/Library/LaunchAgents` on macOS
+and a `.desktop` file in `~/.config/autostart` on Linux. Invalid values fall back to the default
+(`settings::stored`).

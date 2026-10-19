@@ -32,7 +32,7 @@ Each row defines a label, how its value is shown, and optionally `cycle` (←/�
 | Theme | `set_theme` | Same as → | Default | Emits `appearance-changed` |
 | Transparency | `set_transparency` (0–80 % in steps) | Same as → | 30 % | Emits `appearance-changed` |
 | Scale | `set_scale` (80, 90, 100, 110, 125, 150 %) | Same as → | 100 % | Re-zooms all windows, resizes an unpinned Pad, emits `appearance-changed` |
-| Start with Windows (Start at login on macOS and Linux) | `set_autostart` | Same as → | Off | Adds or removes the `Run` registry entry through the autostart plugin |
+| Start with Windows (Start at login on macOS and Linux) | `set_autostart` | Same as → | Off | Adds or removes the autostart plugin's entry: the `Run` registry value on Windows, a LaunchAgent on macOS, a `~/.config/autostart` file on Linux |
 | Auto update | `set_auto_update` | Same as → | On | On: check now; off: forget the announced release |
 
 ## Keys

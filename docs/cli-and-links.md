@@ -45,10 +45,11 @@ of starting the application.
 
 1. Attaches to the parent console if the process has no standard output or error handle (see
    below).
-2. Reads the notes folder and the mode directly from `%APPDATA%\<identifier>\settings.json`
-   (`settings::notes_settings_in`), because the store plugin is not running. A missing or unreadable
-   file means the defaults: `Documents\Quicklly` (`settings::default_notes_dir`, as in the app)
-   and daily files.
+2. Reads the notes folder and the mode directly from `settings.json` in the data folder,
+   `dirs::data_dir()` joined with the identifier (`%APPDATA%\<identifier>` on Windows; see
+   [Data format](data-format.md#application-files)), with `settings::notes_settings_in`, because
+   the store plugin is not running. A missing or unreadable file means the defaults:
+   `Documents\Quicklly` (`settings::default_notes_dir`, as in the app) and daily files.
 3. Calls `notes::append_note` with the local time, so tags, nested folders, headings and
    normalisation are identical to the input window.
 4. Prints `Saved to <file>` (the notes file relative to the notes folder, with `/`) on standard

@@ -1,12 +1,13 @@
 # Overview
 
-Quicklly is a hotkey notepad for Windows. A global hotkey brings up a one-line input window over
-every other window; the typed thought is appended with the time to a Markdown file and the window
-disappears, so the user stays in the task at hand. Around that core the application offers a
-larger editor (the Pad), a reader for browsing, completing, editing and deleting notes, search,
-tags, due dates with reminders, an archive of completed notes and a journal of recent work. All
-data lives in plain Markdown files in a folder the user chooses. This page states the purpose,
-the principles that shape every change, the scope and the direction of the project.
+Quicklly is a hotkey notepad for Windows, macOS and Linux. A global hotkey brings up a one-line
+input window over every other window; the typed thought is appended with the time to a Markdown
+file and the window disappears, so the user stays in the task at hand. Around that core the
+application offers a larger editor (the Pad), a reader for browsing, completing, editing and
+deleting notes, search, tags, due dates with reminders, an archive of completed notes and a
+journal of recent work. All data lives in plain Markdown files in a folder the user chooses. This
+page states the purpose, the principles that shape every change, the scope and the platforms, and
+the direction of the project.
 
 ## Purpose
 
@@ -25,7 +26,7 @@ system.
 | Simplicity over guardrails | The simplest implementation wins. There are no input restrictions and no heuristics that guess the user's intent or the state of the outside world; the user decides. For example, `#tag` routing follows a fixed grammar rather than guessing, and a hotkey that cannot be registered is reported rather than replaced. |
 | Minimal settings | A setting is added only where users genuinely differ (folder, file layout, date format, appearance). Behaviour that can have one good default has no setting. |
 | Lightweight | The application lives in the tray, creates windows only when they are first needed, and keeps its installer small. See [ADR 0001](decisions/0001-tauri-2-over-electron.md) and [ADR 0008](decisions/0008-windows-created-lazily-from-async-commands.md). |
-| Safe changes to user data | Destructive operations go to the Recycle Bin, edits only touch the note the user saw and are refused if the file changed, and changes made in the reader can be undone. See [ADR 0010](decisions/0010-reader-changes-guarded-by-the-note-as-last-seen.md) and [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |
+| Safe changes to user data | Destructive operations go to the Recycle Bin (the Trash on macOS and Linux), edits only touch the note the user saw and are refused if the file changed, and changes made in the reader can be undone. See [ADR 0010](decisions/0010-reader-changes-guarded-by-the-note-as-last-seen.md) and [ADR 0015](decisions/0015-deletions-go-to-the-recycle-bin.md). |
 
 ## Scope
 
@@ -35,10 +36,21 @@ In scope:
   `quicklly://` links.
 - Working with notes: the reader (complete, edit, delete, undo, copy links, open images), search,
   reminders for due notes, the archive of completed notes and the journal of the last seven days.
-- Running unobtrusively: tray icon, global hotkey, start with Windows, signed automatic updates.
+- Running unobtrusively: tray icon (the menu bar on macOS), global hotkey, start at login, signed
+  automatic updates.
 
-The application currently targets Windows only. It relies on WebView2, the acrylic window effect,
-the Windows Recycle Bin and Win32 calls for the active window and the console.
+The application runs on Windows, macOS (13.1 or later, one universal build) and Linux (x86-64,
+AppImage, deb and rpm), from one code base: platform code sits behind `cfg(target_os)` in Rust
+and the build-time `__PLATFORM__` constant in the pages ([Frontend](frontend.md#build-set-up)).
+Where a platform can't do what Windows does, the application does the simplest honest thing
+instead:
+
+| Platform | Differences from Windows |
+| --- | --- |
+| macOS | ⌘ for the app's own shortcuts (⌃C still closes), ⌫ deletes in the reader; a menu-bar app without a Dock icon that hides itself when its last window goes, so the previous app gets the keyboard back ([Architecture](architecture.md#focus-on-macos)); HUD vibrancy instead of Acrylic; no window over a full-screen app; links saved by the running app ([ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md)); undo in the reader can't take images back out of the Trash; ad-hoc signed, not notarized |
+| Linux | On Wayland the hotkey is a desktop shortcut that runs `quicklly` ([ADR 0020](decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md)), and the compositor places the windows; no blur behind the windows; the tray is an AppIndicator menu (GNOME needs an extension); deb and rpm updates only on `/update` ([ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md)) |
+
+The user-facing side of these is in the README's [Installation](../README.md#installation).
 
 ## Non-goals
 
@@ -57,16 +69,14 @@ the Windows Recycle Bin and Win32 calls for the active window and the console.
 The following describes the intended direction at a high level. It is not a commitment to scope
 or dates.
 
-- **Version 1.0** is planned to include reminders at a time of day (a Windows notification for a
+- **Version 1.0** is planned to include reminders at a time of day (a system notification for a
   note such as "tomorrow at 10 call the bank", extending the day-based dates and reminders),
   publication in winget, screenshots in the README, and ports to macOS and Linux.
-- **macOS and Linux ports.** The build matrix would cover all three platforms with one update
-  manifest. Known porting work: vibrancy instead of acrylic on macOS; an X11 global hotkey on
-  Linux, while on Wayland applications cannot register global hotkeys, so a command that the user
-  binds in the desktop environment (or the `GlobalShortcuts` portal) would replace it; a tray
-  through AppIndicator; fallback monospace fonts; layout checks in WebKit. Restoring images from
-  the Recycle Bin uses `trash::os_limited`, which is not available on macOS, so there undo leaves
-  a note's images in the Trash.
+- **After the macOS and Linux ports.** Known next steps, each only if hand testing shows the
+  need: a non-activating panel (`NSPanel`) on macOS so the windows can show over full-screen apps;
+  the `GlobalShortcuts` portal on Wayland, whose activation token would also help a desktop that
+  refuses to focus the window; reading pasted images from the native clipboard where WebKitGTK
+  doesn't pass them to the page.
 - **Backlog ideas**, not scheduled: capturing context with a note (active window, browser URL),
   writing into an Obsidian vault's daily note, voice input, LLM-assisted triage of the inbox, Git
   sync.

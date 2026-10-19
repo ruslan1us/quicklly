@@ -1,7 +1,7 @@
 # Agent guide
 
-Quicklly is a hotkey notepad for Windows built with Tauri 2 (Rust backend, Vite/TypeScript
-frontend). This file is the entry point for coding agents working on the repository.
+Quicklly is a hotkey notepad for Windows, macOS and Linux built with Tauri 2 (Rust backend,
+Vite/TypeScript frontend). This file is the entry point for coding agents working on the repository.
 
 ## Before changing code
 
@@ -46,5 +46,9 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-Tests must not touch real user data, the real Recycle Bin or system settings; see
+CI runs them on Windows, macOS and Linux. Rust code behind `cfg(target_os = "macos")` or
+`cfg(target_os = "linux")` is compiled only there, so such a change is not checked until CI has
+run; see [`docs/development.md`](docs/development.md#prerequisites).
+
+Tests must not touch real user data, the real Recycle Bin or Trash, or system settings; see
 [`docs/testing.md`](docs/testing.md).
