@@ -91,6 +91,10 @@ kept active while the window doesn't have the focus so that it doesn't turn grey
 blur: Tauri can't apply window effects there, so the windows are transparent over the plain
 desktop.
 
+Windows 11 rounds the corners of frameless windows by itself; macOS doesn't. There the blur gets
+its radius in `blur_behind()` and the page from `round_corners()`, which rounds the web view's
+layer: CSS can't, since the page background fills the whole view whatever the radius on `body`.
+
 Transparent windows need macOS's private API: on macOS, Tauri's `transparent()` builder method
 exists only with the `macos-private-api` feature of the `tauri` crate, so without it the app does
 not compile there. The feature is on in [`Cargo.toml`](../src-tauri/Cargo.toml) together with

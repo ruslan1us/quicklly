@@ -142,6 +142,8 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
   login, and the app in front keeps the keys; no ⌘-Tab entry; opening the app in
   Finder while it runs shows the input window; the menu-bar icon (the app icon in colour) shows
   on a light and a dark bar.
+- Rounded corners and a shadow that follows them on the input window, the popups, the reminders
+  and the Pad (pinned and resized too), also after the input window grows with its text.
 - ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields;
   ⌘M and ⌃⌘F do nothing in the input window, the Pad (pinned too), the reader and the popups.
 - ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad, and of an image copied in Safari

@@ -279,6 +279,7 @@ fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
         Ok(window) => {
             let _ = window.set_zoom(zoom);
             no_minimize_or_full_screen(&window);
+            round_corners(&window);
             if label == READER_WINDOW {
                 reader_window::arrange(&window);
             }
@@ -320,6 +321,30 @@ pub(crate) fn no_minimize_or_full_screen(window: &WebviewWindow) {
 #[cfg(not(target_os = "macos"))]
 pub(crate) fn no_minimize_or_full_screen(_window: &WebviewWindow) {}
 
+/// Radius of the windows' corners on macOS, in points: that of the system's own windows.
+#[cfg(target_os = "macos")]
+const CORNER_RADIUS: f64 = 10.0;
+
+/// Rounds a window's page on macOS, as `blur_behind` rounds the blur: the system rounds only
+/// windows with a frame there, and a page can't do it itself, its background filling the whole
+/// view whatever the CSS radius. Windows 11 rounds frameless windows by itself.
+#[cfg(target_os = "macos")]
+pub(crate) fn round_corners(window: &WebviewWindow) {
+    let _ = window.with_webview(|webview| {
+        // SAFETY: the pointer is the window's WKWebView, an NSView, alive during this call, which
+        // runs on the main thread.
+        let view = unsafe { &*webview.inner().cast::<objc2_app_kit::NSView>() };
+        view.setWantsLayer(true);
+        if let Some(layer) = view.layer() {
+            layer.setCornerRadius(CORNER_RADIUS);
+            layer.setMasksToBounds(true);
+        }
+    });
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn round_corners(_window: &WebviewWindow) {}
+
 /// The blurred desktop behind every window, which shows through as much as the
 /// transparency setting lets the background through.
 #[cfg(not(target_os = "macos"))]
@@ -335,6 +360,7 @@ pub(crate) fn blur_behind() -> WindowEffectsConfig {
     EffectsBuilder::new()
         .effect(Effect::HudWindow)
         .state(tauri::window::EffectState::Active)
+        .radius(CORNER_RADIUS)
         .build()
 }
 
@@ -711,6 +737,7 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 let _ = input.set_visible_on_all_workspaces(ON_EVERY_SPACE);
                 no_minimize_or_full_screen(&input);
+                round_corners(&input);
             }
             apply_scale(app.handle());
             reminders::start(app.handle());
