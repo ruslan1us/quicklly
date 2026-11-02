@@ -54,6 +54,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | --- | --- |
 | `platform.test.ts` | Windows by default on any machine, macOS and Linux when stubbed, back to Windows after the test |
 | `popup.test.ts` | `reveal()`: centred and shown only on Windows; on Linux fitted again up to the same limit once the page was laid out, and centred again |
+| `theme.test.ts` | `data-platform` for each system; the rounded corners and edge from `themes.css` on Linux only (the one stylesheet `vitest.config.ts` lets through: Vitest empties imported CSS) |
 | `links.test.ts` | Link recognition, trailing punctuation and brackets, `shortLink`, `splitLinks` |
 | `dates.test.ts` | Formatting and parsing in every format, leap years, `toStored`/`toDisplay` round trips, `/date` detection, `commandDate`, `splitDoneDate`, whole-date deletion |
 | `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, held, text wins, errors), `releaseImages` |
@@ -178,6 +179,11 @@ comes first: it decides whether the Wayland hotkey works at all.
 - Window size on first show, on Wayland, X11 and from the AppImage: the input window is one line
   high from the first hotkey on, `/config`, the reader and the other popups end at their content,
   the reminders too; on X11 the popups stay centred and the reminders in their corner.
+- Corners and edge: every window (input, also grown and with its error border, the popups, the
+  reminders, the Pad and the reader, pinned and resized too) has rounded corners that clip its
+  content and scrollbars, the desktop in the corners rather than black or the page's colour, and an
+  even thin edge in each theme and at each transparency, also at Scale 150 % and with long lists
+  scrolled.
 - Placement: where GNOME and KDE put the input window, the popups, the Pad and the reminders;
   pinned windows; always on top on X11; taskbar entries (none on X11; on Wayland the open windows
   show in the dash and Alt+Tab).

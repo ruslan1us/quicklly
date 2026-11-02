@@ -40,6 +40,20 @@
   --surface: color-mix(in srgb, var(--bg) var(--opacity, 100%), transparent);
 }
 
+/* Linux gives a frameless window neither rounded corners nor a shadow, so the page draws them:
+   every window's body fills it and clips its content (overflow other than `visible`).
+   A background on the root, even an invisible one, keeps the body's own from being propagated
+   to the whole canvas, where the radius wouldn't apply. */
+:root[data-platform="linux"] {
+  background-image: linear-gradient(transparent, transparent);
+}
+
+/* The edge is inset so that it takes no room: the windows measure the same as elsewhere. */
+:root[data-platform="linux"] body {
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--dim);
+}
+
 /* The monospace font of every window: the Windows fonts first, then those of macOS
    (ui-monospace is SF Mono) and of Linux distributions. */
 :root {

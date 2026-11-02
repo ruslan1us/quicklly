@@ -42,7 +42,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 | Module | Responsibility | Used by |
 | --- | --- | --- |
 | [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isWindows`, `isMac`, `isLinux`; `primary(e)`, the modifier of the app's own shortcuts (⌘ on macOS, <kbd>Ctrl</kbd> elsewhere); `names`, what the hints call keys and things on this system (`mod`, `ctrl`, `shift`, `del`, `trash`, `cli`); `nameThings()`, which puts them into a page's elements marked `data-name` | Input, Pad, reader, settings, help |
-| [`theme.ts`](../src/shared/theme.ts) | Loads the appearance (`get_appearance`) and follows `appearance-changed`: sets `data-theme`, the `--opacity` variable and the exported `zoom` | Every page |
+| [`theme.ts`](../src/shared/theme.ts) | Sets `data-platform` on `<html>` as it loads (what `platform` says); loads the appearance (`get_appearance`) and follows `appearance-changed`: sets `data-theme`, the `--opacity` variable and the exported `zoom` | Every page |
 | [`popup.ts`](../src/shared/popup.ts) | `fitToContent(maxHeight)` sizes a popup to its `main` element at the base width (640 logical pixels × zoom); `reveal()` centres, shows and focuses it (`center_window`, then `reveal_window`); `showAndFit(show, place)` shows it and, on Linux only, fits it again up to the last limit and `place`s it (see Window sizing below) | Reader, reminders, done, settings, help, changelog |
 | [`dates.ts`](../src/shared/dates.ts) | Date format, `toStored`/`toDisplay`, `/date` detection, `splitDoneDate`, `DONE_DAYS` (the done journal's period), `dateNodes` highlighting, `deleteDatesWhole`, `followDateFormat` | Input, Pad, reader, reminders, done, help |
 | [`calendar.ts`](../src/shared/calendar.ts), [`calendar.css`](../src/shared/calendar.css) | `datePicker`: Enter on `/date` resolves it or opens the keyboard calendar, and types the picked date over the command | Input, Pad, reader editor |
@@ -50,7 +50,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 | [`images.ts`](../src/shared/images.ts) | Label ↔ Markdown conversion (`toMarkdown`, `fromMarkdown`), `imagePaths`, highlighting nodes, `pasteImages` (adds each pasted image to the window's held set), `releaseImages` (lets go of the held images when the text starts over, see [ADR 0018](decisions/0018-pasted-images-let-go-of-when-the-text-starts-over.md)) | Input, Pad, reader, reminders, done |
 | [`links.ts`](../src/shared/links.ts) | Link recognition (`http(s)://…` or a bare domain with a known top-level domain), sentence-punctuation trimming, `shortLink`, `linkNodes` | Input, Pad, reader, reminders, done |
 | [`blockCaret.ts`](../src/shared/blockCaret.ts) | Terminal-style block caret over a textarea whose native caret is hidden, positioned with a mirror element that holds the whole text (so it wraps like the textarea); at the end of a line it goes just after the last character, and never past the edge of the text | Input, Pad, reader editor |
-| [`themes.css`](../src/shared/themes.css) | Theme colour variables, `--surface`, the `--mono` font stack, thin themed scrollbars | Every page |
+| [`themes.css`](../src/shared/themes.css) | Theme colour variables, `--surface`, the rounded corners and edge on Linux, the `--mono` font stack, thin themed scrollbars | Every page |
 | [`terminal.css`](../src/shared/terminal.css) | Popup base: font, body-scrolling layout, header, rows, error, footer | Popups |
 
 ## Styling conventions
@@ -76,6 +76,14 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 - **Transparency.** Rust gives every window an acrylic blur (a dark vibrancy on macOS). The page
   background is `--surface`, `color-mix(in srgb, var(--bg) var(--opacity), transparent)`, where
   `--opacity` is `100 % − transparency`.
+- **Corners and edge on Linux.** Linux gives a frameless window neither rounded corners nor a
+  shadow, so `themes.css`, under `:root[data-platform="linux"]`, rounds `body` by 10 pixels and
+  draws a 1-pixel `--dim` edge as an inset `box-shadow`, which takes no room and leaves the measured
+  heights alone. For this `body` must fill the window and have an `overflow` other than `visible`
+  in every window, as all of them do (`terminal.css`, the input window, the Pad), so its content is
+  clipped to the radius. A body's background normally goes to the whole canvas, where the radius
+  doesn't apply; an invisible `background-image` on the root stops that. Nothing in these rules
+  applies on Windows or macOS (see [Architecture](architecture.md#windows)).
 - **Scale.** Rust zooms each webview (`set_zoom`). Window sizes are set in logical pixels, so pages
   multiply CSS sizes by `zoom` from `theme.ts` when sizing their window, and refit on
   `appearance-changed`.

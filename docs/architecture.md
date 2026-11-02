@@ -94,6 +94,12 @@ desktop.
 Windows 11 rounds the corners of frameless windows by itself; macOS doesn't. There the blur gets
 its radius in `blur_behind()` and the page from `round_corners()`, which rounds the web view's
 layer: CSS can't, since the page background fills the whole view whatever the radius on `body`.
+Linux gives frameless windows no rounded corners, shadow or blur and Tauri has no way to ask for
+them, so there the page draws the corners and a thin edge, which also marks the window out on a
+wallpaper: CSS under `:root[data-platform="linux"]` in `themes.css`, where a background on the root
+keeps the page background to the rounded `body` (see
+[Frontend](frontend.md#styling-conventions)). There is no shadow outside the window: nothing can be
+drawn outside the web view.
 
 Transparent windows need macOS's private API: on macOS, Tauri's `transparent()` builder method
 exists only with the `macos-private-api` feature of the `tauri` crate, so without it the app does

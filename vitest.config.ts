@@ -12,6 +12,8 @@ export default defineConfig({
     environment: "happy-dom",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["tests/setup.ts"],
+    // Imported CSS is empty in tests, except this one that theme.test.ts puts on the page.
+    css: { include: /themes\.css/ },
     // A platform stubbed by one test is back to Windows for the next.
     unstubGlobals: true,
   },

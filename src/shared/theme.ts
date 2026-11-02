@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { platform } from "./platform";
+
+// For the styles of one system only (see themes.css).
+document.documentElement.dataset.platform = platform;
 
 export type Theme = "default" | "defaultPlus" | "light";
 
