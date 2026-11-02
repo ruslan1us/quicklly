@@ -86,7 +86,7 @@ Unit tests live in a `#[cfg(test)] mod tests` at the bottom of each module and r
 | `pad` | Draft file: missing reads as empty, appending text, an unreadable draft an error and left unchanged |
 | `cli` | Request parsing for `add` and links, decoding, rejection of other input, relative file names |
 | `updater` | Which cache files count as stale downloads (temporary files do not), their removal from a folder, saving a download through a temporary file and removing it when the save fails |
-| `watcher` | Which paths count as a notes change; a real watcher on a temporary folder reports a `.md.tmp` renamed into place and ignores images and temporary files |
+| `watcher` | Which paths count as a notes change; on built events, an access is no change and a burst of changes is reported once; a real watcher on a temporary folder reports a `.md.tmp` renamed into place, ignores images, temporary files and (not on macOS) a notes file being read, and stops when dropped |
 
 ### Rules
 

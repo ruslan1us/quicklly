@@ -1,6 +1,6 @@
 # 0017. Watch the notes folder for changes
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [0023](0023-watcher-ignores-file-accesses.md)
 - **Date:** 2026-10-14
 
 ## Context

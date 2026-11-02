@@ -5,22 +5,22 @@
 //! windows reload once more.
 
 use std::path::{Component, Path, PathBuf};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::sync::Mutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use notify_debouncer_mini::notify::{self, RecommendedWatcher, RecursiveMode};
-use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
+use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher as _};
 use tauri::{AppHandle, Manager};
 
 use crate::{images, settings};
 
-/// How long a file has to stay unchanged before the windows are told, so that a burst of
+/// How long the notes files have to stay unchanged before the windows are told, so that a burst of
 /// writes (a temporary file renamed over a notes file, several files archived) gives one event.
 const DEBOUNCE: Duration = Duration::from_millis(300);
 
 /// The watcher of the notes folder; dropping it stops watching.
 #[derive(Default)]
-pub struct Watcher(Mutex<Option<Debouncer<RecommendedWatcher>>>);
+pub struct Watcher(Mutex<Option<RecommendedWatcher>>);
 
 /// Starts watching the notes folder, at startup and again whenever another folder is chosen in
 /// settings, in place of the one watched before. A folder that can't be watched is only logged:
@@ -38,7 +38,7 @@ pub fn start(app: &AppHandle) {
                 .map_err(|e| format!("{}: {e}", dir.display()))
         });
     match result {
-        Ok(debouncer) => *watcher = Some(debouncer),
+        Ok(watching) => *watcher = Some(watching),
         Err(e) => eprintln!("Failed to watch the notes folder: {e}"),
     }
 }
@@ -46,29 +46,53 @@ pub fn start(app: &AppHandle) {
 /// Watches `dir` and everything in it, and calls `changed` once a burst of changes to its notes
 /// files is over. The folder is made if it isn't there yet (it would be with the first note), so
 /// that it can be watched from the start.
-fn watch(
-    dir: &Path,
-    changed: impl Fn() + Send + 'static,
-) -> notify::Result<Debouncer<RecommendedWatcher>> {
+fn watch(dir: &Path, changed: impl Fn() + Send + 'static) -> notify::Result<RecommendedWatcher> {
     std::fs::create_dir_all(dir)?;
     // FSEvents (macOS) reports paths with symlinks resolved, `/private/var/...` for `/var/...`;
     // Windows and inotify report them under the folder as given. A change counts under either.
     // On Windows the resolved form is a `\\?\` path, which reported paths never start with.
     let mut folders = vec![dir.to_path_buf()];
     folders.extend(dir.canonicalize().ok());
-    let mut debouncer = new_debouncer(DEBOUNCE, move |result: DebounceEventResult| match result {
-        Ok(events) => {
-            if events
-                .iter()
-                .any(|event| is_notes_change(&folders, &event.path))
-            {
+    let (sender, events) = mpsc::channel();
+    let mut watcher = notify::recommended_watcher(sender)?;
+    watcher.watch(dir, RecursiveMode::Recursive)?;
+    std::thread::spawn(move || debounce(events, &folders, changed));
+    Ok(watcher)
+}
+
+/// Calls `changed` once the notes files in `folders` have stayed unchanged for `DEBOUNCE` after a
+/// change. Returns when `events` closes, which dropping the watcher does.
+fn debounce(events: Receiver<notify::Result<Event>>, folders: &[PathBuf], changed: impl Fn()) {
+    let mut deadline: Option<Instant> = None;
+    loop {
+        let received = match deadline {
+            Some(at) => events.recv_timeout(at.saturating_duration_since(Instant::now())),
+            None => events.recv().map_err(RecvTimeoutError::from),
+        };
+        match received {
+            Ok(Ok(event)) => {
+                if is_change(folders, &event) {
+                    deadline = Some(Instant::now() + DEBOUNCE);
+                }
+            }
+            Ok(Err(e)) => eprintln!("Error watching the notes folder: {e}"),
+            Err(RecvTimeoutError::Timeout) => {
+                deadline = None;
                 changed();
             }
+            Err(RecvTimeoutError::Disconnected) => return,
         }
-        Err(e) => eprintln!("Error watching the notes folder: {e}"),
-    })?;
-    debouncer.watcher().watch(dir, RecursiveMode::Recursive)?;
-    Ok(debouncer)
+    }
+}
+
+/// Whether `event` changes a notes file. An access doesn't: inotify reports every file opened and
+/// closed, so the windows reloading on it would read the files and report that, without end.
+fn is_change(folders: &[PathBuf], event: &Event) -> bool {
+    !event.kind.is_access()
+        && event
+            .paths
+            .iter()
+            .any(|path| is_notes_change(folders, path))
 }
 
 /// Whether a change at `path` in the notes folder, given as its `folders` (the path as set and
@@ -97,8 +121,9 @@ fn is_notes_change(folders: &[PathBuf], path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use notify::event::{AccessKind, AccessMode, CreateKind, DataChange, ModifyKind, RemoveKind};
+    use notify::EventKind;
     use std::fs;
-    use std::sync::mpsc;
 
     fn temp_dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("quicklly-test-{name}-{}", std::process::id()));
@@ -149,6 +174,98 @@ mod tests {
         assert!(counts(path_in(&folders[1], &["work", "quicklly.md"])));
         assert!(!counts(path_in(&folders[1], &["images", "notes.md"])));
         assert!(!counts(path_in(&root, &["Other", "inbox.md"])));
+    }
+
+    /// An event of `kind` for `path`.
+    fn event(kind: EventKind, path: &Path) -> Event {
+        Event::new(kind).add_path(path.to_path_buf())
+    }
+
+    #[test]
+    fn counts_changes_but_not_accesses() {
+        let dir = std::env::temp_dir().join("Notes");
+        let folders = [dir.clone()];
+        let inbox = dir.join("inbox.md");
+        let counts = |kind| is_change(&folders, &event(kind, &inbox));
+        assert!(!counts(EventKind::Access(AccessKind::Open(
+            AccessMode::Any
+        ))));
+        assert!(!counts(EventKind::Access(AccessKind::Close(
+            AccessMode::Read
+        ))));
+        assert!(!counts(EventKind::Access(AccessKind::Close(
+            AccessMode::Write
+        ))));
+        let modify = EventKind::Modify(ModifyKind::Data(DataChange::Any));
+        assert!(counts(modify));
+        assert!(counts(EventKind::Create(CreateKind::File)));
+        assert!(counts(EventKind::Remove(RemoveKind::File)));
+        // A change elsewhere in the folder doesn't count.
+        assert!(!is_change(
+            &folders,
+            &event(modify, &path_in(&dir, &["images", "a.png"]))
+        ));
+        // A rename can report both names, and only one of them need be a notes file.
+        let rename = Event::new(modify)
+            .add_path(dir.join("inbox.md.tmp"))
+            .add_path(inbox.clone());
+        assert!(is_change(&folders, &rename));
+    }
+
+    #[test]
+    fn reports_a_burst_of_changes_once_and_ends_with_its_events() {
+        let dir = std::env::temp_dir().join("Notes");
+        let inbox = dir.join("inbox.md");
+        let (sender, events) = mpsc::channel();
+        let (told, reports) = mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            debounce(events, &[dir], move || told.send(()).unwrap());
+        });
+        let open = EventKind::Access(AccessKind::Open(AccessMode::Any));
+        sender.send(Ok(event(open, &inbox))).unwrap();
+        assert!(reports.recv_timeout(DEBOUNCE * 2).is_err());
+        let modify = EventKind::Modify(ModifyKind::Data(DataChange::Any));
+        for _ in 0..3 {
+            sender.send(Ok(event(modify, &inbox))).unwrap();
+        }
+        assert!(reports.recv_timeout(Duration::from_secs(5)).is_ok());
+        assert!(reports.recv_timeout(DEBOUNCE * 2).is_err());
+        drop(sender);
+        thread.join().unwrap();
+    }
+
+    #[test]
+    fn stops_when_the_watcher_is_dropped() {
+        let dir = temp_dir("watcher-drop");
+        let (tx, rx) = mpsc::channel::<()>();
+        let watcher = watch(&dir, move || {
+            let _ = tx.send(());
+        })
+        .unwrap();
+        drop(watcher);
+        // The thread owns the callback and with it `tx`.
+        assert_eq!(
+            rx.recv_timeout(Duration::from_secs(5)),
+            Err(RecvTimeoutError::Disconnected)
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// Not on macOS: FSEvents can report a file made just before the watch started.
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn does_not_report_a_notes_file_being_read() {
+        let dir = temp_dir("watcher-read");
+        fs::write(dir.join("inbox.md"), "- 09:00 note\n").unwrap();
+        let (tx, rx) = mpsc::channel();
+        let watcher = watch(&dir, move || {
+            let _ = tx.send(());
+        })
+        .unwrap();
+        fs::read_to_string(dir.join("inbox.md")).unwrap();
+        assert!(rx.recv_timeout(Duration::from_secs(1)).is_err());
+        drop(watcher);
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
