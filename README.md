@@ -73,7 +73,8 @@ Three formats, all for x86-64, built on Ubuntu 24.04, so they need glibc 2.39 or
 - **AppImage** (`Quicklly_x.y.z_amd64.AppImage`): make it executable
   (`chmod +x Quicklly_x.y.z_amd64.AppImage`) and run it. It updates itself in place, so keep it in
   a folder you can write to. It isn't on your `PATH`: use its full path, or link it into
-  `~/.local/bin` as `quicklly`.
+  `~/.local/bin` as `quicklly`. On Wayland use the deb or rpm instead (see
+  **The AppImage on Wayland** below).
 - **deb** (Debian, Ubuntu): `sudo apt install ./Quicklly_x.y.z_amd64.deb`.
 - **rpm** (Fedora, openSUSE Tumbleweed): `sudo dnf install ./Quicklly-x.y.z-1.x86_64.rpm`, or
   `sudo zypper install ./Quicklly-x.y.z-1.x86_64.rpm` on openSUSE. openSUSE Leap 15.6 has
@@ -100,10 +101,28 @@ full path to it), and the settings say **Set in system settings: run quicklly**:
 The key then opens what **Hotkey opens** in the settings names. If Quicklly isn't running, the
 first press starts it in the tray; press again for the window.
 
-On Wayland the desktop decides where windows go, so the Pad and the reminders may not open in
-their corners, and a pinned Pad or reader keeps its size but neither its place nor staying on
-top. The windows also show in the dash and in Alt+Tab while they are open. There is no blur
-behind the windows on Linux: the transparency setting shows the desktop as it is.
+**Window position on Wayland.** The desktop decides where windows go, so the input window may not
+open in the centre, the Pad and the reminders may not open in their corners, and a pinned Pad or
+reader keeps its size but neither its place nor staying on top. GNOME 47 and older (so Ubuntu
+24.04) put new windows at the top left of the work area; GNOME 48 and later centre them. To have
+an older GNOME centre them too, for all applications, run:
+
+```sh
+gsettings set org.gnome.mutter center-new-windows true
+```
+
+The windows also show in the dash and in Alt+Tab while they are open.
+
+**Reminders and the keyboard on Wayland.** The desktop also decides which window gets the
+keyboard, so reminders that show by themselves may take it from the app you are typing in. Typing
+does nothing in them until you click them; click back in your app to go on typing there.
+
+**The AppImage on Wayland.** The AppImage always runs through XWayland (its GTK hook sets
+`GDK_BACKEND=x11`), and GNOME doesn't give the keyboard to its windows: click a window before
+typing in it. The deb and rpm don't have this problem, so use them on Wayland.
+
+**Transparency.** There is no blur behind the windows on Linux: the setting shows the desktop as
+it is.
 
 **Pasting images** needs WebKitGTK 2.54.1 or later. The deb and rpm use your system's WebKitGTK
 (`libwebkit2gtk-4.1`), the AppImage the one it was built with. Ubuntu 24.04 and 26.04 and
@@ -231,8 +250,9 @@ window, the Pad and the reader show it in the **Date format** of the settings.
 
 Notes that are not done and have a date of today or earlier pop up in a small window in the
 bottom right corner when Quicklly starts (also at login) and when a new day begins while it
-runs: overdue ones first, then today's. The window stays on top without taking the focus, so it
-doesn't get in the way of your typing; click it to use the keys. <kbd>↑</kbd> <kbd>↓</kbd> select
+runs: overdue ones first, then today's. The window stays on top without taking the focus (on
+Wayland the desktop decides that, see [Linux](#linux)), so it doesn't get in the way of your
+typing; click it to use the keys. <kbd>↑</kbd> <kbd>↓</kbd> select
 a note, <kbd>Space</kbd> marks it done (and takes it off the list), <kbd>S</kbd> moves its date
 to tomorrow and <kbd>W</kbd> a week from today (which takes it off the list too),
 <kbd>Enter</kbd> opens it in the [reader](#reader) and <kbd>Esc</kbd> closes the window; it
@@ -281,7 +301,7 @@ entry):
 | <kbd>C</kbd>                         |                        | Copy the note's links              |
 | <kbd>O</kbd>                         |                        | Open the note's images             |
 | <kbd>Del</kbd>                       | Move to the Recycle Bin, the Trash on macOS and Linux (press <kbd>Del</kbd> twice) | Delete (press <kbd>Del</kbd> twice) |
-| <kbd>Ctrl</kbd>+<kbd>Z</kbd>         | Undo                   | Undo                               |
+| <kbd>Ctrl</kbd>+<kbd>Z</kbd>         | Undo the latest change to a note; a deleted file comes back only from the Recycle Bin or the Trash | Undo |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd>         |                        | Pin: keep the reader open over other windows, resizable and up to date |
 | <kbd>←</kbd>                         |                        | Back to the files                  |
 | <kbd>→</kbd>                         | Back to the input      |                                    |
@@ -297,8 +317,8 @@ was done (see [Archive](#archive)):
 Changes only touch that note; the rest of the file stays as it is. If the file was changed
 elsewhere in the meantime, nothing is written and the reader reloads it.
 
-<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the deletes, done marks and edits made in the reader while it
-is open, one per press, latest first: the note comes back exactly as it was, with its day heading
+<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the note deletes, done marks and edits made in the reader while
+it is open, one per press, latest first: the note comes back exactly as it was, with its day heading
 and its images (taken back out of the Recycle Bin or the Trash; not on macOS, see
 [macOS](#macos)), and the reader opens its file. A change to a
 file that has changed again since, say by a new note from the input window, is not undone.
