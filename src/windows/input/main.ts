@@ -24,7 +24,7 @@ import {
   toMarkdown,
 } from "../../shared/images";
 import { linkNodes, shortLink, splitLinks } from "../../shared/links";
-import { primary } from "../../shared/platform";
+import { isLinux, primary } from "../../shared/platform";
 import { BASE_WIDTH } from "../../shared/popup";
 import { tagSuggest } from "../../shared/tagSuggest";
 import { followTheme, zoom } from "../../shared/theme";
@@ -590,6 +590,8 @@ window.addEventListener("focus", () => {
   input.focus();
   announceUpdate();
   void suggestions.load();
+  // On Linux a fit done while the window is hidden doesn't hold, and it comes up too large.
+  if (isLinux) refit();
 });
 
 // The window is fitted to the note once the scale is known, and again whenever it changes.

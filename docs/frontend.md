@@ -43,7 +43,7 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 | --- | --- | --- |
 | [`platform.ts`](../src/shared/platform.ts) | The system the pages were built for: `platform` (`win32`, `darwin` or `linux`), `isWindows`, `isMac`, `isLinux`; `primary(e)`, the modifier of the app's own shortcuts (⌘ on macOS, <kbd>Ctrl</kbd> elsewhere); `names`, what the hints call keys and things on this system (`mod`, `ctrl`, `shift`, `del`, `trash`, `cli`); `nameThings()`, which puts them into a page's elements marked `data-name` | Input, Pad, reader, settings, help |
 | [`theme.ts`](../src/shared/theme.ts) | Loads the appearance (`get_appearance`) and follows `appearance-changed`: sets `data-theme`, the `--opacity` variable and the exported `zoom` | Every page |
-| [`popup.ts`](../src/shared/popup.ts) | `fitToContent(maxHeight)` sizes a popup to its `main` element at the base width (640 logical pixels × zoom); `reveal()` centres, shows and focuses it (`center_window`, then `reveal_window`) | Reader, reminders, done, settings, help, changelog |
+| [`popup.ts`](../src/shared/popup.ts) | `fitToContent(maxHeight)` sizes a popup to its `main` element at the base width (640 logical pixels × zoom); `reveal()` centres, shows and focuses it (`center_window`, then `reveal_window`); `showAndFit(show, place)` shows it and, on Linux only, fits it again up to the last limit and `place`s it (see Window sizing below) | Reader, reminders, done, settings, help, changelog |
 | [`dates.ts`](../src/shared/dates.ts) | Date format, `toStored`/`toDisplay`, `/date` detection, `splitDoneDate`, `DONE_DAYS` (the done journal's period), `dateNodes` highlighting, `deleteDatesWhole`, `followDateFormat` | Input, Pad, reader, reminders, done, help |
 | [`calendar.ts`](../src/shared/calendar.ts), [`calendar.css`](../src/shared/calendar.css) | `datePicker`: Enter on `/date` resolves it or opens the keyboard calendar, and types the picked date over the command | Input, Pad, reader editor |
 | [`tagSuggest.ts`](../src/shared/tagSuggest.ts) | Suggests existing tags (`list_tags`) for a `#tag` being typed; ↑ ↓ choose, Enter or Tab pick, Esc closes until the typed tag changes; exports `TAG_NAME`, the tag rule of `notes::first_tag`, which the Pad also highlights tags by | Input, Pad |
@@ -137,3 +137,13 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 - **Window sizing.** Pages size their own windows: the input window grows with its text up to ten
   lines, popups fit their content up to a per-window maximum and then scroll, the reminders keep
   their corner after resizing (`place_reminders`).
+- **Fitting again on Linux.** On Linux a fit done while the window is hidden doesn't hold: the
+  input window comes up about 200 pixels high and the popups too large, on Wayland and on X11,
+  while a fit on the visible window works. The cause is not confirmed, so the fix doesn't depend
+  on it: on Linux, every window that fits itself fits again once it shows. The input window refits
+  on its `focus` event, which also covers later shows. `reveal()` and the reminders go through
+  `showAndFit`: after the show it waits for the page to be laid out at the window's size (the next
+  `resize`, at most 300 ms), fits up to the limit `fitToContent` last had, waits for that size to
+  apply the same way and puts the window back in place (`center_window` or `place_reminders`, which
+  read the size GTK last reported; on Wayland the compositor places windows and this does
+  nothing). A pinned reader and the Pad keep the size they were given and are not fitted.

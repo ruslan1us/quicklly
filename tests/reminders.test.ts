@@ -1,5 +1,5 @@
 import { emit } from "@tauri-apps/api/event";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import html from "../src/windows/reminders/index.html?raw";
 import {
   type Call,
@@ -202,6 +202,32 @@ async function pressAll() {
   press(document, "Escape");
   await settle();
 }
+
+/** The commands sent since the window showed. */
+function sinceShown() {
+  const commands = calls.map((call) => call.cmd);
+  return commands.slice(commands.indexOf("reveal_reminders") + 1);
+}
+
+// Before the tests on Linux, whose windows go on fitting for a moment after the test.
+test("on Windows the reminders are not fitted again once shown", async () => {
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  expect(sinceShown()).toEqual([]);
+});
+
+test("on Linux the reminders are fitted again once shown, and kept in their corner", async () => {
+  closePage();
+  onPlatform("linux");
+  await open(DUE, AHEAD);
+  await vi.waitFor(() =>
+    expect(sinceShown()).toEqual([
+      "plugin:window|scale_factor",
+      "plugin:window|inner_size",
+      "plugin:window|set_size",
+      "place_reminders",
+    ]),
+  );
+});
 
 /** Whether nothing was done to the notes or the window. */
 const untouched = () =>

@@ -53,15 +53,16 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | File | Covers |
 | --- | --- |
 | `platform.test.ts` | Windows by default on any machine, macOS and Linux when stubbed, back to Windows after the test |
+| `popup.test.ts` | `reveal()`: centred and shown only on Windows; on Linux fitted again up to the same limit once the page was laid out, and centred again |
 | `links.test.ts` | Link recognition, trailing punctuation and brackets, `shortLink`, `splitLinks` |
 | `dates.test.ts` | Formatting and parsing in every format, leap years, `toStored`/`toDisplay` round trips, `/date` detection, `commandDate`, `splitDoneDate`, whole-date deletion |
 | `images.test.ts` | Label and Markdown conversion, renumbering clashes, `imagePaths`, pasting (saved, numbered, held, text wins, errors), `releaseImages` |
 | `calendar.test.ts` | `/date` resolution and the calendar keys |
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
-| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search (marks in the shown text, the day in the date format or blank, the delay after typing, Enter during the delay, late results of an older search ignored), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails, ⌘E on macOS, the Enter that ends an input method's composition |
+| `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search (marks in the shown text, the day in the date format or blank, the delay after typing, Enter during the delay, late results of an older search ignored), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails, ⌘E on macOS, the Enter that ends an input method's composition, the window fitted again on focus on Linux only |
 | `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over; ⌘Enter and ⌘P on macOS, and the hints naming them; the Enter that ends an input method's composition |
 | `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused (not on the Enter that ends an input method's composition), Ctrl+Z in its cases; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere; the hints naming the keys and the Recycle Bin or Trash |
-| `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab; on Linux, keys ignored in reminders that showed by themselves until a click or `/reminders` |
+| `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab; on Linux, keys ignored in reminders that showed by themselves until a click or `/reminders`, and the window fitted again once shown, only there |
 | `done.test.ts` | The period asked for, grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
 | `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period, keys and the Recycle Bin or Trash named for Windows, macOS and Linux, the hotkey on Wayland mentioned only on Linux |
 | `settings.test.ts` | The autostart row, the footer and the held modifiers while recording a hotkey, named for Windows, macOS and Linux; on Wayland the Hotkey row naming the command to bind, with nothing to record or reset |
@@ -174,6 +175,9 @@ comes first: it decides whether the Wayland hotkey works at all.
 - Look: transparency without blur, the three themes, the Scale setting 80–150 % and display
   scaling 100/200 %, Pad text and highlighting aligned on long wrapped lines, the block caret,
   fonts, scrollbars (the system's), emoji.
+- Window size on first show, on Wayland, X11 and from the AppImage: the input window is one line
+  high from the first hotkey on, `/config`, the reader and the other popups end at their content,
+  the reminders too; on X11 the popups stay centred and the reminders in their corner.
 - Placement: where GNOME and KDE put the input window, the popups, the Pad and the reminders;
   pinned windows; always on top on X11; taskbar entries (none on X11; on Wayland the open windows
   show in the dash and Alt+Tab).

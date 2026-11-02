@@ -35,7 +35,9 @@ snoozed or opened in the reader. User-facing keys are in the root README,
   first unhides the app: with `come_forward` when the window takes the focus, and without
   activating it (`unhideWithoutActivation`) when it doesn't. A window shown without focus is then
   ordered in with `orderFrontRegardless`, as showing it would make it the key window inside
-  Quicklly, so an input window or a Pad being typed in would lose the keys and hide.
+  Quicklly, so an input window or a Pad being typed in would lose the keys and hide. On Linux the
+  page fits the window again once it shows and calls `place_reminders`, as a fit done while it is
+  hidden doesn't hold there (see [Frontend](../frontend.md#editing-conventions)).
 - **Keys of unrequested reminders on Linux.** Some Linux desktops give the window the keyboard
   anyway: GNOME on Wayland focuses every new window (`focused(false)` doesn't reach the
   compositor there), and KDE may too. What the user was typing elsewhere would then mark notes

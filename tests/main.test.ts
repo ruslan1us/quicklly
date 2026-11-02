@@ -323,6 +323,27 @@ test("Ctrl+E keeps the note and shows why when the Pad draft can't be read", asy
   expect(calls.some((call) => call.cmd === "reveal_window")).toBe(true);
 });
 
+/** The sizes the window was given when it got the focus, with a note of one line. */
+async function sizesOnFocus() {
+  Object.defineProperty(document.querySelector("#measure"), "offsetHeight", { value: 56 });
+  calls.length = 0;
+  window.dispatchEvent(new Event("focus"));
+  await settle();
+  return argsOf(calls, "plugin:window|set_size").map((args) => JSON.stringify(args));
+}
+
+test("on Windows the window keeps its size when it shows", async () => {
+  expect(await sizesOnFocus()).toEqual([]);
+});
+
+test("on Linux the window fits again when it shows, each time", async () => {
+  closePage();
+  onPlatform("linux");
+  await open();
+  expect(await sizesOnFocus()).toEqual([expect.stringContaining('"height":56')]);
+  expect(await sizesOnFocus()).toEqual([expect.stringContaining('"height":56')]);
+});
+
 test("on macOS ⌘E moves the note into the Pad, not Ctrl+E; Ctrl+C still closes", async () => {
   closePage();
   onPlatform("darwin");

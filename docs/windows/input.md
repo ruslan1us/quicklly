@@ -30,7 +30,9 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
   for the next show. <kbd>Esc</kbd>, a saved note or a command clears the field, leaves search mode
   and hides. Alt+F4 hides instead of closing.
 - On every `focus` event the page refocuses the textarea, reloads the tag list and, if a release is
-  waiting, shows `update vX available · /update` in the hint for two seconds.
+  waiting, shows `update vX available · /update` in the hint for two seconds. On Linux it also fits
+  the window again, as a fit done while it is hidden doesn't hold there (see
+  [Frontend](../frontend.md#editing-conventions)).
 
 ## Keys and commands
 

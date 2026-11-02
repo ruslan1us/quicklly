@@ -126,7 +126,9 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
   never flickers at the wrong size. Popups call `reveal()` from
   [`popup.ts`](../src/shared/popup.ts) (centre on the active monitor with `center_window`, then
   show and focus with `reveal_window`); the reminders call `reveal_reminders`; the Pad and a pinned
-  reader call `reveal_window` themselves.
+  reader call `reveal_window` themselves. On Linux a fit done while hidden doesn't hold, so the
+  input window and the fitted popups fit again once they show (see
+  [Frontend](frontend.md#editing-conventions)).
 - **Unfocused creation.** `show_popup` and the reminders build windows with `focused(false)`, and
   the `main` window is declared with `"focus": false`. A hidden window created with focus would
   take the keyboard from the application in use, notably at start.

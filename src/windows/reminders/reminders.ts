@@ -4,7 +4,7 @@ import { dateNodes, followDateFormat, shownDate, toDisplay } from "../../shared/
 import { markdownNodes } from "../../shared/images";
 import { linkNodes, shortLink } from "../../shared/links";
 import { isLinux } from "../../shared/platform";
-import { appWindow, fitToContent } from "../../shared/popup";
+import { appWindow, fitToContent, showAndFit } from "../../shared/popup";
 import { followTheme } from "../../shared/theme";
 
 /** A note as the reader sees it, so it can be marked done the same way. */
@@ -231,7 +231,12 @@ async function start() {
     return;
   }
   await fitToContent(MAX_HEIGHT);
-  if (await invoke<boolean>("reveal_reminders")) keysOn = true;
+  await showAndFit(
+    async () => {
+      if (await invoke<boolean>("reveal_reminders")) keysOn = true;
+    },
+    () => invoke("place_reminders"),
+  );
 }
 
 // Shown only once themed and filled in, so it never flickers.
