@@ -142,8 +142,8 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
 - The reminders at start don't take the focus, nor when they come up (at midnight) while the
   input window or the Pad is being typed in; no Dock icon or menu bar flash at start, also at
   login, and the app in front keeps the keys; no ⌘-Tab entry; opening the app in
-  Finder while it runs shows the input window; the menu-bar icon (the app icon in colour) shows
-  on a light and a dark bar.
+  Finder while it runs shows the input window; the menu-bar icon (the notebook, without
+  its square) takes the bar's colour on a light and a dark bar.
 - Rounded corners and a shadow that follows them on the input window, the popups, the reminders
   and the Pad (pinned and resized too), also after the input window grows with its text.
 - ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields;

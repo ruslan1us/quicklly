@@ -624,7 +624,7 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
         ],
     )?;
 
-    let mut tray = TrayIconBuilder::with_id("main")
+    let tray = TrayIconBuilder::with_id("main")
         .tooltip("Quicklly")
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -645,9 +645,16 @@ fn setup_tray(app: &App) -> tauri::Result<()> {
                 show_input(tray.app_handle());
             }
         });
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
-    }
+    // The macOS menu bar draws a template image from its alpha alone, in the bar's own colour.
+    #[cfg(target_os = "macos")]
+    let tray = tray
+        .icon(tauri::include_image!("icons/tray-template.png"))
+        .icon_as_template(true);
+    #[cfg(not(target_os = "macos"))]
+    let tray = match app.default_window_icon() {
+        Some(icon) => tray.icon(icon.clone()),
+        None => tray,
+    };
     tray.build(app)?;
     Ok(())
 }
