@@ -31,7 +31,7 @@ so it appears without delay. User-facing keys are in the root README, [Usage](..
   and hides. Alt+F4 hides instead of closing.
 - On every `focus` event the page refocuses the textarea, reloads the tag list and, if a release is
   waiting, shows `update vX available · /update` in the hint for two seconds. On Linux it also fits
-  the window again, as a fit done while it is hidden doesn't hold there (see
+  the window again, as a fit done while it is hidden may not hold there (see
   [Frontend](../frontend.md#editing-conventions)).
 
 ## Keys and commands

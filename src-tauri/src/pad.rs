@@ -124,6 +124,7 @@ pub fn show(app: &AppHandle) {
             let _ = window.set_zoom(settings::scale(app));
             crate::no_minimize_or_full_screen(&window);
             crate::round_corners(&window);
+            crate::let_shrink(&window);
             window_bounds::set_resizable(&window, is_pinned(app), MIN_SIZE);
             arrange(&window);
         }

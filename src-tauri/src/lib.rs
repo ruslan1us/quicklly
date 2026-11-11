@@ -280,6 +280,7 @@ fn show_popup(app: &AppHandle, label: &str, name: &str, title: &str) {
             let _ = window.set_zoom(zoom);
             no_minimize_or_full_screen(&window);
             round_corners(&window);
+            let_shrink(&window);
             if label == READER_WINDOW {
                 reader_window::arrange(&window);
             }
@@ -344,6 +345,26 @@ pub(crate) fn round_corners(window: &WebviewWindow) {
 
 #[cfg(not(target_os = "macos"))]
 pub(crate) fn round_corners(_window: &WebviewWindow) {}
+
+/// Lets a window be made as low as its page wants, on Linux. The web view tells GTK it needs no
+/// room (WebKitGTK reports a natural size of 0), and GTK 3 then gives the window a natural size of
+/// 200 pixels as if it were empty (`NO_CONTENT_CHILD_NAT` in `gtkwindow.c`); a window that isn't
+/// resizable is never smaller than its natural size, so no window could be less than 200 pixels
+/// high. A size request of one pixel on the box that holds the web view gives the content a
+/// natural size of its own, so the window takes the size it is given.
+#[cfg(target_os = "linux")]
+pub(crate) fn let_shrink(window: &WebviewWindow) {
+    let handle = window.clone();
+    let _ = window.run_on_main_thread(move || {
+        use gtk::prelude::*;
+        if let Ok(vbox) = handle.default_vbox() {
+            vbox.set_size_request(1, 1);
+        }
+    });
+}
+
+#[cfg(not(target_os = "linux"))]
+pub(crate) fn let_shrink(_window: &WebviewWindow) {}
 
 /// The blurred desktop behind every window, which shows through as much as the
 /// transparency setting lets the background through.
@@ -745,6 +766,7 @@ pub fn run() {
                 let _ = input.set_visible_on_all_workspaces(ON_EVERY_SPACE);
                 no_minimize_or_full_screen(&input);
                 round_corners(&input);
+                let_shrink(&input);
             }
             apply_scale(app.handle());
             reminders::start(app.handle());

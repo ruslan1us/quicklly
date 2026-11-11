@@ -145,13 +145,20 @@ The page links `../../shared/themes.css` and its own stylesheet. See
 - **Window sizing.** Pages size their own windows: the input window grows with its text up to ten
   lines, popups fit their content up to a per-window maximum and then scroll, the reminders keep
   their corner after resizing (`place_reminders`).
-- **Fitting again on Linux.** On Linux a fit done while the window is hidden doesn't hold: the
-  input window comes up about 200 pixels high and the popups too large, on Wayland and on X11,
-  while a fit on the visible window works. The cause is not confirmed, so the fix doesn't depend
-  on it: on Linux, every window that fits itself fits again once it shows. The input window refits
-  on its `focus` event, which also covers later shows. `reveal()` and the reminders go through
-  `showAndFit`: after the show it waits for the page to be laid out at the window's size (the next
-  `resize`, at most 300 ms), fits up to the limit `fitToContent` last had, waits for that size to
-  apply the same way and puts the window back in place (`center_window` or `place_reminders`, which
-  read the size GTK last reported; on Wayland the compositor places windows and this does
-  nothing). A pinned reader and the Pad keep the size they were given and are not fitted.
+- **Windows lower than 200 pixels on Linux.** GTK 3 gives a window whose content
+  reports no natural size a natural size of 200 pixels, and WebKitGTK's web view reports none; a
+  window that isn't resizable is never smaller than its natural size. So every window that should
+  be lower than 200 pixels stopped at 200, however it was fitted. Rust gives the box that holds
+  each web view a one-pixel size request (`let_shrink` in [`lib.rs`](../src-tauri/src/lib.rs),
+  called wherever a window is built), after which a window takes the height its page sets.
+- **Fitting again on Linux.** On Linux a fit done while the window is hidden didn't hold: the
+  input window came up about 200 pixels high (the limit above) and the popups too large, on
+  Wayland and on X11, while a fit on the visible window worked. A hidden window is not laid out by
+  GTK, so the page is likely measured before WebKitGTK has laid it out at the window's size; this
+  is not confirmed. On Linux, every window that fits itself therefore fits again once it shows.
+  The input window refits on its `focus` event, which also covers later shows. `reveal()` and the
+  reminders go through `showAndFit`: after the show it waits for the page to be laid out at the
+  window's size (the next `resize`, at most 300 ms), fits up to the limit `fitToContent` last had,
+  waits for that size to apply the same way and puts the window back in place (`center_window` or
+  `place_reminders`, which read the size GTK last reported; on Wayland the compositor places
+  windows and this does nothing). A pinned reader and the Pad keep the size they were given and are not fitted.

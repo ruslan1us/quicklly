@@ -117,6 +117,9 @@ Each of these has caused a defect before.
 9. **Change text in fields with `document.execCommand`**, not by assigning `value`, wherever the
    user may want to undo the change with <kbd>Ctrl</kbd>+<kbd>Z</kbd>. See
    [Frontend](frontend.md#editing-conventions).
+10. **Call `let_shrink` on every window built in Rust.** Without it a window on Linux can't be
+    lower than 200 pixels, whatever size the page sets (see
+    [Architecture](architecture.md#creation-rules)). `show_popup` does it for the popups.
 
 ## Checklist: add a window
 

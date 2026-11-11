@@ -93,6 +93,7 @@ fn show(app: &AppHandle, focus: bool) {
             let _ = window.set_zoom(zoom);
             crate::no_minimize_or_full_screen(&window);
             crate::round_corners(&window);
+            crate::let_shrink(&window);
         }
         Err(e) => eprintln!("Failed to open the reminders: {e}"),
     }

@@ -183,6 +183,12 @@ comes first: it decides whether the Wayland hotkey works at all.
 - Window size on first show, on Wayland, X11 and from the AppImage: the input window is one line
   high from the first hotkey on, `/config`, the reader and the other popups end at their content,
   the reminders too; on X11 the popups stay centred and the reminders in their corner.
+- Windows lower than 200 pixels: the input window 640×56 at 100 % scale, the reader on a folder
+  with two files and on a file with one note, a short reminders list, each ending at its content
+  rather than at about 200 pixels; the input window grows with its text and shrinks back.
+- Pinning: pin and unpin the reader (also on a file with one note) and the Pad several times, in a
+  freshly opened window and in one that was already pinned: pinning keeps the size, unpinning
+  refits; a pinned reader keeps its size after clicking another window and back.
 - Corners and edge: every window (input, also grown and with its error border, the popups, the
   reminders, the Pad and the reader, pinned and resized too) has rounded corners that clip its
   content and scrollbars, the desktop in the corners rather than black or the page's colour, and an
