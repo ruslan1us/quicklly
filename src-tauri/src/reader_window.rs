@@ -41,7 +41,10 @@ pub fn is_pinned(app: &AppHandle) -> bool {
 /// screen now); an unpinned one is placed by its page.
 pub fn arrange(window: &WebviewWindow) {
     if is_pinned(window.app_handle()) {
-        window_bounds::set_resizable(window, true, MIN_SIZE);
+        // The minimum is measured against the size the window is about to be given back.
+        let size = window_bounds::saved_size(window.app_handle(), BOUNDS_KEY)
+            .or_else(|| window.inner_size().ok());
+        window_bounds::set_resizable_at(window, true, MIN_SIZE, size);
         window_bounds::restore(window, BOUNDS_KEY);
     }
 }

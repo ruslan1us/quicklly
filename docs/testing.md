@@ -62,7 +62,7 @@ Tests that depend on the date fix it with `vi.setSystemTime`. Letter shortcuts a
 | `tagSuggest.test.ts` | Filtering, picking with Enter and Tab, wrapping, Esc, nested tags, replacing a tag in the middle |
 | `main.test.ts` | Input window: Enter saves and hides, Shift+Enter, dates on Enter, calendar, date format, search (marks in the shown text, the day in the date format or blank, the delay after typing, Enter during the delay, late results of an older search ignored), pasted images let go of when the note is cleared or handed to the Pad with Ctrl+E, the note kept when Ctrl+E fails, ⌘E on macOS, the Enter that ends an input method's composition, the window fitted again on focus on Linux only |
 | `pad.test.ts` | Pad: the images let go of when a note is saved, when an edit replaces the draft and when it ends; the draft's images held, also after text moved from the input window; a draft that can't be read shown as an error and never saved over; ⌘Enter and ⌘P on macOS, and the hints naming them; the Enter that ends an input method's composition |
-| `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused (not on the Enter that ends an input method's composition), Ctrl+Z in its cases; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere; the hints naming the keys and the Recycle Bin or Trash |
+| `reader.test.ts` | File list order and tree, opening a file, Tab sort, image labels in notes and in the editor, copying links, opening images, inline edit saved and refused (not on the Enter that ends an input method's composition), Ctrl+Z in its cases; unpinning centred like on open; ⌘Z, ⌘P and ⌫ for Del on macOS, ⌫ deleting nothing elsewhere; the hints naming the keys and the Recycle Bin or Trash |
 | `reminders.test.ts` | Due list, snooze keys, closing when empty, the ahead list and Tab; on Linux, keys ignored in reminders that showed by themselves until a click or `/reminders`, and the window fitted again once shown, only there |
 | `done.test.ts` | The period asked for, grouping by day, empty state, copying Markdown, reloading on `notes-changed`, Esc |
 | `help.test.ts` | Version in the header, the Archive text following the setting, the done journal's period, keys and the Recycle Bin or Trash named for Windows, macOS and Linux, the hotkey on Wayland mentioned only on Linux |
@@ -149,8 +149,9 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
 - ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields;
   ⌘M and ⌃⌘F do nothing in the input window, the Pad (pinned too), the reader and the popups.
 - Pin the reader with ⌘P on an open file, and unpin it: the keys still work, and the window
-  grows no taller than the 440×200 minimum (a file with one note grows to it, as on Windows);
-  the same with ⌘P in the Pad.
+  keeps its size on pin (a file with one note stays as short as it is, as on Windows); the same
+  with ⌘P in the Pad.
+- Unpinning puts the reader back in the centre, not above it.
 - ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad, and of an image copied in Safari
   (**Copy Image**).
 - <kbd>C</kbd> in the done journal copies the list.

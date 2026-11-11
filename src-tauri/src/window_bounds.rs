@@ -15,17 +15,24 @@ struct Bounds {
     height: u32,
 }
 
+/// The bounds saved under `key`, if any.
+fn saved(app: &AppHandle, key: &str) -> Option<Bounds> {
+    app.store(STORE_FILE)
+        .ok()
+        .and_then(|store| store.get(key))
+        .and_then(|bounds| serde_json::from_value::<Bounds>(bounds).ok())
+}
+
+/// The size saved under `key`, if any: the size [`restore`] gives the window.
+pub fn saved_size(app: &AppHandle, key: &str) -> Option<PhysicalSize<u32>> {
+    saved(app, key).map(|bounds| PhysicalSize::new(bounds.width, bounds.height))
+}
+
 /// Puts a window back where it was saved under `key`; returns false if nothing was saved, or if
 /// the saved place is on no screen now (a screen was disconnected): then only the size is put
 /// back and the window is left where it is.
 pub fn restore(window: &WebviewWindow, key: &str) -> bool {
-    let saved = window
-        .app_handle()
-        .store(STORE_FILE)
-        .ok()
-        .and_then(|store| store.get(key))
-        .and_then(|bounds| serde_json::from_value::<Bounds>(bounds).ok());
-    let Some(bounds) = saved else {
+    let Some(bounds) = saved(window.app_handle(), key) else {
         return false;
     };
     let _ = window.set_size(PhysicalSize::new(bounds.width, bounds.height));
@@ -93,8 +100,20 @@ fn store(app: &AppHandle, key: &str, position: PhysicalPosition<i32>, size: Phys
 
 /// Lets a pinned window be resized, but not below `min` (logical pixels at normal scale), so
 /// it can't be squeezed into a sliver; an unpinned window keeps the size its page gives it.
-/// A window shorter or narrower than `min` grows to it, on every system.
+/// Pinning never grows the window: one already shorter or narrower than `min` keeps its size,
+/// and that size is its minimum that way.
 pub fn set_resizable(window: &WebviewWindow, resizable: bool, min: (f64, f64)) {
+    set_resizable_at(window, resizable, min, window.inner_size().ok());
+}
+
+/// [`set_resizable`] with the minimum measured against `size` rather than the window's size now:
+/// for a window about to be given that size.
+pub fn set_resizable_at(
+    window: &WebviewWindow,
+    resizable: bool,
+    min: (f64, f64),
+    size: Option<PhysicalSize<u32>>,
+) {
     let _ = window.set_resizable(resizable);
     // On macOS tao changes the window's style mask for this and then makes its own view the first
     // responder, a view the webview replaced as the window's content, so the page would get no
@@ -102,8 +121,26 @@ pub fn set_resizable(window: &WebviewWindow, resizable: bool, min: (f64, f64)) {
     #[cfg(target_os = "macos")]
     let _ = window.as_ref().set_focus();
     let zoom = settings::scale(window.app_handle());
-    let min_size = resizable.then(|| LogicalSize::new(min.0 * zoom, min.1 * zoom));
+    // The minimum is given in logical pixels, which the system turns into the window's own with
+    // its scale factor, so the physical size is compared in logical pixels too.
+    let current = window.scale_factor().ok().and_then(|factor| {
+        let size = size?.to_logical::<f64>(factor);
+        Some((size.width, size.height))
+    });
+    let min_size = resizable.then(|| {
+        let (width, height) = min_size((min.0 * zoom, min.1 * zoom), current);
+        LogicalSize::new(width, height)
+    });
     let _ = window.set_min_size(min_size);
+}
+
+/// The minimum size of a pinned window: `min`, but no larger than the window's `current` size in
+/// either dimension, so pinning doesn't grow it. Without the current size, just `min`.
+fn min_size(min: (f64, f64), current: Option<(f64, f64)>) -> (f64, f64) {
+    match current {
+        Some((width, height)) => (min.0.min(width), min.1.min(height)),
+        None => min,
+    }
 }
 
 #[cfg(test)]
@@ -158,5 +195,31 @@ mod tests {
     #[test]
     fn a_window_touching_a_screen_edge_is_not_on_screen() {
         assert!(!on_screen(&rect(1920, 100, 560, 380), &screens()));
+    }
+
+    #[test]
+    fn a_window_larger_than_the_minimum_gets_the_minimum() {
+        assert_eq!(
+            min_size((440.0, 200.0), Some((640.0, 520.0))),
+            (440.0, 200.0)
+        );
+    }
+
+    #[test]
+    fn a_window_smaller_than_the_minimum_keeps_its_size_as_the_minimum() {
+        // A reader on a file with one note: as wide as usual, but shorter than the minimum.
+        assert_eq!(
+            min_size((440.0, 200.0), Some((640.0, 138.0))),
+            (440.0, 138.0)
+        );
+        assert_eq!(
+            min_size((440.0, 200.0), Some((300.0, 150.0))),
+            (300.0, 150.0)
+        );
+    }
+
+    #[test]
+    fn without_the_current_size_the_minimum_is_kept() {
+        assert_eq!(min_size((660.0, 300.0), None), (660.0, 300.0));
     }
 }

@@ -159,8 +159,14 @@ opens what **Hotkey opens** names. See
 
 Both keep a pin flag in managed state (an `AtomicBool`, loaded at start) so that the window-event
 handler can decide quickly whether to hide, close or remember bounds. Pinned windows are resizable
-with a minimum size (Pad 360×200, reader 440×200 logical pixels at 100 % scale; a smaller window
-grows to it) and save their bounds in physical pixels on every move or resize. On macOS
+with a minimum size (Pad 360×200, reader 440×200 logical pixels at 100 % scale) and save their
+bounds in physical pixels on every move or resize. Pinning never grows a window:
+`window_bounds::set_resizable` takes, per dimension, the smaller of the minimum and the window's
+current size (`inner_size()` turned into logical pixels with `scale_factor()`, the units the
+minimum is given in; `min_size`, unit-tested), so a window already smaller than the minimum keeps
+its size and can't be made smaller by hand. A pinned reader reopened at its saved bounds gets its
+minimum from the saved size (`saved_size`, `set_resizable_at`), as it is made resizable before
+that size is put back. On macOS
 `window_bounds::set_resizable` also hands the keys back to the page (see
 [Architecture](architecture.md#creation-rules)). `window_bounds::restore` puts the position
 back only if the top of the saved rectangle (where the window is dragged, 32 pixels) overlaps one

@@ -14,6 +14,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (⌃C still closes) and ⌫ deletes in the reader; on Wayland the hotkey is a shortcut you add in
   your desktop's keyboard settings that runs `quicklly`.
 
+### Fixed
+
+- Pinning the reader or the Pad no longer makes the window bigger: a reader on a file with a single
+  note keeps its height instead of growing and leaving an empty space above the footer.
+
 ## [0.8.3] - 2026-10-16
 
 ### Fixed

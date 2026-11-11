@@ -393,7 +393,9 @@ async function togglePin() {
   render();
   if (!pinned) {
     await fit();
-    await appWindow.center();
+    // Centred on the monitor in use, as on open (the window's own `center()` puts it above the
+    // middle of the main screen on macOS).
+    await invoke("center_window");
   }
 }
 

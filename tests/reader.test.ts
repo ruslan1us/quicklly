@@ -476,6 +476,18 @@ test("in a pinned reader the calendar is scrolled into view, the window kept as 
   expect(calls[0].args).toBe(calendar());
 });
 
+test("unpinning fits the window and centres it on the monitor in use, as on open", async () => {
+  closePage();
+  await open({ get_reader_pin: { pinned: true, file: "2026-10-13.md" } });
+  calls.length = 0;
+  press(document, "p", { code: "KeyP", ctrlKey: true });
+  await settle();
+  expect(argsOf(calls, "set_reader_pin")).toEqual([{ pinned: false, file: "2026-10-13.md" }]);
+  const cmds = calls.map((call) => call.cmd);
+  expect(cmds).not.toContain("plugin:window|center");
+  expect(cmds.slice(-2)).toEqual(["plugin:window|set_size", "center_window"]);
+});
+
 test("Ctrl+Z with nothing to undo says so", async () => {
   await undo();
   expect(argsOf(calls, "undo_change")).toEqual([]);
