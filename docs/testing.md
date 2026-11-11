@@ -148,6 +148,9 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
   and the Pad (pinned and resized too), also after the input window grows with its text.
 - ⌘E, ⌘Enter, ⌘P, ⌘Z do the app's actions; ⌃C closes; ⌘C, ⌘V, ⌘A, ⌘Z work in text fields;
   ⌘M and ⌃⌘F do nothing in the input window, the Pad (pinned too), the reader and the popups.
+- Pin the reader with ⌘P on an open file, and unpin it: the keys still work, and the window
+  grows no taller than the 440×200 minimum (a file with one note grows to it, as on Windows);
+  the same with ⌘P in the Pad.
 - ⌘V of a screenshot (⌃⇧⌘4) in the input window and the Pad, and of an image copied in Safari
   (**Copy Image**).
 - <kbd>C</kbd> in the done journal copies the list.

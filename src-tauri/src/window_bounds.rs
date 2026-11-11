@@ -93,8 +93,14 @@ fn store(app: &AppHandle, key: &str, position: PhysicalPosition<i32>, size: Phys
 
 /// Lets a pinned window be resized, but not below `min` (logical pixels at normal scale), so
 /// it can't be squeezed into a sliver; an unpinned window keeps the size its page gives it.
+/// A window shorter or narrower than `min` grows to it, on every system.
 pub fn set_resizable(window: &WebviewWindow, resizable: bool, min: (f64, f64)) {
     let _ = window.set_resizable(resizable);
+    // On macOS tao changes the window's style mask for this and then makes its own view the first
+    // responder, a view the webview replaced as the window's content, so the page would get no
+    // keys until it is clicked: the page is given them back.
+    #[cfg(target_os = "macos")]
+    let _ = window.as_ref().set_focus();
     let zoom = settings::scale(window.app_handle());
     let min_size = resizable.then(|| LogicalSize::new(min.0 * zoom, min.1 * zoom));
     let _ = window.set_min_size(min_size);

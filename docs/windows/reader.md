@@ -98,9 +98,10 @@ While a delete waits for confirmation the footer says so; any other key or a cli
   `images/` and the failure is only logged. Inside the inline editor <kbd>Ctrl</kbd>+<kbd>Z</kbd> is
   the editor's own text undo.
 - **Pinning.** A file must be open to pin. Pinning saves the pin state and the open file and makes
-  the window resizable (minimum 440×200 at 100 % scale); moves and resizes are saved. A pinned
-  reader keeps its size, scrolls its rows between a fixed header and footer, and reopens on its
-  file. Unpinning refits and centres the window.
+  the window resizable (minimum 440×200 at 100 % scale); moves and resizes are saved. A reader
+  shorter than the minimum, such as one on a file with a single note, grows to it, leaving room
+  between the rows and the footer. A pinned reader keeps its size, scrolls its rows between a
+  fixed header and footer, and reopens on its file. Unpinning refits and centres the window.
 - **Sizing.** Unpinned, the window fits its content up to 520 CSS pixels; beyond that the body
   scrolls. Selecting the first or last row scrolls fully so the header or footer shows too.
 

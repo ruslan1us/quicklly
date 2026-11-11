@@ -166,6 +166,12 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
   [`lib.rs`](../src-tauri/src/lib.rs) therefore makes every window not minimisable and gives it
   the `FullScreenNone` collection behaviour, right after it is built (the input window at set-up).
   On Windows and Linux it does nothing: the windows stay as they were there.
+- **Keys after pinning on macOS.** Making a window resizable or not changes its style mask, after
+  which tao makes its own view the first responder. That view is no longer in the window (wry
+  replaced the content view with the webview's), so the page would get no keys until it was
+  clicked. `window_bounds::set_resizable` therefore focuses the webview right after
+  (`Webview::set_focus`, which makes the WKWebView the first responder), on every pin and unpin of
+  the Pad and the reader and when either is created.
 - **Permissions.** Every window label is listed in
   [`capabilities/default.json`](../src-tauri/capabilities/default.json), which grants the core
   window permissions the pages use (show, hide, close, focus, size, centre, drag). Application
