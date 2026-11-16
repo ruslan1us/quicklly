@@ -4,9 +4,9 @@
 [![Release](https://img.shields.io/github/v/release/ruslan1us/quicklly)](https://github.com/ruslan1us/quicklly/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/ruslan1us/quicklly)](LICENSE)
 
-A hotkey mini-notepad for Windows, macOS and Linux. Press a global hotkey anywhere, type a
-thought, hit <kbd>Enter</kbd> — it is appended with a timestamp to today's markdown file, and you
-are back in whatever you were doing.
+A hotkey mini-notepad for Windows, macOS and Linux (experimental). Press a global hotkey
+anywhere, type a thought, hit <kbd>Enter</kbd> — it is appended with a timestamp to today's
+markdown file, and you are back in whatever you were doing.
 
 ![Quicklly: a note typed in the input window with a tag and a date, then found in the reader](docs/demo.gif)
 
@@ -70,6 +70,9 @@ On macOS:
   access your Documents folder: allow it.
 
 ### Linux
+
+Linux support is experimental: the app works, but it is tested less than on Windows and macOS,
+and some windows may not size or place themselves as they should.
 
 Three formats, all for x86-64, built on Ubuntu 24.04, so they need glibc 2.39 or later
 (Ubuntu 24.04, Debian 13, Fedora 40 and newer):
