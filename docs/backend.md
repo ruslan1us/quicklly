@@ -191,8 +191,11 @@ A thread checks at start and then every 6 hours while automatic updates are on. 
 downloaded (the plugin verifies the signature) and stored as `update-<version>.bin` in the app
 cache directory; at the next start the stored bytes are installed instead of downloaded again,
 except in a deb or rpm install, which waits for `/update` (see
-[Architecture](architecture.md#updates)). After a successful install the app restarts into the new
-version.
+[Architecture](architecture.md#updates)). After a successful install the stored download is removed
+and the app restarts into the new version. A failed install (a deb or rpm password prompt
+cancelled) keeps the download, so the next `/update` installs it without downloading again. On
+Windows the plugin exits into the installer before the removal; the new version's first check
+removes the download as one of the running version.
 The download is written to `update-<version>.bin.tmp` and renamed into place, one check at a time
 (turning automatic updates on can start a check alongside the periodic one), so the stored file is
 always complete; a failed save removes the temporary file, is logged, and the release is not

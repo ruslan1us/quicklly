@@ -174,11 +174,14 @@ fn installs_at_startup() -> bool {
 
 /// Installs a release and restarts into it. On Windows the plugin has already exited into the
 /// installer, which starts the app again; on macOS and Linux it only replaces the app and returns.
+/// The download is removed only once installed, so a failed or cancelled install (a deb or rpm
+/// password prompt dismissed) keeps it for the next try. On Windows the process never gets that
+/// far; the new version's first check removes it as a download of the running version.
 fn install(app: &AppHandle, update: &Update, bytes: Vec<u8>) -> Result<(), String> {
+    update.install(bytes).map_err(|e| e.to_string())?;
     if let Some(path) = download_path(app, &update.version) {
         let _ = fs::remove_file(path);
     }
-    update.install(bytes).map_err(|e| e.to_string())?;
     app.restart()
 }
 
