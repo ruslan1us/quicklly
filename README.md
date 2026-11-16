@@ -82,7 +82,7 @@ Three formats, all for x86-64, built on Ubuntu 24.04, so they need glibc 2.39 or
 - **deb** (Debian, Ubuntu): `sudo apt install ./Quicklly_x.y.z_amd64.deb`.
 - **rpm** (Fedora, openSUSE Tumbleweed): `sudo dnf install ./Quicklly-x.y.z-1.x86_64.rpm`, or
   `sudo zypper install ./Quicklly-x.y.z-1.x86_64.rpm` on openSUSE. openSUSE Leap 15.6 has
-  glibc 2.38, too old.
+  glibc 2.38, too old: the package manager refuses the rpm there.
 
 The deb and rpm install `quicklly` on your `PATH`. They don't update at start, since installing a
 package asks for your password: a new version is announced in the input window, and `/update`

@@ -116,9 +116,12 @@ an rpm install from the rpm.
 
 The macOS app needs macOS 13.1 or later (`minimumSystemVersion`). The Linux files are built on
 Ubuntu 24.04, so all three, the AppImage, the deb and the rpm, need glibc 2.39 or later (Ubuntu
-24.04, Debian 13, Fedora 40 and newer). The deb says so in its dependencies (`libc6 (>= 2.39)`),
-so apt refuses it on an older system; the rpm can't (the bundler writes each rpm dependency as a
-bare name, without a version), so on an older system it installs and then fails at start with
+24.04, Debian 13, Fedora 40 and newer). The packages say so in their dependencies, so the package
+manager refuses them on an older system: the deb with `libc6 (>= 2.39)`, the rpm with
+`libc.so.6(GLIBC_2.39)(64bit)`. The bundler writes each rpm dependency as a bare name, without a
+version (`glibc >= 2.39` would be a requirement on a package named exactly that, which nothing
+provides), so the rpm names the symbol version instead: glibc 2.39 and later provide it, older
+glibc doesn't. The AppImage has no dependencies and on an older system fails at start with
 `GLIBC_2.39 not found`.
 
 Both Windows installers register the `quicklly://` scheme. They are not code-signed, so Windows
@@ -141,7 +144,7 @@ an array or a string replaces the base value.
 | `bundle.targets` | `appimage`, `deb`, `rpm` | The three Linux formats (the same set as `"all"` on Linux, named explicitly) |
 | `bundle.category` | `Utility` | `Categories=Utility;` in the `.desktop` file |
 | `bundle.shortDescription`, `bundle.longDescription` | A one-line summary and a paragraph | Package summary and description, and the `.desktop` `Comment`. Without them the bundler uses the `description` from [`Cargo.toml`](../src-tauri/Cargo.toml), "Hotkey mini-notepad", which the Windows installers also use in their metadata |
-| `bundle.linux.deb.depends`, `bundle.linux.rpm.depends` | `xdg-utils`, `desktop-file-utils`; the deb also `libc6 (>= 2.39)` | `xdg-mime` and `update-desktop-database` for the [registration of `quicklly://`](cli-and-links.md#registration-of-the-scheme) at start, `xdg-open` for opening the notes folder and images; `libc6 (>= 2.39)` is the glibc of the build machine (see [Artifacts](#artifacts)), which the bundler copies into the deb's `Depends` as written |
+| `bundle.linux.deb.depends`, `bundle.linux.rpm.depends` | `xdg-utils`, `desktop-file-utils`; the deb also `libc6 (>= 2.39)`, the rpm also `libc.so.6(GLIBC_2.39)(64bit)` | `xdg-mime` and `update-desktop-database` for the [registration of `quicklly://`](cli-and-links.md#registration-of-the-scheme) at start, `xdg-open` for opening the notes folder and images; the glibc entries are the glibc of the build machine (see [Artifacts](#artifacts)), which the bundler copies into the deb's `Depends` and the rpm's `Requires` as written |
 | `bundle.linux.deb.desktopTemplate`, `bundle.linux.rpm.desktopTemplate` | [`linux/quicklly.desktop`](../src-tauri/linux/quicklly.desktop) | The bundler's default `.desktop` template with `%u` added to `Exec`, so the packaged launcher passes a `quicklly://` link on. The AppImage is built from the deb's files and gets the same `.desktop` file |
 
 The CLI adds the rest of the package dependencies itself: WebKitGTK and GTK, and, because the
