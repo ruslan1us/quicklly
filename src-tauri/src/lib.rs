@@ -58,7 +58,7 @@ fn save_links(app: &AppHandle, urls: Vec<tauri::Url>) {
         }
     }
     // macOS made Quicklly the active app to open the link.
-    give_focus_back(app);
+    give_focus_back(app, false);
 }
 
 /// Saves an image pasted into the input window or the Pad in the notes folder's `images/`, and
@@ -126,9 +126,19 @@ pub(crate) fn notes_changed(app: &AppHandle) {
 }
 
 /// Brings Quicklly forward before one of its windows shows with the focus. On macOS it unhides
-/// the app, which `give_focus_back` may have hidden: the windows of a hidden app don't show.
+/// the app, which `give_focus_back` may have hidden: the windows of a hidden app don't show. It
+/// first remembers the app in use, unless that is Quicklly already, for `give_focus_back` to hand
+/// the keys back to.
 #[cfg(target_os = "macos")]
 pub(crate) fn come_forward(app: &AppHandle) {
+    use objc2_app_kit::{NSRunningApplication, NSWorkspace};
+    CAME_FORWARD.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    // Thread safe: `come_forward` also runs from async commands.
+    if let Some(front) = NSWorkspace::sharedWorkspace().frontmostApplication() {
+        if front != NSRunningApplication::currentApplication() {
+            *PREVIOUS_APP.lock().unwrap() = Some(front);
+        }
+    }
     let _ = app.show();
 }
 
@@ -172,31 +182,107 @@ async fn reveal_window(window: WebviewWindow) {
 #[cfg(target_os = "macos")]
 const HAND_OVER: std::time::Duration = std::time::Duration::from_millis(250);
 
-/// Hands the keys back to the app in use before, once none of Quicklly's windows is on screen.
-/// Windows does that by itself when a window hides; macOS leaves Quicklly the active app with no
-/// window, until the app hides itself. Decided a moment later (`HAND_OVER`), on the main thread,
-/// so that switching from one window to another doesn't hide the app in between. Not while a
-/// popup is still being set up hidden, as it is about to show: popups are closed when they are
-/// done, while the input window and the Pad live hidden. The reminders that come up by
-/// themselves don't need the app active, so they count only once they show.
+/// The app in use when Quicklly last came forward from it (see `come_forward`), which gets the
+/// keys back when Quicklly's window goes while others stay on screen.
 #[cfg(target_os = "macos")]
-fn give_focus_back(app: &AppHandle) {
+static PREVIOUS_APP: Mutex<Option<objc2::rc::Retained<objc2_app_kit::NSRunningApplication>>> =
+    Mutex::new(None);
+
+/// How many times Quicklly came forward, for `give_focus_back` to see whether a window was asked
+/// for while it waited.
+#[cfg(target_os = "macos")]
+static CAME_FORWARD: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// The label of Quicklly's window with the keys, from the focus events. A window that closes
+/// gets no focus event (tao lets go of its delegate first), so this tells whether it had them.
+#[cfg(target_os = "macos")]
+static KEY_WINDOW: Mutex<Option<String>> = Mutex::new(None);
+
+/// Hands the keys back to the app in use before, after a window lost them. Windows does that by
+/// itself when a window hides; macOS leaves Quicklly the active app, either with no window or
+/// with the keys in whichever of its windows is still on screen (the reminders, a pinned Pad or
+/// reader, an open popup). Called with `went_away` when the window hid or closed while it had the
+/// keys (Enter, Esc, a hand-over), not when it lost them to a click elsewhere.
+///
+/// Decided a moment later (`HAND_OVER`), on the main thread, so that switching from one window to
+/// another doesn't give the keys away in between: nothing is done when Quicklly came forward
+/// meanwhile, or while a popup is still being set up hidden, as it is about to show (popups are
+/// closed when they are done, while the input window and the Pad live hidden; the reminders that
+/// come up by themselves don't need the app active, so they count only once they show). Then,
+/// with no window on screen, the app hides itself and macOS activates the previous app. With
+/// windows on screen, hiding would hide them too, so when a window went away while Quicklly is
+/// still the active app, the app it came forward from is activated instead, and the windows stay.
+#[cfg(target_os = "macos")]
+fn give_focus_back(app: &AppHandle, went_away: bool) {
+    use objc2_app_kit::{NSApplication, NSApplicationActivationOptions};
+    use std::sync::atomic::Ordering;
+    let came_forward = CAME_FORWARD.load(Ordering::Relaxed);
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(HAND_OVER);
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || {
-            let showing = handle.webview_windows().into_iter().any(|(label, window)| {
-                let about_to_show = label != MAIN_WINDOW
+            if CAME_FORWARD.load(Ordering::Relaxed) != came_forward {
+                return;
+            }
+            let mut visible = false;
+            for (label, window) in handle.webview_windows() {
+                if window.is_visible().unwrap_or(false) {
+                    visible = true;
+                } else if label != MAIN_WINDOW
                     && label != pad::PAD_WINDOW
-                    && (label != reminders::REMINDERS_WINDOW || reminders::takes_focus(&handle));
-                about_to_show || window.is_visible().unwrap_or(false)
-            });
-            if !showing {
+                    && (label != reminders::REMINDERS_WINDOW || reminders::takes_focus(&handle))
+                {
+                    return;
+                }
+            }
+            let mut previous = PREVIOUS_APP.lock().unwrap();
+            if !visible {
+                *previous = None;
                 let _ = handle.hide();
+                return;
+            }
+            let Some(mtm) = objc2::MainThreadMarker::new() else {
+                return;
+            };
+            if !NSApplication::sharedApplication(mtm).isActive() {
+                // The user went to another app.
+                *previous = None;
+                return;
+            }
+            // Not after a click on another of Quicklly's windows, which is then in use.
+            if went_away {
+                if let Some(previous) = previous.take() {
+                    let _ = previous.activateWithOptions(NSApplicationActivationOptions::empty());
+                }
             }
         });
     });
+}
+
+/// Keeps `KEY_WINDOW` current and calls `give_focus_back` when a window lost the keys: a window
+/// no longer visible by then hid by itself, and one that closed with the keys closed by itself;
+/// otherwise a click took them elsewhere.
+#[cfg(target_os = "macos")]
+fn follow_focus(window: &tauri::Window, event: &WindowEvent) {
+    let label = window.label();
+    let had_keys = {
+        let mut key = KEY_WINDOW.lock().unwrap();
+        let had_keys = key.as_deref() == Some(label);
+        match event {
+            WindowEvent::Focused(true) => *key = Some(label.to_string()),
+            WindowEvent::Focused(false) | WindowEvent::Destroyed if had_keys => *key = None,
+            _ => {}
+        }
+        had_keys
+    };
+    match event {
+        WindowEvent::Focused(false) => {
+            give_focus_back(window.app_handle(), !window.is_visible().unwrap_or(false));
+        }
+        WindowEvent::Destroyed => give_focus_back(window.app_handle(), had_keys),
+        _ => {}
+    }
 }
 
 fn show_input(app: &AppHandle) {
@@ -773,15 +859,13 @@ pub fn run() {
             watcher::start(app.handle());
             // macOS made Quicklly the active app to launch it, with no window to show.
             #[cfg(target_os = "macos")]
-            give_focus_back(app.handle());
+            give_focus_back(app.handle(), false);
             Ok(())
         })
         .on_window_event(|window, event| {
-            // A window that hid or closed may have been the last one on screen.
+            // A window that hid or closed may have been the last one on screen, or had the keys.
             #[cfg(target_os = "macos")]
-            if matches!(event, WindowEvent::Focused(false) | WindowEvent::Destroyed) {
-                give_focus_back(window.app_handle());
-            }
+            follow_focus(window, event);
             if window.label() == READER_WINDOW {
                 let pinned = reader_window::is_pinned(window.app_handle());
                 match event {

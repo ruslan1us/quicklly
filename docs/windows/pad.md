@@ -27,6 +27,9 @@ be pinned to stay open, movable and resizable. User-facing keys are in the root 
   are loaded and any pending edit is taken.
 - Focus loss hides an unpinned Pad. <kbd>Esc</kbd> saves the draft and hides. The window is never
   destroyed, so the text and its undo history survive hiding.
+- On macOS a pinned Pad on screen keeps Quicklly from hiding itself when another of its windows
+  goes; the keys then go back to the app Quicklly came forward from, not into the Pad's draft (see
+  [Focus on macOS](../architecture.md#focus-on-macos)). A click in the Pad gives it the keys.
 
 ## Keys and commands
 

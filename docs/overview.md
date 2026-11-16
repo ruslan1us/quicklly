@@ -47,7 +47,7 @@ instead:
 
 | Platform | Differences from Windows |
 | --- | --- |
-| macOS | ⌘ for the app's own shortcuts (⌃C still closes), ⌫ deletes in the reader; a menu-bar app without a Dock icon that hides itself when its last window goes, so the previous app gets the keyboard back ([Architecture](architecture.md#focus-on-macos)); HUD vibrancy instead of Acrylic; no window over a full-screen app; links saved by the running app ([ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md)); undo in the reader can't take images back out of the Trash; ad-hoc signed, not notarized |
+| macOS | ⌘ for the app's own shortcuts (⌃C still closes), ⌫ deletes in the reader; a menu-bar app without a Dock icon that gives the keyboard back to the previous app when its window goes: it hides itself, or reactivates that app when other Quicklly windows stay on screen ([Architecture](architecture.md#focus-on-macos)); HUD vibrancy instead of Acrylic; no window over a full-screen app; links saved by the running app ([ADR 0019](decisions/0019-links-saved-by-the-running-app-on-macos.md)); undo in the reader can't take images back out of the Trash; ad-hoc signed, not notarized |
 | Linux | On Wayland the hotkey is a desktop shortcut that runs `quicklly` ([ADR 0020](decisions/0020-global-hotkey-on-wayland-via-a-desktop-shortcut.md)), and the compositor places the windows; no blur behind the windows; the tray is an AppIndicator menu (GNOME needs an extension); deb and rpm updates only on `/update` ([ADR 0021](decisions/0021-deb-and-rpm-updates-only-on-request.md)) |
 
 The user-facing side of these is in the README's [Installation](../README.md#installation).

@@ -137,6 +137,11 @@ bundle: no `LSUIElement`, no `quicklly://` scheme). Focus comes first: the rest 
   <kbd>Enter</kbd> give the keyboard back to that app; input → reader → input, `/config`, `/help`,
   → to the Pad and ← back, ⌘E without a visible flash of the previous app, and typing right after
   each switch lands in the new window.
+- With reminders, a pinned Pad or a pinned reader on screen: hotkey, type a note, Enter, keep
+  typing — the keys go to the app you were in. The same after <kbd>Esc</kbd> in the input window
+  and in a popup (`/help`), while the windows stay on screen; a click in the pinned Pad still gives
+  it the keys, and clicking from the input window or an unpinned reader into the pinned Pad
+  leaves them there.
 - A pinned Pad on another Space comes along; the hotkey while a full-screen app is in front
   switches to the desktop (known limitation).
 - The reminders at start don't take the focus, nor when they come up (at midnight) while the

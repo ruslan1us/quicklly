@@ -184,27 +184,48 @@ no-ops. The private API keeps an app out of Apple's App Store, which Quicklly do
 
 ### Focus on macOS
 
-On Windows, hiding Quicklly's last window gives the keyboard back to the application in use
-before. macOS leaves Quicklly the active application with no window, so typing goes nowhere until
-the user clicks somewhere. Quicklly therefore hides itself (`app.hide()`), and macOS activates the
-previous application:
+On Windows, hiding or closing the window with the keyboard gives it back to the window in use
+before, in whatever application. macOS leaves Quicklly the active application: with no window,
+typing goes nowhere until the user clicks somewhere; with other Quicklly windows on screen (the
+reminders, a pinned Pad or reader, a popup left open), AppKit is likely to make one of them the key
+window, and keys meant for the previous application would mark reminders done or land in the Pad's
+draft. So `give_focus_back` in [`lib.rs`](../src-tauri/src/lib.rs) hands the keyboard back itself:
 
-- **When.** `give_focus_back` in [`lib.rs`](../src-tauri/src/lib.rs) runs on every
-  `Focused(false)` and `Destroyed` window event, at the end of set-up, and after a
-  [link](cli-and-links.md#links-on-macos) is saved. It decides 250 ms later (`HAND_OVER`), on the main thread, and hides the app when no
-  window is visible and no popup exists then. Popups are closed when they are done, so one that
-  exists hidden is still being set up and about to show (the reminders open the reader and close
-  themselves, for example); the input window and the Pad live hidden and count only when visible,
-  and so do the reminders that come up by themselves, which show without the app being active.
-  A visible pinned Pad or reader keeps Quicklly from hiding, since hiding the app would hide them
-  too.
+- **When.** It runs on every `Focused(false)` and `Destroyed` window event (through
+  `follow_focus`), at the end of set-up, and after a [link](cli-and-links.md#links-on-macos) is
+  saved. It decides 250 ms later (`HAND_OVER`), on the main thread, and does nothing when
+  Quicklly came forward in the meantime (a window was asked for, see below) or while a popup
+  exists hidden. Popups are closed when they are done, so one that exists hidden is still being
+  set up and about to show (the reminders open the reader and close themselves, for example); the
+  input window and the Pad live hidden and count only when visible, and so do the reminders that
+  come up by themselves, which show without the app being active.
+- **No window on screen.** Quicklly hides itself (`app.hide()`), and macOS activates the previous
+  application.
+- **Windows still on screen.** Hiding the app would hide them too. Instead, when the window that
+  lost the keys went away by itself (it hid or closed with them: <kbd>Enter</kbd>, <kbd>Esc</kbd>,
+  a command) and Quicklly is still the active app, the application Quicklly came forward from is
+  activated again (`NSRunningApplication::activateWithOptions`, no options; it is not deprecated,
+  only its `ActivateIgnoringOtherApps` option is, and `activate()` needs macOS 14). The windows stay
+  on screen, above the other app (they float), without the keys. `come_forward` remembers that
+  application (`NSWorkspace::frontmostApplication`, unless it is Quicklly itself) and it is
+  forgotten once used, once Quicklly hid, or once the user went to another app. When Quicklly
+  wasn't brought forward from another app (the user clicked one of its windows, or a link started
+  it), there is nothing to go back to and the keys stay in Quicklly, as before.
+- **Hid by itself or clicked away.** A window that lost the keys and is no longer visible when the
+  event arrives hid by itself (the page or a command hid it); one still visible lost them to a
+  click, on another app or on another Quicklly window, which then has them and keeps them. A key
+  window that closes reports no `Focused(false)`: tao lets go of the window's delegate before it
+  closes. So `follow_focus` keeps the label of the window with the keys (`KEY_WINDOW`) from the
+  focus events, and on `Destroyed` the window went away by itself only if it still had them (an
+  unpinned reader closed for a click elsewhere lost them first).
 - **Hand-overs.** When the input window or the Pad hands over to another window (the reader,
-  settings, help, the Pad, the input window), it hides first and then asks for the other one.
-  The wait gives that window time to exist (a popup) or to show (the input window, a Pad that
-  existed), so the app stays active throughout and keys typed meanwhile stay in Quicklly. The
-  price: after the last window goes, the previous application gets the keyboard back 250 ms
-  later. A Pad opened for the first time takes longer to load than the wait, so Quicklly may still
-  hide and come forward again then, and the previous application flash as active.
+  settings, help, the Pad, the input window), it hides first and then asks for the other one,
+  through a path that calls `come_forward`. `give_focus_back` counts those calls (`CAME_FORWARD`)
+  and does nothing when one came during its wait, so the app stays active throughout, keys typed
+  meanwhile stay in Quicklly, and the window asked for gets them, even a Pad that takes longer than
+  the wait to load. The price: after the last window goes, the previous application gets the
+  keyboard back 250 ms later, and keys typed in those 250 ms may still reach a Quicklly window that
+  AppKit made key.
 - **Coming back.** The windows of a hidden app don't show, and `set_focus` does nothing for them.
   Every path that shows a window with the focus therefore calls `come_forward` first, which
   unhides the app (`app.show()`, which activates it): `show_input`, `show_popup`, `pad::show`,

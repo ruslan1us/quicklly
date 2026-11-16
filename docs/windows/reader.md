@@ -27,6 +27,9 @@ changes as they happen and reopens on the same file. User-facing keys are in the
   only its saved size and stays where the new window was created, as with nothing saved.
 - An unpinned reader closes when it loses focus (only once visible). <kbd>Esc</kbd> or
   <kbd>Ctrl</kbd>+<kbd>C</kbd> closes it. Closing destroys the window and with it the undo history.
+- On macOS a pinned reader on screen keeps Quicklly from hiding itself when another of its windows
+  goes; the keys then go back to the app Quicklly came forward from, not to the reader (see
+  [Focus on macOS](../architecture.md#focus-on-macos)).
 - The view reloads on `focus` and on `notes-changed`, unless a note is being edited.
   `notes-changed` also comes from the notes folder watcher, so a pinned reader follows notes saved
   through the CLI or changed in another editor; after the reader's own changes it arrives a second
