@@ -1,10 +1,14 @@
 # Quicklly
 
+[![CI](https://github.com/ruslan1us/quicklly/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ruslan1us/quicklly/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ruslan1us/quicklly)](https://github.com/ruslan1us/quicklly/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/ruslan1us/quicklly)](LICENSE)
+
 A hotkey mini-notepad for Windows, macOS and Linux. Press a global hotkey anywhere, type a
 thought, hit <kbd>Enter</kbd> — it is appended with a timestamp to today's markdown file, and you
 are back in whatever you were doing.
 
-![Quicklly input window](docs/screenshot.png)
+![Quicklly: a note typed in the input window with a tag and a date, then found in the reader](docs/demo.gif)
 
 - **Fast** — the input window pops up instantly on top of everything, already focused.
 - **Plain text** — notes are ordinary `.md` files you can open in Obsidian or VS Code and sync
