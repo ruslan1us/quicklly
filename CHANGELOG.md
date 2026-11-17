@@ -7,12 +7,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-17
+
 ### Added
 
 - Quicklly for macOS, one app for Apple silicon and Intel that lives in the menu bar, and for
-  Linux as an AppImage, a deb and an rpm. On macOS the app's own shortcuts take ⌘ instead of Ctrl
-  (⌃C still closes) and ⌫ deletes in the reader; on Wayland the hotkey is a shortcut you add in
-  your desktop's keyboard settings that runs `quicklly`.
+  Linux (experimental) as an AppImage, a deb and an rpm. On macOS the app's own shortcuts take ⌘
+  instead of Ctrl (⌃C still closes) and ⌫ deletes in the reader; on Wayland the hotkey is a
+  shortcut you add in your desktop's keyboard settings that runs `quicklly`.
 
 ### Fixed
 
@@ -268,7 +270,8 @@ The first version, published as source code only.
 - A tray icon to write a new note, open the notes folder or quit.
 - Only one copy of Quicklly runs at a time.
 
-[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.8.3...HEAD
+[Unreleased]: https://github.com/ruslan1us/quicklly/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/ruslan1us/quicklly/compare/v0.8.3...v0.9.0
 [0.8.3]: https://github.com/ruslan1us/quicklly/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/ruslan1us/quicklly/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/ruslan1us/quicklly/compare/v0.8.0...v0.8.1
